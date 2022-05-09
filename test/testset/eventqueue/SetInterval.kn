@@ -1,0 +1,27 @@
+[do {
+    [var setIntervalResult
+      [set_interval
+        [func () {
+            [Writeln ("in set interval fiber handler func")]
+          }
+        ]
+        1000
+      ]
+    ]
+    [Writeln ("after set interval, setIntervalResult:")]
+    [Writeln (setIntervalResult)]
+    [var result
+      [wait_timeout
+        [func () {
+            [Writeln ("in set timeout fiber handler func")]
+            [setIntervalResult clear_interval;]
+            5
+          }
+        ]
+        5000
+      ]
+    ]
+    [Writeln ("after wait timeout")]
+    result
+  }
+]

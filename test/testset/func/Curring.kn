@@ -1,0 +1,10 @@
+[do {
+    [func add4args (a b c d) {
+        [var x [+ (a b)]]
+        [var y [+ (c d)]]
+        [+ (x y)]
+      }
+    ]
+    [add4args (1 2) (3 4)]
+  }
+]

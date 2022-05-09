@@ -1,0 +1,15 @@
+[
+  :public a
+  :<T M>:(1 2)(1 2) ~String ~<[where] S>
+  %
+    a = 1
+    b = 2
+  % {
+    [add;]
+  }
+  a {
+  }
+  $b {
+  }
+  c
+]

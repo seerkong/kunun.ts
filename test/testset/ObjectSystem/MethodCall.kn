@@ -1,0 +1,26 @@
+[main {
+    [table val
+      field {
+        [field m]
+        [field n = 1]
+      }
+      prop {
+        [field_prop :public m ~ Int]
+        [field_prop :public n ~ Int]
+      }
+      method {
+        [method :public SetM (self value ~ Int) ~ Int {
+            [self $m = value]
+          }
+        ]
+        [method :public GetMAddN (self) ~ Int {
+            [+ ([self .m] [self .n])]
+          }
+        ]
+      }
+    ]
+    val
+    [val .SetM (2)]
+    [val .GetMAddN()]
+  }
+]

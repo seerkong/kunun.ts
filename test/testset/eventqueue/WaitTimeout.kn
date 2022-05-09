@@ -1,0 +1,15 @@
+[do {
+    [var result
+      [wait_timeout
+        [func () {
+            [Writeln ("in set timeout fiber handler func")]
+            5
+          }
+        ]
+        5000
+      ]
+    ]
+    [Writeln ("after wait timeout")]
+    result
+  }
+]

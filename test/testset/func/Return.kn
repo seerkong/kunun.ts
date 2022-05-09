@@ -1,0 +1,11 @@
+[do {
+    [func Foo () {
+        [Writeln ("Before return")]
+        [return (1)]
+        [Writeln ("After return")]
+        2
+      }
+    ]
+    [Foo ()]
+  }
+]
