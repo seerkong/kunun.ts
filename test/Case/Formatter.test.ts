@@ -5,7 +5,7 @@ import { TableHandler } from '../../src/Handler/PrefixKeyword/TableHandler';
 import assert from "assert";
 import fs from 'fs'
 
-const BASE_DIR = './test/testset'
+const BASE_DIR = './Test/Resource'
 
 function parseFile(fileName: string) {
     const knStr = fs.readFileSync(`${BASE_DIR}/${fileName}`, 'utf-8')
@@ -54,7 +54,7 @@ describe("formatter", function() {
       console.log(v)
     });
     it("nested_map", function() {
-      let v = Parser.Parse("(a= 1  b= (c= 2  d= (e= 3  f= ()) ) )");
+      let v = Parser.Parse("(a =1  b =(c =2  d =(e =3  f =()) ) )");
       // let v = Parser.Parse("(a= 1  )");
       let str = KnFormatter.Stringify(v, true);
       console.log(str)
@@ -64,25 +64,25 @@ describe("formatter", function() {
 
   describe("knot", function() {
     it("knot_core_only", function() {
-      let ast = parseFile('parser/knot_core_only.kn');
+      let ast = parseFile('Parser/KnotCoreOnly.kn');
       let str = KnFormatter.Stringify(ast, true);
       console.log(str)
       console.log(ast)
     });
     it("knot_single_node", function() {
-      let ast = parseFile('parser/knot_single_node.kn');
+      let ast = parseFile('Parser/KnotSingleNode.kn');
       let str = KnFormatter.Stringify(ast, true);
       console.log(str)
       console.log(ast)
     });
     it("knot_multi_map", function() {
-      let ast = parseFile('parser/knot_multi_map.kn');
+      let ast = parseFile('Parser/KnotMultiMap.kn');
       let str = KnFormatter.Stringify(ast, true);
       console.log(str)
       console.log(ast)
     });
     it("knot_multi_array", function() {
-      let ast = parseFile('parser/knot_multi_array.kn');
+      let ast = parseFile('Parser/KnotMultiArray.kn');
       let str = KnFormatter.Stringify(ast, true);
       console.log(str)
       console.log(ast)
@@ -106,7 +106,7 @@ describe("formatter", function() {
 
   describe("Quote", function() {
     it("CloseQuote", function() {
-      let ast = parseFile('parser/ObjSetter.kn');
+      let ast = parseFile('Parser/ObjSetter.kn');
       let str = KnFormatter.Stringify(ast, true);
       console.log(str)
       console.log(JSON.stringify(ast, null, 2));

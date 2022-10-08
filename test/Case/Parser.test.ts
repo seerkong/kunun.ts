@@ -3,7 +3,7 @@ import { Parser } from '../../src/Converter/Parser';
 import assert from "assert";
 import fs from 'fs'
 
-const BASE_DIR = './test/testset'
+const BASE_DIR = './Test/Resource'
 
 function parseFile(fileName: string) {
     const knStr = fs.readFileSync(`${BASE_DIR}/${fileName}`, 'utf-8')
@@ -30,23 +30,23 @@ describe("parser", function() {
 
   describe("knot", function() {
     it("arr_Words", function() {
-      let ast = parseFile('parser/Words.kn');
+      let ast = parseFile('Parser/Words.kn');
       console.log(ast)
     });
     it("knot_core_only", function() {
-      let ast = parseFile('parser/knot_core_only.kn');
+      let ast = parseFile('Parser/KnotCoreOnly.kn');
       console.log(ast)
     });
     it("knot_single_node", function() {
-      let ast = parseFile('parser/knot_single_node.kn');
+      let ast = parseFile('Parser/KnotSingleNode.kn');
       console.log(ast)
     });
     it("knot_multi_map", function() {
-      let ast = parseFile('parser/knot_multi_map.kn');
+      let ast = parseFile('Parser/KnotMultiMap.kn');
       console.log(ast)
     });
     it("knot_multi_array", function() {
-      let ast = parseFile('parser/knot_multi_array.kn');
+      let ast = parseFile('Parser/KnotMultiArray.kn');
       console.log(ast)
     });
   });

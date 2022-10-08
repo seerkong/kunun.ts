@@ -41,7 +41,7 @@ influenced by lisp, in kunun language, the data part and the expression part use
 vector:
 `{1 2 3}`
 map:
-`(a=1 b = 2)`
+`(a =1 b = 2)`
 
 `knot`, a data structure has a list of nodes. each node has following fields
 ```
@@ -102,7 +102,7 @@ run all interpreter test cases
 modify `.vscode/launch.json` args
 ```
 "args": [
-    "test/Interpreter.test.ts",
+    "test/Case/Interpreter.test.ts",
     "--no-timeouts"
 ],
 ```
@@ -112,7 +112,7 @@ modify `.vscode/launch.json` args
 for example：AddWith4Args
 ```
 "args": [
-    "test/Interpreter.test.ts",
+    "test/Case/Interpreter.test.ts",
     "-g",
     "'AddWith4Args'",
     "--no-timeouts"

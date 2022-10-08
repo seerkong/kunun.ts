@@ -373,4 +373,11 @@ export class FiberMgr {
       return nextFiber;
     }
   }
+
+  public ResetAllState() {
+    this.runnableFibers = [];
+    this.idleFibers = [];
+    this.suspendedFibers = [];
+    this.resumeEventQueue = [];
+  }
 }

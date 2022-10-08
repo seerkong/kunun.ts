@@ -22,18 +22,18 @@ export class StateMgr {
     public ExecHistory : InstructionExecLog[] = [];
 
     constructor() {
-        let mainFiber = Fiber.CreateRootFiber();
-        this.FiberMgr.GetRunnableFibers().push(mainFiber);
-        let rootEnv = Env.CreateRootEnv();
-        this.EnvTree.AddVertex(rootEnv);
-        this.EnvTree.SetEntryVertexId(rootEnv.Id);
+        
+        let buildInEnv = Env.CreateBuildInEnv();
+        this.EnvTree.AddVertex(buildInEnv);
+        this.EnvTree.SetEntryVertexId(buildInEnv.Id);
 
-        let globalEnv = Env.CreateChildEnv(FlowVarEnvType.Global, rootEnv);
+        let globalEnv = Env.CreateGlobalEnv(buildInEnv);
         this.EnvTree.AddVertex(globalEnv);
-        this.EnvTree.AddEdge(rootEnv.GetVertexId(), globalEnv.GetVertexId());
+        this.EnvTree.AddEdge(buildInEnv.GetVertexId(), globalEnv.GetVertexId());
 
-        mainFiber.CurrentEnvId = globalEnv.Id;
+        this.ResetFiberMgr();
     }
+
     // current active fiber state start
     public get CurrentEnvId() : number {
         let curFiber = this.GetCurrentFiber();
@@ -68,6 +68,15 @@ export class StateMgr {
     }
 
     // current active fiber state end
+
+    public ResetFiberMgr() {
+        this.FiberMgr.ResetAllState();
+        let globalEnv = this.GetGlobalEnv();
+        let mainFiber = Fiber.CreateRootFiber();
+        this.FiberMgr.GetRunnableFibers().push(mainFiber);
+        mainFiber.CurrentEnvId = globalEnv.Id;
+    }
+
 
     public GetCurrentFiber() {
         return this.FiberMgr.GetCurrentFiber();

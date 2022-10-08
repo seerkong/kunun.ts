@@ -5,14 +5,11 @@ import { InstructionExecLog, StateMgr } from "./StateMgr";
 import { Instruction } from "./StateManagement/InstructionStack";
 import { HostFunctions } from './HostSupport/HostFunctions';
 import { ExtensionRegistry } from './ExtensionRegistry';
+import { RunResult } from './RunResult';
+import { Parser } from './Converter/Parser';
 
 export class Interpreter {
-    public async Exec(nodeToRun: any) : Promise<any> {
-        let stateMgr: StateMgr = this.PrepareState();
-        return this.ExecNode(stateMgr, nodeToRun);
-    }
-
-    public PrepareState() : StateMgr {
+    public static PrepareState() : StateMgr {
         let stateMgr: StateMgr = new StateMgr();
         let rootEnv = stateMgr.GetRootEnv();
         HostFunctions.Import(rootEnv);
@@ -20,12 +17,40 @@ export class Interpreter {
         return stateMgr;
     }
 
-    public async ExecNode(stateMgr: StateMgr, nodeToRun: any) : Promise<any> {
-        stateMgr.AddOpDirectly(OpCode.Node_RunNode, nodeToRun);
-        return this.StartLoop(stateMgr);
+    public static async Eval(knStr: string) : Promise<any> {
+        let stateMgr: StateMgr = Interpreter.PrepareState();
+        return Interpreter.EvalWithState(stateMgr, knStr);
     }
 
-    public async StartLoop(stateMgr: StateMgr) : Promise<any> {
+    public static async EvalWithState(stateMgr: StateMgr, knStr: string) : Promise<any> {
+        let nodeToRun = Parser.Parse(knStr);
+        return Interpreter.ExecWithState(stateMgr, nodeToRun);
+    }
+
+    public static async Exec(nodeToRun: any) : Promise<any> {
+        let stateMgr: StateMgr = Interpreter.PrepareState();
+        return Interpreter.ExecWithState(stateMgr, nodeToRun);
+    }
+
+    public static async ExecWithState(stateMgr: StateMgr, nodeToRun: any) : Promise<any> {
+        stateMgr.AddOpDirectly(OpCode.Node_RunNode, nodeToRun);
+        let r = Interpreter.StartLoop(stateMgr);
+        return r;
+    }
+
+    public static async ExecAndReuseState(stateMgr: StateMgr, nodeToRun: any) : Promise<any> {
+        stateMgr.ResetFiberMgr();
+
+        stateMgr.OpBatchStart();
+        stateMgr.AddOp(OpCode.Node_RunNode, nodeToRun);
+        stateMgr.AddOp(OpCode.OpStack_LandSuccess);
+        stateMgr.OpBatchCommit();
+
+        let r = Interpreter.StartLoop(stateMgr);
+        return r;
+    }
+
+    public static async StartLoop(stateMgr: StateMgr) : Promise<any> {
         let instruction : Instruction = stateMgr.GetCurrentFiber().InstructionStack.PopValue();
         let currentFiber = stateMgr.GetCurrentFiber();
         while (instruction.OpCode != OpCode.OpStack_LandSuccess

@@ -8,16 +8,21 @@ import { FlowVarEnvType } from "../StateManagement/FlowVarEnvType";
 export class EnvTreeHandler {
   public static RunDiveProcessEnv(stateMgr: StateMgr, opContState : Instruction) {
     let curEnv = stateMgr.GetCurEnv();
-    let r = stateMgr.EnvTree.MakeCurChildEnv(curEnv, FlowVarEnvType.Process);
-    stateMgr.GetCurrentFiber().ChangeEnvById(r.Id);
-    return r;
+
+    let nextEnv : Env  = Env.CreateProcessEnv(curEnv);
+    stateMgr.EnvTree.AddVertex(nextEnv);
+    stateMgr.EnvTree.AddEdge(curEnv.Id, nextEnv.Id);
+    stateMgr.GetCurrentFiber().ChangeEnvById(nextEnv.Id);
+    return nextEnv;
   }
 
   public static RunDiveLocalEnv(stateMgr: StateMgr, opContState : Instruction) {
     let curEnv = stateMgr.GetCurEnv();
-    let r = stateMgr.EnvTree.MakeCurChildEnv(curEnv, FlowVarEnvType.Local);
-    stateMgr.GetCurrentFiber().ChangeEnvById(r.Id);
-    return r;
+    let nextEnv : Env  = Env.CreateLocalEnv(curEnv);
+    stateMgr.EnvTree.AddVertex(nextEnv);
+    stateMgr.EnvTree.AddEdge(curEnv.Id, nextEnv.Id);
+    stateMgr.GetCurrentFiber().ChangeEnvById(nextEnv.Id);
+    return nextEnv;
   }
 
   public static RunRise(stateMgr: StateMgr, opContState : Instruction) {

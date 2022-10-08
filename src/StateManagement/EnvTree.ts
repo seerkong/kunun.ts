@@ -31,11 +31,4 @@ export class EnvTree extends SingleEntryGraph<Env, number> {
     // 使用传入的 env 作为fallback
     return fromEnv;
   }
-
-  public MakeCurChildEnv(parentEnv : Env, envType : FlowVarEnvType) {
-      let r : Env  = Env.CreateChildEnv(envType, parentEnv);
-      this.AddVertex(r);
-      this.AddEdge(parentEnv.Id, r.Id);
-      return r;
-  }
 }

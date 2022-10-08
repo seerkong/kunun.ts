@@ -14,17 +14,34 @@ export class Env implements SingleEntryGraphNode<Number> {
         Env.nextEnvId += 1;
     }
 
-    public static CreateRootEnv() : Env {
+    private static CreateRootEnv() : Env {
         let env : Env = new Env();
         env.EnvType = FlowVarEnvType.BuildIn;
         return env;
     }
 
-    public static CreateChildEnv(envType: FlowVarEnvType, parentEnv : Env) : Env {
+    private static CreateChildEnv(envType: FlowVarEnvType, parentEnv : Env) : Env {
         let env : Env = new Env();
         env.EnvType = envType;
         env.ParentEnv = parentEnv;
         return env;
+    }
+
+    public static CreateBuildInEnv() : Env {
+        return Env.CreateRootEnv();
+    }
+
+
+    public static CreateGlobalEnv(parentEnv : Env) : Env {
+        return Env.CreateChildEnv(FlowVarEnvType.Global, parentEnv);
+    }
+
+    public static CreateProcessEnv(parentEnv : Env) : Env {
+        return Env.CreateChildEnv(FlowVarEnvType.Process, parentEnv);
+    }
+    
+    public static CreateLocalEnv(parentEnv : Env) : Env {
+        return Env.CreateChildEnv(FlowVarEnvType.Local, parentEnv);
     }
 
     public Define(key : String, value : any) {
