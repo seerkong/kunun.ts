@@ -30,6 +30,7 @@ import { FiberScheduleHandler } from './Handler/FiberScheduleHandler';
 import { WaitTimeoutHandler } from './Handler/PrefixKeyword/WaitTimeoutHandler';
 import { SetIntervalHandler } from './Handler/PrefixKeyword/SetInterval';
 import { SaveOperandValuesHandler } from './Handler/InfixKeyword/SaveOperandValuesHandler';
+import { AwaitHostFuncHandler } from './Handler/PrefixKeyword/AwaitHostFuncHandler';
 
 export class ExtensionRegistry {
   private static InstructionHandlerMap : {[ k : string] : (stateMgr: StateMgr, opContState : Instruction) => void } = {
@@ -101,8 +102,9 @@ export class ExtensionRegistry {
     'set': SetEnvHandler.ExpandSetEnv,
     'try': TryHandler.ExpandTry,
     'perform': PerformHandler.ExpandPerform,
-    'wait_timeout': WaitTimeoutHandler.ExpandWaitTimeout,
+    'set_timeout': WaitTimeoutHandler.ExpandWaitTimeout,
     'set_interval': SetIntervalHandler.ExpandSetInterval,
+    'await_host_fn': AwaitHostFuncHandler.ExpandAwaitHostFunc,
     'foreach': ForeachHandler.ExpandForeach,
     'for': ForLoopHandler.ExpandForLoop,
     'table': TableHandler.ExpandDeclareTable,

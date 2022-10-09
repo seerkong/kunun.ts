@@ -26,8 +26,8 @@ export class SetIntervalHandler {
           new Instruction(OpCode.Ctrl_ApplyToFrameTop, currentFiber.CurrentEnvId, triggerHandler),
           new Instruction(OpCode.Ctrl_FinalizeFiber, currentFiber.CurrentEnvId),
         ];
-        let subFiber = Fiber.CreateSubFiber(currentFiber, FiberState.Idle, initSubFiberOps);
-
+        let subFiber = Fiber.CreateSubFiber(currentFiber, FiberState.Idle);
+        subFiber.InitInstructions(initSubFiberOps);
         
         stateMgr.FiberMgr.AddToSuspendedFibersLast(subFiber);
 

@@ -44,4 +44,98 @@ describe("Interop", function() {
     });
   });
 
+  describe("CallHost", function() {
+    it("CallHostSyncFunc", async function() {
+      let ksState : StateMgr = Interpreter.PrepareState();
+      let env : Env = ksState.GetCurEnv();
+      env.Define("foo", function(arg1) {
+        console.log("call func foo, arg1 is ", arg1);
+        return 1 + arg1;
+      });
+
+      let code1 = Parser.Parse('[func bar (x) { [foo (x)] }]');
+      let r1 = await Interpreter.ExecWithState(ksState, code1);
+
+      let code2 = Parser.Parse('[bar (5)]');
+      let r2 = await Interpreter.ExecAndReuseState(ksState, code2);
+      assert.equal(r2, 6);
+    });
+
+    it("CallHostAsyncFunc_Fulfilled_1", async function() {
+      let ksState : StateMgr = Interpreter.PrepareState();
+      let env : Env = ksState.GetCurEnv();
+      env.Define("console", console);
+      env.Define("foo", async function(arg1) {
+        console.log("call async func foo, arg1 is ", arg1);
+        return new Promise(function (resolve, reject) {
+          setTimeout(function() {
+            console.log("exec callback func");
+            let r = 1 + arg1;
+            resolve(r);
+          }, 100);
+        });
+      });
+
+      let code1 = Parser.Parse('[func bar (x) { [await_host_fn foo (x) catch (e) { [console .log (e)] } ] }]');
+      let r1 = await Interpreter.ExecWithState(ksState, code1);
+
+      let code2 = Parser.Parse('[bar (5)]');
+      let r2 = await Interpreter.ExecAndReuseState(ksState, code2);
+      assert.equal(r2, 6);
+    });
+
+
+    it("CallHostAsyncFunc_Fulfilled_2", async function() {
+      let ksState : StateMgr = Interpreter.PrepareState();
+      let env : Env = ksState.GetCurEnv();
+
+      let func1 = async function(arg1) {
+        console.log("call async func foo, arg1 is ", arg1);
+        return new Promise(function (resolve, reject) {
+          setTimeout(function() {
+            console.log("exec callback func");
+            let r = 1 + arg1;
+            resolve(r);
+          }, 100);
+        });
+      };
+      env.Define("console", console);
+      env.Define("foo", async function(arg1) {
+        console.log("call async func foo, arg1 is ", arg1);
+        let r = await func1(arg1);
+        return r;
+      });
+
+      let code1 = Parser.Parse('[func bar (x) { [await_host_fn foo (x) catch (e) { [console .log (e)] } ] }]');
+      let r1 = await Interpreter.ExecWithState(ksState, code1);
+
+      let code2 = Parser.Parse('[bar (5)]');
+      let r2 = await Interpreter.ExecAndReuseState(ksState, code2);
+      assert.equal(r2, 6);
+    });
+
+
+    it("CallHostAsyncFunc_Rejected", async function() {
+      let ksState : StateMgr = Interpreter.PrepareState();
+      let env : Env = ksState.GetCurEnv();
+      env.Define("console", console);
+      env.Define("foo", async function(arg1) {
+        console.log("call async func foo, arg1 is ", arg1);
+        return new Promise(function (resolve, reject) {
+          setTimeout(function() {
+            console.log("exec callback func");
+            reject("this is a exception");
+          }, 100);
+        });
+      });
+
+      let code1 = Parser.Parse('[func bar (x) { [await_host_fn foo (x) catch (e) { [console .log (e)] 0 } ] }]');
+      let r1 = await Interpreter.ExecWithState(ksState, code1);
+
+      let code2 = Parser.Parse('[bar (5)]');
+      let r2 = await Interpreter.ExecAndReuseState(ksState, code2);
+      assert.equal(r2, 0);
+    });
+
+  });
 });

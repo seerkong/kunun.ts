@@ -11,7 +11,7 @@
     [Writeln ("after set interval, setIntervalResult:")]
     [Writeln (setIntervalResult)]
     [var result
-      [wait_timeout
+      [set_timeout
         [func () {
             [Writeln ("in set timeout fiber handler func")]
             [setIntervalResult clear_interval;]

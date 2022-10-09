@@ -20,13 +20,14 @@ export class WaitTimeoutHandler {
     let initSubFiberOps = [
       new Instruction(OpCode.Ctrl_CurrentFiberToSuspended, currentFiber.CurrentEnvId),
       new Instruction(OpCode.Node_RunNode, currentFiber.CurrentEnvId, triggerHandler),
-      new Instruction(OpCode.Ctrl_ApplyToFrameTop, currentFiber.CurrentEnvId, triggerHandler),
+      new Instruction(OpCode.Ctrl_ApplyToFrameTop, currentFiber.CurrentEnvId, null),
       new Instruction(OpCode.YieldToFiberAndChangeCurrentFiberState, currentFiber.CurrentEnvId, {
         YieldToFiberId: currentFiber.Id,
         ChangeCurrentFiberToState: FiberState.Dead
       }),
     ];
-    let subFiber = Fiber.CreateSubFiber(currentFiber, FiberState.Idle, initSubFiberOps);
+    let subFiber = Fiber.CreateSubFiber(currentFiber, FiberState.Idle);
+    subFiber.InitInstructions(initSubFiberOps);
     stateMgr.FiberMgr.AddToSuspendedFibersLast(subFiber);
 
     stateMgr.OpBatchStart();

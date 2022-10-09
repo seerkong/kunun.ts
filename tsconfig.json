@@ -10,6 +10,7 @@
         "importHelpers": true,
         "strictNullChecks": false,
         "allowUnreachableCode": true,
+        // "module": "es2015",
         "module": "commonjs",
         // "module": "amd",
         "target": "es2017",

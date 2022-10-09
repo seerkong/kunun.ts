@@ -1,18 +1,22 @@
 import { OpCode } from "../OpCode";
 import { Fiber, FiberState } from "./Fiber";
+import { Instruction } from "./InstructionStack";
 
-function sleep(time){
+function sleep(time) {
   return new Promise((resolve) => setTimeout(resolve, time));
 }
 
 
 export class ResumeFiberToken {
-  public FiberId : number;
+  public FiberId: number;
   // public IsUsed: boolean = false;
   public Result: any[];
-  constructor(fiberId, result) {
+  public BeforeResumeOps : Instruction[];
+
+  constructor(fiberId, result, beforeResumeOps: Instruction[] = []) {
     this.FiberId = fiberId;
     this.Result = result;
+    this.BeforeResumeOps = beforeResumeOps;
   }
 }
 
@@ -27,12 +31,12 @@ export class FiberMgr {
 
   }
 
-  public AddToSuspendedFibersLast(f : Fiber) {
+  public AddToSuspendedFibersLast(f: Fiber) {
     this.suspendedFibers.push(f);
   }
 
-  public CurrentFiberToIdle() : ResumeFiberToken {
-    let fiber : Fiber = this.GetCurrentFiber();
+  public CurrentFiberToIdle(): ResumeFiberToken {
+    let fiber: Fiber = this.GetCurrentFiber();
     this.SwitchFiberState(fiber, FiberState.Idle, null);
     // fiber.SetState(FiberState.Idle);
 
@@ -42,8 +46,8 @@ export class FiberMgr {
     return r;
   }
 
-  public SuspendCurrentFiber() : ResumeFiberToken {
-    let fiber : Fiber = this.GetCurrentFiber();
+  public SuspendCurrentFiber(): ResumeFiberToken {
+    let fiber: Fiber = this.GetCurrentFiber();
 
     this.SwitchFiberState(fiber, FiberState.Suspended, null);
 
@@ -55,7 +59,7 @@ export class FiberMgr {
     return r;
   }
 
-  public GetFiberByIds(fiberIds : number[]) : Map<number, Fiber> {
+  public GetFiberByIds(fiberIds: number[]): Map<number, Fiber> {
 
     let fiberIdSet = new Set();
     for (let i = 0; i < fiberIds.length; i++) {
@@ -80,37 +84,34 @@ export class FiberMgr {
     return r;
   }
 
-  public GetFiberById(fiberId : number) : Fiber {
+  public GetFiberById(fiberId: number): Fiber {
     let fiberIdToDetailMap: Map<number, Fiber> = this.GetFiberByIds([fiberId])
     return fiberIdToDetailMap.get(fiberId);
   }
 
-
-
-
   public SwitchToFiberById(toFiberId: number, oldFiberToState: FiberState) {
-    let toFiber : Fiber = this.GetFiberById(toFiberId);
+    let toFiber: Fiber = this.GetFiberById(toFiberId);
     if (toFiber == null) {
-        throw new Error("switch to a fiber not exist");
+      throw new Error("switch to a fiber not exist");
     }
     this.SwitchFiberState(toFiber, FiberState.Running, oldFiberToState);
   }
 
   public SwitchFiberState(toFiber: Fiber, toFiberToState: FiberState, oldFiberToState: FiberState) {
-    let currentFiber : Fiber = this.GetCurrentFiber();
+    let currentFiber: Fiber = this.GetCurrentFiber();
     let excludeFiberIds = [];
     excludeFiberIds.push(toFiber.Id);
 
     if (currentFiber != null && currentFiber.Id !== toFiber.Id) {
-        excludeFiberIds.push(currentFiber.Id);
+      excludeFiberIds.push(currentFiber.Id);
     }
 
     // 在备选fibers中移除toFiber, 再添加原来运行的fiber
 
-    let excludedFibers : [Fiber[], Fiber[], Fiber[]] = this.ExcludeFibers(excludeFiberIds);
-    let updatedRunnableFibers : Fiber[] = excludedFibers[0];
-    let updatedIdleFibers : Fiber[] = excludedFibers[1];
-    let updatedSuspenedFibers : Fiber[] = excludedFibers[2];
+    let excludedFibers: [Fiber[], Fiber[], Fiber[]] = this.ExcludeFibers(excludeFiberIds);
+    let updatedRunnableFibers: Fiber[] = excludedFibers[0];
+    let updatedIdleFibers: Fiber[] = excludedFibers[1];
+    let updatedSuspenedFibers: Fiber[] = excludedFibers[2];
 
     if (currentFiber !== null && oldFiberToState != null && currentFiber.Id !== toFiber.Id) {
       currentFiber.SetState(oldFiberToState);
@@ -161,17 +162,17 @@ export class FiberMgr {
 
   public FinalizeFiber(fiber: Fiber) {
     if (fiber.IsRootFiber()) {
-        return;
+      return;
     }
     fiber.SetState(FiberState.Dead);
 
     // TODO 触发 env 垃圾收集
     let excludeFiberIds = [fiber.Id];
-    let excludedFibers : [Fiber[], Fiber[], Fiber[]] = this.ExcludeFibers(excludeFiberIds);
+    let excludedFibers: [Fiber[], Fiber[], Fiber[]] = this.ExcludeFibers(excludeFiberIds);
 
-    let updatedRunnableFibers : Fiber[] = excludedFibers[0];
-    let updatedIdleFibers : Fiber[] = excludedFibers[1];
-    let updatedSuspenedFibers : Fiber[] = excludedFibers[2];
+    let updatedRunnableFibers: Fiber[] = excludedFibers[0];
+    let updatedIdleFibers: Fiber[] = excludedFibers[1];
+    let updatedSuspenedFibers: Fiber[] = excludedFibers[2];
 
     this.runnableFibers = updatedRunnableFibers;
     this.idleFibers = updatedIdleFibers;
@@ -180,12 +181,12 @@ export class FiberMgr {
 
 
   public BatchUpdateFiberState(fiberIds: number[], toState: FiberState) {
-    let fiberIdToDetailMap : Map<number, Fiber> = this.GetFiberByIds(fiberIds);
-    let excludedFibers : [Fiber[], Fiber[], Fiber[]] = this.ExcludeFibers(fiberIds);
+    let fiberIdToDetailMap: Map<number, Fiber> = this.GetFiberByIds(fiberIds);
+    let excludedFibers: [Fiber[], Fiber[], Fiber[]] = this.ExcludeFibers(fiberIds);
 
-    let updatedRunnableFibers : Fiber[] = excludedFibers[0];
-    let updatedIdleFibers : Fiber[] = excludedFibers[1];
-    let updatedSuspenedFibers : Fiber[] = excludedFibers[2];
+    let updatedRunnableFibers: Fiber[] = excludedFibers[0];
+    let updatedIdleFibers: Fiber[] = excludedFibers[1];
+    let updatedSuspenedFibers: Fiber[] = excludedFibers[2];
 
 
     fiberIdToDetailMap.forEach((fiber, fiberId) => {
@@ -193,47 +194,47 @@ export class FiberMgr {
       switch (toState) {
         case FiberState.Runnable:
         case FiberState.Running:
-            updatedRunnableFibers.push(fiber);
-            break;
+          updatedRunnableFibers.push(fiber);
+          break;
         case FiberState.Idle:
-            updatedIdleFibers.push(fiber);
-            break;
+          updatedIdleFibers.push(fiber);
+          break;
         case FiberState.Suspended:
-            updatedSuspenedFibers.push(fiber);
-            break;
+          updatedSuspenedFibers.push(fiber);
+          break;
         case FiberState.Dead:
         default:
-            // DO NOTHING
-            break;
+          // DO NOTHING
+          break;
       }
-    }) 
+    })
 
     this.runnableFibers = updatedRunnableFibers;
     this.idleFibers = updatedIdleFibers;
     this.suspendedFibers = updatedSuspenedFibers;
   }
 
-  private ExcludeFibers(excludeFiberIds : number[]) : [Fiber[], Fiber[], Fiber[]] {
+  private ExcludeFibers(excludeFiberIds: number[]): [Fiber[], Fiber[], Fiber[]] {
     let excludeFiberIdSet = new Set<number>();
     for (let i = 0; i < excludeFiberIds.length; i++) {
       excludeFiberIdSet.add(excludeFiberIds[i]);
     }
 
-    let updatedRunnableFibers : Fiber[] = [];
+    let updatedRunnableFibers: Fiber[] = [];
     for (let i = 0; i < this.runnableFibers.length; i++) {
       if (!excludeFiberIdSet.has(this.runnableFibers[i].Id)) {
         updatedRunnableFibers.push(this.runnableFibers[i]);
       }
     }
 
-    let updatedIdleFibers : Fiber[] = [];
+    let updatedIdleFibers: Fiber[] = [];
     for (let i = 0; i < this.idleFibers.length; i++) {
       if (!excludeFiberIdSet.has(this.idleFibers[i].Id)) {
         updatedIdleFibers.push(this.idleFibers[i]);
       }
     }
 
-    let updatedSuspenedFibers : Fiber[] = [];
+    let updatedSuspenedFibers: Fiber[] = [];
     for (let i = 0; i < this.suspendedFibers.length; i++) {
       if (!excludeFiberIdSet.has(this.suspendedFibers[i].Id)) {
         updatedSuspenedFibers.push(this.suspendedFibers[i]);
@@ -263,25 +264,29 @@ export class FiberMgr {
     if (sleepCount >= maxSleepCount) {
       throw new Error("sleep exceed max time")
     }
-    let resumeToken : ResumeFiberToken = this.resumeEventQueue.shift();
+    let resumeToken: ResumeFiberToken = this.resumeEventQueue.shift();
 
-    let fiber : Fiber = this.GetFiberById(resumeToken.FiberId);
+    let fiber: Fiber = this.GetFiberById(resumeToken.FiberId);
 
     // 切换fiber, 将current fiber更新为resume fiber, 同时更新状态
     this.SwitchToFiberById(fiber.Id, FiberState.Idle);
 
     fiber.OperandStack.PushItems(resumeToken.Result);
+
+    // 如果resume前需要执行一些指令，在这里添加
+    let beforeResumeOps = resumeToken.BeforeResumeOps;
+    fiber.InstructionStack.ReversePushItems(beforeResumeOps);
   }
 
 
 
-  public GetRunnableFibers() : Fiber[] {
+  public GetRunnableFibers(): Fiber[] {
     return this.runnableFibers;
   }
 
 
-  public GetAllFibers() : Fiber[] {
-    let r : Fiber[] = [];
+  public GetAllFibers(): Fiber[] {
+    let r: Fiber[] = [];
     for (let i = 0; i < this.runnableFibers.length; i++) {
       r.push(this.runnableFibers[i]);
     }
@@ -295,8 +300,8 @@ export class FiberMgr {
   }
 
   // 通过遍历的方式找到main fiber
-  public GetRootFiber() : Fiber {
-    let allFibers : Fiber[] = this.GetAllFibers();
+  public GetRootFiber(): Fiber {
+    let allFibers: Fiber[] = this.GetAllFibers();
     for (let i = 0; i < allFibers.length; i++) {
       if (allFibers[i].IsRootFiber()) {
         return allFibers[i];
@@ -306,7 +311,7 @@ export class FiberMgr {
   }
 
 
-  public GetCurrentFiber() : Fiber {
+  public GetCurrentFiber(): Fiber {
     // TODO 如果当前 runningFibers 为空的情况
     if (this.runnableFibers.length <= 0) {
       return null;
@@ -322,12 +327,12 @@ export class FiberMgr {
 
   // 如果当前fiber处于运行状态，返回当前fiber
   // 否则，在备选fiber中选择一个执行
-  public GetNextActiveFiber() : Fiber {
+  public GetNextActiveFiber(): Fiber {
     if (this.runnableFibers.length == 0) {
       return null;
     }
-    let currentFiber : Fiber = this.GetCurrentFiber();
-  
+    let currentFiber: Fiber = this.GetCurrentFiber();
+
 
     if (currentFiber != null) {
       let runnableFibersExcludeRootFiber = [];
@@ -352,10 +357,10 @@ export class FiberMgr {
         else {
           // root fiber走到了最后一个指令
           currentFiber.SetState(FiberState.Runnable);
-          let nextFiber : Fiber = null;
+          let nextFiber: Fiber = null;
           if (runnableFiberCountExcludeRootFiber > 0) {
-              nextFiber = runnableFibersExcludeRootFiber[0];
-              nextFiber.SetState(FiberState.Running);
+            nextFiber = runnableFibersExcludeRootFiber[0];
+            nextFiber.SetState(FiberState.Running);
           }
           runnableFibersExcludeRootFiber.push(currentFiber);
           this.runnableFibers = runnableFibersExcludeRootFiber;
@@ -379,5 +384,21 @@ export class FiberMgr {
     this.idleFibers = [];
     this.suspendedFibers = [];
     this.resumeEventQueue = [];
+  }
+
+  public OpBatchStart() {
+    this.GetCurrentFiber().OpBatchStart();
+  }
+
+  public AddOp(opCode: OpCode, memo: any = null) {
+    this.GetCurrentFiber().AddOp(opCode, memo);
+  }
+
+  public OpBatchCommit() {
+    this.GetCurrentFiber().OpBatchCommit();
+  }
+
+  public AddOpDirectly(opCode: OpCode, memo: any = null) {
+    this.GetCurrentFiber().AddOpDirectly(opCode, memo);
   }
 }
