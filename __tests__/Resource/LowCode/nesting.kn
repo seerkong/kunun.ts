@@ -1,0 +1,146 @@
+(
+datasource =
+  {
+  }
+
+fields =
+  {
+    (
+    component = "div"
+    props =
+      (
+      class = "cus"
+      )
+    children =
+      {
+        (
+        component = "h1"
+        props =
+          (
+          innerText = "动态嵌套"
+          )
+        )
+
+        (
+        component = "input"
+        value = "model.text1"
+        props =
+          (
+          style =
+            (
+            border = "1px solid black"
+            )
+          )
+        )
+
+        (
+        component = "custom"
+        url = "/kunun/nesting/cmp1.kn"
+        )
+
+        (
+        component = "custom"
+        url = "/kunun/nesting/cmp2.kn"
+        props =
+          (
+          prop1 =
+            (
+            text = "$:model.text1"
+            )
+          )
+        children =
+          {
+            (
+            component = "span"
+            props =
+              (
+              innerText = "slot里的内容1"
+              )
+            )
+          }
+        )
+
+        (
+        component = "slot"
+        )
+
+        (
+        component = "div"
+        children =
+          {
+            (
+            component = "select"
+            value = "model.text"
+            children =
+              {
+                (
+                component = "option"
+                props =
+                  (
+                  value = "/kunun/nesting/cmp2.kn"
+                  label = "cmp2"
+                  )
+                )
+
+                (
+                component = "option"
+                props =
+                  (
+                  value = "/kunun/nesting/cmp3.kn"
+                  label = "cmp3"
+                  )
+                )
+              }
+            )
+
+            (
+            component = "button"
+            props =
+              (
+              innerText = "更新"
+              onClick = "$:() => model.cmpurl = model.text"
+              )
+            )
+          }
+        )
+
+        (
+        component = "custom"
+        url = "$:model.cmpurl"
+        props =
+          (
+          prop1 =
+            (
+            text = "$:model.text1"
+            )
+          )
+        children =
+          {
+            (
+            component = "p"
+            props =
+              (
+              innerText = "$:model.text1"
+              )
+            )
+            (
+            component = "span"
+            props =
+              (
+              innerText = "slot里的内容2"
+              )
+            )
+            (
+            component = "span"
+            slot = "head"
+            props =
+              (
+              innerText = "head slot 里的内容"
+              )
+            )
+          }
+        )
+      }
+    )
+  }    
+)

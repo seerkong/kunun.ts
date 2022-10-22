@@ -1,9 +1,0 @@
-[do {
-    [var true_branch_visited false]
-    [if [> (5 3)] {
-        [set true_branch_visited true]
-      }
-    ]
-    true_branch_visited
-  }
-]

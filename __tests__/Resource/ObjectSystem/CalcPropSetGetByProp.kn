@@ -1,0 +1,22 @@
+[main {
+    [table val field {
+        [field m]
+        [field n = 1]
+      }
+      prop {
+        [field_prop :public m ~Int]
+        [field_prop :public n ~Int]
+        [calc_prop o ~Int :public set :(m)(self value) {
+            [self @.m = value]
+          }
+          :public get :(m n)(self) {
+            [+ ([self .m] [self .n])]
+          }
+        ]
+      }
+    ]
+    val
+    [val @.o = 2]
+    [val .o]
+  }
+]

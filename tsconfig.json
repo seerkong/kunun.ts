@@ -10,32 +10,34 @@
         "importHelpers": true,
         "strictNullChecks": false,
         "allowUnreachableCode": true,
-        // "module": "es2015",
-        "module": "commonjs",
-        // "module": "amd",
-        "target": "es2017",
-        // "noImplicitAny": true,
+        "noImplicitAny": false,
         "removeComments": true,
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,
+        "resolveJsonModule": true,
         "esModuleInterop": true,
-        // "outDir": "app",
-        "baseUrl": "./src",
+        
+        "target": "esnext",
+        // "module": "esnext",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "lib": ["esnext"],
+        
+        "outDir": "dist",
+        "baseUrl": "./lib",
         "paths": {
-            "thinkjs": [
-                "src/index"
-            ]
         },
-        // "outDir": "dist",
-        "outFile": "dist/kunun.js"
     },
     "include": [
-        "typings/**/*",
-        "src"
+        "packages/*/lib/**/*.ts",
+        "packages/*/lib/**/*.d.ts",
+        "lib/**/*.ts",
+        "lib/**/*.d.ts"
     ],
     "exclude": [
         "node_modules",
-        "**/*.spec.ts",
+        "dist",
+        "__tests__"
     ]
 }

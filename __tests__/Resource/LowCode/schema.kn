@@ -1,0 +1,50 @@
+(
+datasource =
+  (
+  schema =
+    (
+    type = "jsonSchema"
+    props =
+      (
+      type = "object"
+      properties =
+        (
+        metadata =
+          (
+          type = "object"
+          properties =
+            (
+            name =
+              (
+              type = "string"
+              )
+            labels =
+              (
+              type = "array"
+              )
+            )
+          )
+          
+        spec =
+          (
+          type = "object"
+          properties =
+            (
+            network =
+              (
+              type = "object"
+              properties =
+                (
+                ip =
+                  (
+                  type = "string"
+                  )
+                )
+              )
+            )
+          )  
+        )
+      )
+    )
+  )
+)

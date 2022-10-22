@@ -13,8 +13,10 @@
             ],
             "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
             "args": [
-                "test/Case/Interpreter.test.ts",
-                "--no-timeouts"
+                "__tests__/Case/Formatter.test.ts",
+                "-g",
+                "'DeclareObject'",
+                "--no-timeouts",
             ],
             "cwd": "${workspaceRoot}",
             "runtimeExecutable": "/usr/local/bin/node",

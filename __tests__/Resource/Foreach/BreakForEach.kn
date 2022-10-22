@@ -1,0 +1,20 @@
+[do {
+    [var b 0]
+    [foreach x in
+      ${
+        1
+        2
+        3
+      } {
+        [if
+          [== (x 2)] {
+            [break;]
+          }
+        ]
+        [Writeln (x)]
+        [set b x]
+      }
+    ]
+    b
+  }
+]

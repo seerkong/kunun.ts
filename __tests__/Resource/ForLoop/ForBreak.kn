@@ -1,0 +1,33 @@
+[do {
+    [var a
+      ${
+        1
+        2
+        3
+      }
+    ]
+    [var b 0]
+    [for
+      %
+      i = 0
+      %
+      [i
+        [a .length]
+        <;
+      ]
+      [++ i] {
+        [var x
+          [a .:i]
+        ]
+        [if
+          [== (x 2)] {
+            [break;]
+          }
+        ]
+        [Writeln (x)]
+        [set b x]
+      }
+    ]
+    b
+  }
+]
