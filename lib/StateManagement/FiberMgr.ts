@@ -31,6 +31,24 @@ export class FiberMgr {
 
   }
 
+  public Copy() : FiberMgr {
+    let r = new FiberMgr();
+    for (let i = 0; i < this.RunnableFibers.length; i++) {
+      let f = this.RunnableFibers[i].Copy();
+      r.RunnableFibers.push(f);
+    }
+    for (let i = 0; i < this.IdleFibers.length; i++) {
+      let f = this.IdleFibers[i].Copy();
+      r.IdleFibers.push(f);
+    }
+    for (let i = 0; i < this.SuspendedFibers.length; i++) {
+      let f = this.SuspendedFibers[i].Copy();
+      r.SuspendedFibers.push(f);
+    }
+    r.ResumeEventQueue = [];
+    return r;
+  }
+
   public AddToSuspendedFibersLast(f: Fiber) {
     this.SuspendedFibers.push(f);
   }
@@ -250,7 +268,7 @@ export class FiberMgr {
   }
 
 
-  public async WaitAndConsumeResumeToken() {
+  public async WaitAndConsumeResumeTokenAsync() {
     let maxSleepSeconds = 30;
     let sleepTimeInMillis = 200;
     let maxSleepCount = 1000 * maxSleepSeconds / sleepTimeInMillis;
@@ -263,6 +281,24 @@ export class FiberMgr {
     }
     if (sleepCount >= maxSleepCount) {
       throw new Error("sleep exceed max time")
+    }
+    let resumeFiberToken: ResumeFiberToken = this.ResumeEventQueue.shift();
+
+    let fiber: Fiber = this.GetFiberById(resumeFiberToken.FiberId);
+
+    // 切换fiber, 将current fiber更新为resume fiber, 同时更新状态
+    this.SwitchFiber(fiber.Id, FiberState.Idle);
+
+    fiber.OperandStack.PushItems(resumeFiberToken.Result);
+
+    // 如果resume前需要执行一些指令，在这里添加
+    let beforeResumeOps = resumeFiberToken.BeforeResumeOps;
+    fiber.InstructionStack.ReversePushItems(beforeResumeOps);
+  }
+
+  public WaitAndConsumeResumeTokenSync() {
+    if (this.ResumeEventQueue.length == 0) {
+      return;
     }
     let resumeFiberToken: ResumeFiberToken = this.ResumeEventQueue.shift();
 

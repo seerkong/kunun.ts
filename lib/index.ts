@@ -1,6 +1,6 @@
 export * from './ExtensionRegistry'
 export * from './Interpreter'
-export * from './knState'
+export * from './KnState'
 export { NodeHelper } from './Util/NodeHelper'
 export * from './Model'
 

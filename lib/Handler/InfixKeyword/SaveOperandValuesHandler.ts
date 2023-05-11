@@ -10,16 +10,18 @@ import { KnState } from "../../KnState";
 import { NodeHelper } from "../../Util/NodeHelper";
 
 export class SaveOperandValuesHandler {
-  public static ExpandSaveStack(knState: KnState, nodeToRun: any) {
+  public static ExpandSaveStack(knState: KnState, nodeToRun: any) : number {
     let stackValues = knState.GetCurrentFiber().OperandStack.PopFrameAllValues();
     knState.GetCurrentFiber().OperandStack.PushValue(stackValues);
+    return 1;
   }
 
 
-  public static ExpandRestoreStack(knState: KnState, nodeToRun: any) {
+  public static ExpandRestoreStack(knState: KnState, nodeToRun: any) : number{
     let stackValues = knState.GetCurrentFiber().OperandStack.PopFrameAllValues();
     let firstItem = stackValues[0];
     knState.GetCurrentFiber().OperandStack.PushItems(firstItem);
+    return 1;
   }
 
 }

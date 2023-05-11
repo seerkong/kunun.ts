@@ -22,7 +22,7 @@ describe("Interop", function() {
         let ksState : KnState = Interpreter.PrepareState();
         let env : Env = ksState.GetCurEnv();
         env.Define("console", console);
-        let r = await Interpreter.ExecWithState(ksState, code);
+        let r = await Interpreter.ExecWithStateAsync(ksState, code);
         assert.equal(r, undefined);
       });
   });
@@ -34,12 +34,12 @@ describe("Interop", function() {
       let env : Env = ksState.GetCurEnv();
       env.Define("console", console);
 
-      let code1 = Parser.Parse('[var a 5]');
-      let r1 = await Interpreter.ExecWithState(ksState, code1);
+      let code1 = Parser.Parse('[var ~a 5]');
+      let r1 = await Interpreter.ExecWithStateAsync(ksState, code1);
       assert.equal(r1, 5);
 
       let code2 = Parser.Parse('[+ (1 a)]');
-      let r2 = await Interpreter.ExecAndReuseState(ksState, code2);
+      let r2 = await Interpreter.ExecAndReuseStateAsync(ksState, code2);
       assert.equal(r2, 6);
     });
   });
@@ -54,10 +54,10 @@ describe("Interop", function() {
       });
 
       let code1 = Parser.Parse('[func bar (x) { [foo (x)] }]');
-      let r1 = await Interpreter.ExecWithState(ksState, code1);
+      let r1 = await Interpreter.ExecWithStateAsync(ksState, code1);
 
       let code2 = Parser.Parse('[bar (5)]');
-      let r2 = await Interpreter.ExecAndReuseState(ksState, code2);
+      let r2 = await Interpreter.ExecAndReuseStateAsync(ksState, code2);
       assert.equal(r2, 6);
     });
 
@@ -77,10 +77,10 @@ describe("Interop", function() {
       });
 
       let code1 = Parser.Parse('[func bar (x) { [await_host_fn foo (x) catch (e) { [console .log (e)] } ] }]');
-      let r1 = await Interpreter.ExecWithState(ksState, code1);
+      let r1 = await Interpreter.ExecWithStateAsync(ksState, code1);
 
       let code2 = Parser.Parse('[bar (5)]');
-      let r2 = await Interpreter.ExecAndReuseState(ksState, code2);
+      let r2 = await Interpreter.ExecAndReuseStateAsync(ksState, code2);
       assert.equal(r2, 6);
     });
 
@@ -107,10 +107,10 @@ describe("Interop", function() {
       });
 
       let code1 = Parser.Parse('[func bar (x) { [await_host_fn foo (x) catch (e) { [console .log (e)] } ] }]');
-      let r1 = await Interpreter.ExecWithState(ksState, code1);
+      let r1 = await Interpreter.ExecWithStateAsync(ksState, code1);
 
       let code2 = Parser.Parse('[bar (5)]');
-      let r2 = await Interpreter.ExecAndReuseState(ksState, code2);
+      let r2 = await Interpreter.ExecAndReuseStateAsync(ksState, code2);
       assert.equal(r2, 6);
     });
 
@@ -130,11 +130,49 @@ describe("Interop", function() {
       });
 
       let code1 = Parser.Parse('[func bar (x) { [await_host_fn foo (x) catch (e) { [console .log (e)] 0 } ] }]');
-      let r1 = await Interpreter.ExecWithState(ksState, code1);
+      let r1 = await Interpreter.ExecWithStateAsync(ksState, code1);
 
       let code2 = Parser.Parse('[bar (5)]');
-      let r2 = await Interpreter.ExecAndReuseState(ksState, code2);
+      let r2 = await Interpreter.ExecAndReuseStateAsync(ksState, code2);
       assert.equal(r2, 0);
+    });
+
+
+    it("MakeFuncSync_a", async function() {
+      let ksState : KnState = Interpreter.PrepareState();
+      let env : Env = ksState.GetCurEnv();
+      env.Define("console", console);
+      env.Define("a", 1);
+
+      let code1 = Parser.Parse('[func (x) { [console .log (x)] ["result:" x append;] } ]');
+      let r1 = Interpreter.MakeFuncSync(ksState, code1);
+      let r2 = r1("test arg");
+      assert.equal(r2, "result:test arg");
+    });
+
+
+    it("JsCall_1", async function() {
+      let ksState : KnState = Interpreter.PrepareState();
+      let env : Env = ksState.GetCurEnv();
+      env.Define("console", console);
+      let p = new Proxy([], {});
+      env.Define("p", p);
+
+      let code1 = Parser.Parse('[js_call p.push(1)]');
+      let r1 = Interpreter.ExecWithStateSync(ksState, code1);
+      assert.equal(p[0], 1);
+    });
+
+    it("JsApply_1", async function() {
+      let ksState : KnState = Interpreter.PrepareState();
+      let env : Env = ksState.GetCurEnv();
+      env.Define("console", console);
+      let p = new Proxy([], {});
+      env.Define("p", p);
+
+      let code1 = Parser.Parse('[js_apply p.push({1})]');
+      let r1 = Interpreter.ExecWithStateSync(ksState, code1);
+      assert.equal(p[0], 1);
     });
 
   });

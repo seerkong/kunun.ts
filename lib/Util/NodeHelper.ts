@@ -106,7 +106,7 @@ export class NodeHelper {
         ContextParam: node.ContextParam,
         Param: node.Param,
 
-        // Definition: node.Definition,
+        Definition: node.Definition,
         Complements: node.Complements,
 
         Attr: node.Attr,

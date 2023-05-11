@@ -44,6 +44,22 @@ export class StackMachine<T> extends StackMachineData<T> {
         return r;
     }
 
+    public Copy() : StackMachine<T> {
+        let result = new StackMachine<T>();
+        let frameStackBackup = [];
+        for (let i = 0; i < this.FrameBottomIdxStack.length; i++) {
+            frameStackBackup.push(this.FrameBottomIdxStack[i]);
+        }
+        let itemsBackup = [];
+        for (let i = 0; i < this.Items.length; i++) {
+            itemsBackup.push(this.Items[i]);
+        }
+        result.SetFrameBottomIdxStack(frameStackBackup);
+        result.SetItems(itemsBackup);
+
+        return result;
+    }
+
     public ToStackMachineData() : StackMachineData<T> {
         let result = new StackMachineData<T>();
         let frameStackBackup = [];

@@ -8,15 +8,15 @@ export class KnWord {
   
 
   public Definition: any;
-  // public Refinements: any[];
+  public Complements: any[];
   public Value: any;
 
   public constructor(inner: string) {
     this.Value = inner;
   }
 
-  public IsSingleLineWord() : boolean {
-    return (this.Annotations == null || this.Annotations.length == 0)
-      // && (this.Refinements == null || this.Refinements.length == 0);
+  public static IsSingleLineWord(w : KnWord) : boolean {
+    return (w.Annotations == null || w.Annotations.length == 0)
+      && (w.Complements == null || w.Complements.length == 0);
   }
 }

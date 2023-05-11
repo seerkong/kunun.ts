@@ -16,18 +16,20 @@ import { ArrayExt } from '../Util/ArrayExt';
 
 
 enum PrefixType {
-    Annotation, // :[a % m="id" n="parent_id" %][xxx]
-    Flag, // :Deprecated[xxx]
-    Modifier, // :{System IO}[func (a~type_a b ~int) ~type_r]
+    Annotation, // ![a % m="id" n="parent_id" %][xxx]
+    Flag, // !Deprecated[xxx]
+    Modifier, // !{System IO}[func (a~type_a b ~int) ~type_r]
 
     TypeParam, // [Map :<String Object>]
     ContextParam, // get :(field1 field2)() { [field1 field2 +;] }
+
+    Definition, // :String aStr
 }
 
 
 enum SuffixType {
     Definition, // a ~{int}
-    Refinement, // a ~{A} ~<[where %A = [implements B]%]>
+    Complement, // a ^SSS ^[where %A = [implements B]%]
 }
 
 class PrefixItem {
@@ -40,6 +42,7 @@ class PrefixItem {
 }
 
 class PrefixContext {
+    public Definition = null;
     public Annotation = [];
     public Flags  = [];
     public Modifiers = [];
@@ -189,36 +192,49 @@ export class Parser {
         // this.Error();
     }
 
-    PrefixTokenType(char) : PrefixType {
-        if (char == SyntaxConfig.KnotAnnotationBeginStr) {
-            return PrefixType.Annotation;
-        } else if (char == SyntaxConfig.KnotModifierBeginStr) {
-            return PrefixType.Modifier;
-        } else if (char == SyntaxConfig.KnotTypeParamBeginStr) {
-            return PrefixType.TypeParam;
-        } else if (char == SyntaxConfig.KnotContextParamBeginStr) {
-            return PrefixType.ContextParam;
-        } else if (/^[_a-zA-Z=@\+\-\*\/]/.test(char)) {
-            return PrefixType.Flag;
-        } else {
-            this.Error('illegal prefix token type : `' + char + '`');
+    PrefixTokenType(prevTokenType: TokenType, char) : PrefixType {
+        if (this.currentToken.Type == SyntaxConfig.PrefixTypeToken) {
+            if (char == SyntaxConfig.KnotTypeParamBeginStr) {
+                return PrefixType.TypeParam;
+            }
+            return PrefixType.Definition;
         }
+
+        if (this.currentToken.Type == SyntaxConfig.PrefixToken) {
+            if (char == SyntaxConfig.KnotAnnotationBeginStr) {
+                return PrefixType.Annotation;
+            } else if (char == SyntaxConfig.KnotModifierBeginStr) {
+                return PrefixType.Modifier;
+            } else if (char == SyntaxConfig.KnotContextParamBeginStr) {
+                return PrefixType.ContextParam;
+            } else if (/^[_a-zA-Z=@\+\-\*\/]/.test(char)) {
+                return PrefixType.Flag;
+            }
+        }
+
+        this.Error('illegal prefix token type : `' + char + '`');
     }
 
     ParsePrefixItem(acceptPrefixes: PrefixType[]) : PrefixItem {
         this.lexer.SkipWhitespaces();
-        if (this.currentToken.Type != SyntaxConfig.PrefixToken) {
+        if (this.currentToken.Type != SyntaxConfig.PrefixTypeToken
+            && this.currentToken.Type != SyntaxConfig.PrefixToken    
+        ) {
             return null;
         }
 
         let charAfterPrefixToken = this.lexer.Peek(1, 0);
-        let prefixType : PrefixType = this.PrefixTokenType(charAfterPrefixToken);
+        let prefixType : PrefixType = this.PrefixTokenType(this.currentToken.Type, charAfterPrefixToken);
         if (!ArrayExt.Contains(acceptPrefixes, prefixType)) {
             return null;
         }
 
-        this.Consume(SyntaxConfig.PrefixToken);
-        if (this.currentToken.Type === SyntaxConfig.KnotContextParamBeginToken) {
+        this.Consume(this.currentToken.Type);
+        if (prefixType === PrefixType.Definition) {
+            let itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
+            return new PrefixItem(PrefixType.Definition, itemVal);
+        }
+        else if (this.currentToken.Type === SyntaxConfig.KnotContextParamBeginToken) {
             let itemVal = this.KnVectorInner(
                 SyntaxConfig.KnotContextParamBeginToken, SyntaxConfig.KnotContextParamEndToken);
             return new PrefixItem(PrefixType.ContextParam, itemVal);
@@ -247,35 +263,41 @@ export class Parser {
     }
 
     ParseSuffixItem() : SuffixItem {
-        this.Consume(SyntaxConfig.SuffixToken);
-        if (this.currentToken.Type === TokenType.LowerThan) {
-            let itemVal = this.KnVectorInner(TokenType.LowerThan, TokenType.BiggerThan);
-            return new SuffixItem(SuffixType.Refinement, itemVal);
+        let suffixItemType = SuffixType.Definition;
+        if (this.currentToken.Type === SyntaxConfig.SuffixComplementToken) {
+            suffixItemType = SuffixType.Complement;
         }
-        else {
-            let itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
-            return new SuffixItem(SuffixType.Definition, itemVal);
+        else if (this.currentToken.Type === SyntaxConfig.SuffixTypeToken) {
+            suffixItemType = SuffixType.Definition;
         }
-        return null;
+        this.Consume(this.currentToken.Type);
+        let itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
+        return new SuffixItem(suffixItemType, itemVal);
     }
 
     ParsePrefixContext(acceptPrefixes: PrefixType[]) : PrefixContext {
         let typeVars = [];
         let flags  = [];
-        let annotatiosn = [];
+        let annotations = [];
+        let definition = null;
 
         let genericParams = [];
         let contextParams = [];
         
         
-        while (this.currentToken.Type === SyntaxConfig.PrefixToken) {
+        while (this.currentToken.Type === SyntaxConfig.PrefixToken
+            || this.currentToken.Type === SyntaxConfig.PrefixTypeToken
+            ) {
             let prefix = this.ParsePrefixItem(acceptPrefixes);
             if (prefix == null) {
                 break;
             }
             switch (prefix.Type) {
+                case PrefixType.Definition:
+                    definition = prefix.Value;
+                    break;
                 case PrefixType.Annotation:
-                    annotatiosn.push(prefix.Value);
+                    annotations.push(prefix.Value);
                     break;
                 case PrefixType.Flag:
                     flags.push(prefix.Value);
@@ -292,9 +314,10 @@ export class Parser {
             }
         }
         let result = new PrefixContext();
+        result.Definition = definition;
         result.Modifiers = typeVars;
         result.Flags = flags;
-        result.Annotation = annotatiosn;
+        result.Annotation = annotations;
         result.TypeParams = genericParams;
         result.ContextParams = contextParams;
         return result;
@@ -302,9 +325,11 @@ export class Parser {
 
     ParseSuffixContext() : SuffixContext {
         let definition = null;
-        let refinements  = null;
+        let complements  = [];
         
-        while (this.currentToken.Type === SyntaxConfig.SuffixToken) {
+        while (this.currentToken.Type === SyntaxConfig.SuffixTypeToken
+            || this.currentToken.Type === SyntaxConfig.SuffixComplementToken
+        ) {
             let suffix = this.ParseSuffixItem();
             if (suffix == null) {
                 break;
@@ -313,14 +338,14 @@ export class Parser {
                 case SuffixType.Definition:
                     definition = suffix.Value;
                     break;
-                case SuffixType.Refinement:
-                    refinements = suffix.Value;
+                case SuffixType.Complement:
+                    complements.push(suffix.Value);
                     break;
             }
         }
         let result = new SuffixContext();
         result.Definition = definition;
-        result.Complements = refinements;
+        result.Complements = complements;
         return result;
     }
 
@@ -330,6 +355,12 @@ export class Parser {
         let valueType = NodeHelper.GetType(value);
         if (valueType !== KnNodeType.KnWord && valueType !== KnNodeType.KnKnot) {
             return value;
+        }
+        if (prefixContext.Definition != null) {
+            value.Definition = prefixContext.Definition;
+        }
+        if (prefixContext.ContextParams.length > 0) {
+            value.ContextParams = prefixContext.ContextParams;
         }
         if (prefixContext.Flags.length > 0) {
             value.Flags = prefixContext.Flags;
@@ -344,7 +375,7 @@ export class Parser {
     }
 
     String() {
-        const str = this.currentToken.Value.slice(1, -1);
+        const str = this.currentToken.Value;
         this.Consume(TokenType.String);
         return str;
     }
@@ -357,6 +388,9 @@ export class Parser {
             let suffixContext = this.ParseSuffixContext();
             if (suffixContext.Definition != null) {
                 word.Definition = suffixContext.Definition;
+            }
+            if (suffixContext.Complements != null) {
+                word.Complements = suffixContext.Complements;
             }
         }
         return word;
@@ -440,7 +474,7 @@ export class Parser {
             this.Consume(TokenType.Word);
             return str;
         } else {
-            this.Error();
+            this.Error(`parse key error, line ${this.currentToken.Line}, column ${this.currentToken.Column}`);
         }
     }
 
@@ -521,9 +555,13 @@ export class Parser {
             }
 
             let charAfterPrefixToken = this.lexer.Peek(1, 0);
-            if (this.currentToken.Type === SyntaxConfig.PrefixToken
-                && (charAfterPrefixToken == SyntaxConfig.KnotTypeParamBeginStr
-                    || charAfterPrefixToken == SyntaxConfig.KnotContextParamBeginStr)
+            if ((this.currentToken.Type === SyntaxConfig.PrefixToken
+                    && charAfterPrefixToken == SyntaxConfig.KnotContextParamBeginStr
+                )
+                ||
+                (this.currentToken.Type === SyntaxConfig.PrefixTypeToken
+                    && charAfterPrefixToken == SyntaxConfig.KnotTypeParamBeginStr
+                )
                 ) {
                 // set inner prefix
                 let prefixContextInSegment = this.ParsePrefixContext(Parser.KNOT_INNER_PREFIX_TYPES);
@@ -551,18 +589,20 @@ export class Parser {
                 top.Param = this.KnVectorInner(SyntaxConfig.KnotParamBeginToken, SyntaxConfig.KnotParamEndToken);
             }
             
-            else if (this.currentToken.Type === SyntaxConfig.SuffixToken) {
+            else if (this.currentToken.Type === SyntaxConfig.SuffixTypeToken
+                || this.currentToken.Type === SyntaxConfig.SuffixComplementToken
+            ) {
                 let suffixContext = this.ParseSuffixContext();
-                // if (suffixContext.Definition != null) {
-                //     if (!this.KnotAcceptDefinition(top)
-                //     ) {
-                //         top = new KnKnot({});
-                //         nodes.push(top);
-                //     }
-                //     top.Definition = suffixContext.Definition;
-                // }
+                if (suffixContext.Definition != null) {
+                    if (!this.KnotAcceptDefinition(top)
+                    ) {
+                        top = new KnKnot({});
+                        nodes.push(top);
+                    }
+                    top.Definition = suffixContext.Definition;
+                }
                 if (suffixContext.Complements != null) {
-                    if (!this.KnotAcceptRefinements(top)
+                    if (!this.KnotAcceptComplements(top)
                     ) {
                         top = new KnKnot({});
                         nodes.push(top);
@@ -613,16 +653,16 @@ export class Parser {
         return this.KnotAcceptParam(knot);
     }
 
-    KnotAcceptParam(knot) {
+    KnotAcceptParam(knot: KnKnot) {
         return (knot.Param == null) && this.KnotAcceptDefinition(knot);
     }
 
-    KnotAcceptDefinition(knot) {
-        return (knot.Definition == null) && this.KnotAcceptRefinements(knot);
+    KnotAcceptDefinition(knot: KnKnot) {
+        return (knot.Definition == null) && this.KnotAcceptComplements(knot);
     }
 
-    KnotAcceptRefinements(knot) {
-        return (knot.Refinements == null) && this.KnotAcceptAttr(knot);
+    KnotAcceptComplements(knot: KnKnot) {
+        return (knot.Complements == null) && this.KnotAcceptAttr(knot);
     }
 
     KnotAcceptAttr(knot : KnKnot) {

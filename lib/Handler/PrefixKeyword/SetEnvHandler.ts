@@ -1,12 +1,12 @@
 import { KnOpCode } from "../../KnOpCode";
 import { Instruction } from "../../StateManagement/InstructionStack";
 import { KnState } from "../../KnState";
+import { KnWord } from "../../Model";
 
 export class SetEnvHandler {
   public static ExpandSetEnv(knState: KnState, nodeToRun: any) {
-    
-    let varName = nodeToRun.Next.Core.Value;
-    let varExpr = nodeToRun.Next.Next.Core;
+    let varName = (nodeToRun.Core as KnWord).Definition.Value;
+    let varExpr = nodeToRun.Next.Core;
     knState.OpBatchStart();
     knState.AddOp(KnOpCode.ValStack_PushFrame);
     knState.AddOp(KnOpCode.Node_RunNode, varExpr);

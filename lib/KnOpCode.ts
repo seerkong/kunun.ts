@@ -8,6 +8,7 @@ export enum KnOpCode {
     ValStack_PushValue = 'ValStack_PushValue',
     ValStack_PopValue = 'ValStack_PopValue',
     ValStack_Duplicate = 'ValStack_Duplicate',
+    ValStack_IsTopValTrue = 'ValStack_IsTopValTrue',
 
     // 新增调用流程的环境树节点
     Env_DiveProcessEnv = 'Env_DiveProcessEnv',
@@ -31,6 +32,8 @@ export enum KnOpCode {
     Ctrl_IterForEachLoop = 'Ctrl_IterForEachLoop',
     Ctrl_IterForLoop = 'Ctrl_IterForLoop',
     Ctrl_MakeContExcludeTopNInstruction = 'Ctrl_MakeContExcludeTopNInstruction',
+    Ctrl_JsCall = 'Ctrl_JsCall',
+    Ctrl_JsApply = 'Ctrl_JsApply',
 
     // 在runnable和suspend中间的一种状态，
     // 需要等待下一步命令（比如人的交互），但同时也是一种runnable的状态
@@ -61,4 +64,5 @@ export enum KnOpCode {
     Node_RunSetProperty = 'Node_RunSetProperty',
     Node_RunGetSubscript = 'Node_RunGetSubscript',
     Node_RunSetSubscript = 'Node_RunSetSubscript',
+    Node_RunMakeSubscript = 'Node_RunMakeSubscript',
 }

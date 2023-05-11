@@ -1,5 +1,5 @@
 import { Parser } from '../../lib/Converter/Parser';
-import { KnFormatter } from '../../lib/Formatter/KnFormatter';
+import { KnFormatter } from '../../lib/Converter/KnFormatter';
 import { TableHandler } from '../../lib/Handler/PrefixKeyword/TableHandler';
 // import { describe, it } from "mocha";
 import assert from "assert";

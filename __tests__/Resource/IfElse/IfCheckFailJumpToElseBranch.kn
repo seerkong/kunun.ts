@@ -1,11 +1,11 @@
 [do {
-    [var false_branch_visited false]
+    [var ~false_branch_visited false]
     [if
       [> (2 3)] {
         5
       }
       else {
-        [set false_branch_visited true]
+        [set ~false_branch_visited true]
       }
     ]
     false_branch_visited

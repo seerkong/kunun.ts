@@ -1,6 +1,6 @@
 [do {
-    [var c 3]
-    [var result
+    [var ~c 3]
+    [var ~result
       $(
         a = [1 2 +;]
         b = [3 4 +;]

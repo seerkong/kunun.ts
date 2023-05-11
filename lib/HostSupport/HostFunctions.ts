@@ -2,6 +2,7 @@ import { KnHostFunction } from '../Model/KnHostFunction';
 import { Env } from "../StateManagement/Env";
 import { IOFunctions } from "./IOFunctions";
 import { MathFunctions } from './MathFunctions';
+import { StringFunctions } from './StringFunctions';
 
 export class HostFunctions {
   public static Import(env : Env) {
@@ -16,6 +17,7 @@ export class HostFunctions {
     HostFunctions.Define(env, '<', MathFunctions.Lt);
     HostFunctions.Define(env, '<=', MathFunctions.Le);
 
+    HostFunctions.Define(env, 'append', StringFunctions.Append);
 
     HostFunctions.Define(env, 'console', console);
     HostFunctions.Define(env, 'clear_interval', function(intervalId) {

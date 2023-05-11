@@ -22,6 +22,10 @@ export class KnotExprHandler {
   public static HandleIterEvalKnotClause(knState: KnState, opContState: Instruction) {
     let knot : KnKnot = opContState.Memo;
     let core = knot.Core;
+    let nextKnotClause = null;
+    if (knot.Next != null) {
+      nextKnotClause = knot.Next;
+    }
 
     knState.OpBatchStart();
     if (core == null) {
@@ -44,7 +48,12 @@ export class KnotExprHandler {
     ) {
       let keyWordStr = core.Value;
       let instructionExpander = ExtensionRegistry.GetInfixKeywordExpander(keyWordStr);
-      instructionExpander.apply(null, [knState, knot]);
+      let infixKnotCount = instructionExpander.apply(null, [knState, knot]);
+      let iter = nextKnotClause;
+      for (let i = 1; i < infixKnotCount; i++) {
+        iter = iter.Next;
+      }
+      nextKnotClause = iter;
     }
     else {
       knState.AddOp(KnOpCode.Node_RunNode, core);
@@ -66,8 +75,8 @@ export class KnotExprHandler {
 
     }
 
-    if (knot.Next != null) {
-      knState.AddOp(KnOpCode.Node_IterEvalKnotClause, knot.Next);
+    if (nextKnotClause != null) {
+      knState.AddOp(KnOpCode.Node_IterEvalKnotClause, nextKnotClause);
     }
 
 

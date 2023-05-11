@@ -5,6 +5,7 @@ import { NodeHelper } from "../../Util/NodeHelper";
 import { KnOpCode } from "../../KnOpCode";
 import { Instruction } from "../../StateManagement/InstructionStack";
 import { KnState } from "../../KnState";
+import { KnSubscript } from "../../Model";
 
 export class SubscriptHandler {
   public static ExpandGetSubscript(knState: KnState, nodeToRun: any) {
@@ -34,7 +35,12 @@ export class SubscriptHandler {
       }
     }
     else if (subscriptTargetType !== KnNodeType.KnTable) {
-      let prop = subscriptTarget[subscriptOperand];
+      let prop = null;
+      // if (Object.prototype.toString.call(subscriptTarget) === '[object Proxy]') {
+      //   prop = subscriptTarget['[[Target]]'][subscriptOperand];
+      // } else {
+        prop = subscriptTarget[subscriptOperand];
+      // }
       knState.GetCurrentFiber().OperandStack.PushValue(prop);
     }
     
@@ -60,7 +66,18 @@ export class SubscriptHandler {
       }
     }
     else if (assignTargetType !== KnNodeType.KnTable) {
-      assignTarget[subscriptOperand] = assignValue;
+      // if (Object.prototype.toString.call(assignTarget) === '[object Proxy]') {
+      //   assignTarget['[[Target]]'][subscriptOperand] = assignValue;
+      // } else {
+        assignTarget[subscriptOperand] = assignValue;
+      // }
     }
+  }
+
+  public static RunMakeSubscript(knState: KnState, opContState : Instruction) {
+    let topVal = knState.GetCurrentFiber().OperandStack.PopValue();
+    knState.OpBatchStart();
+    knState.AddOp(KnOpCode.ValStack_PushValue, new KnSubscript(topVal));
+    knState.OpBatchCommit();
   }
 }

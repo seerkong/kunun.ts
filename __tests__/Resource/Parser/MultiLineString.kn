@@ -1,0 +1,12 @@
+(
+DisplayName =
+  "asdf"
+NodeType =
+  "Expr"
+Conf =
+  "[[func () {\n        [Writeln (\"Before return\")]\n        [return (1)]\n        [Writeln (\"After return\")]\n        2\n      }\n    ] ()]"
+AssignTo =
+  "sdfa"
+IsLeaf =
+  true
+)

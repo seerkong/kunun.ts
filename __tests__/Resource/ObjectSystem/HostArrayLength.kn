@@ -1,12 +1,12 @@
 [do {
-    [var a
+    [var ~a
       ${
         1
         2
         3
       }
     ]
-    [var i 1]
+    [var ~i 1]
     [++ i]
     [i
       [a .length]

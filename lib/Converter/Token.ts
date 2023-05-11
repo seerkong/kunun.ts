@@ -8,6 +8,7 @@ export enum TokenType {
     BeginParenthese, // (
     EndParenthese,   // )
     Tilde,      // ~
+    UpArrow,      // ^
     QuestionMark,  // ?
     ExclamationMark, // !
     Percent,    // %
@@ -39,16 +40,20 @@ export enum TokenType {
 export class Token {
     public Type : TokenType;
     public Value;
-    constructor(type, value) {
+    public Line: number;
+    public Column : number;
+    constructor(type, value, line = 1, column = 0) {
         this.Type = type;
         this.Value = value;
+        this.Line = line;
+        this.Column = column;
     }
 
     static get Types() {
         return TokenType;
     }
 
-    static Create(type, value = null) {
-        return new this(type, value);
+    static Create(type, value = null, line = 1, column = 0) {
+        return new this(type, value, line, column);
     }
 }

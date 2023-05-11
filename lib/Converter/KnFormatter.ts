@@ -59,7 +59,7 @@ export class KnFormatter {
       return KnFormatter.UnquoteExpandToString(node, formatState);
     }
     else if (knType === KnNodeType.KnString) {
-      return `"${node.toString()}"`;
+      return JSON.stringify(node);
     }
     else if (knType === KnNodeType.KnNumber) {
       return node.toString();
@@ -99,7 +99,7 @@ export class KnFormatter {
     let flagStr = "";
     let modifiersStr = "";
     let defStr = "";
-    let complementStr = "";
+    let complementsStr = "";
     if (node.Annotations != null && node.Annotations.length > 0) {
       let prefixes = []
       for (let i = 0; i < node.Annotations.length; i++) {
@@ -130,7 +130,7 @@ export class KnFormatter {
           (formatState.IndentLevel),
           FormatConfig.SingleLineConfig,
         ),
-        `:{`, `}`);
+        `${SyntaxConfig.PrefixStr}{`, `}`);
     }
     if (node.Definition != null) {
       defStr += " ~";
@@ -142,7 +142,22 @@ export class KnFormatter {
         )
       );
     }
-    return `${annotationStr}${flagStr}${modifiersStr}${prefix}${node.Value}${defStr}${complementStr}`;
+    if (node.Complements != null && node.Complements.length > 0) {
+      let complementStrList = []
+      for (let i = 0; i < node.Complements.length; i++) {
+        let complementItemStr = KnFormatter.NodeToString(
+          node.Complements[i],
+          new FormatState(
+            (formatState.IndentLevel + 1),
+            FormatConfig.SingleLineConfig,
+          )
+        );
+        complementStrList.push(SyntaxConfig.SuffixComplementStr + complementItemStr);
+      }
+      complementsStr = StringExt.Join(complementStrList, " ");
+      complementsStr = ` ${complementsStr}`;
+    }
+    return `${annotationStr}${flagStr}${modifiersStr}${prefix}${node.Value}${defStr}${complementsStr}`;
   }
 
   public static SubscriptToString(node, formatState) {
@@ -345,7 +360,7 @@ export class KnFormatter {
           (formatState.IndentLevel + 1),
           FormatConfig.SingleLineConfig,
         ),
-        `\n${containerIndent}:{`, `}\n`);
+        `\n${containerIndent}${SyntaxConfig.PrefixStr}{`, `}\n`);
     }
     let inner = "";
 
@@ -376,7 +391,7 @@ export class KnFormatter {
       let currentNode = iter as KnKnot;
       let segmentStr = KnFormatter.KnotFormatSegment(currentNode, formatState);
       sb += segmentStr;
-      if (currentNode.HasNext()) {
+      if (KnKnot.HasNext(currentNode)) {
         let isSegmentStrHasNewline = segmentStr.indexOf("\n") > 0;
         if (isSegmentStrHasNewline) {
           sb += `\n${innerIndent}`;
@@ -400,10 +415,10 @@ export class KnFormatter {
     if (node.Core != null) {
       let coreType = NodeHelper.GetType(node.Core);
       if (coreType == KnNodeType.KnMap || coreType == KnNodeType.KnVector 
-        || coreType == KnNodeType.KnKnot) {
+        || (coreType == KnNodeType.KnKnot && (node.Core as KnKnot).IsData === true)) {
         sb += "$";
       }
-      let isCoreSingleLine = node.IsCoreSingleLine();
+      let isCoreSingleLine = KnKnot.IsCoreSingleLine(node);
       let formatCoreConfig = isCoreSingleLine ? FormatConfig.SingleLineConfig : FormatConfig.MultiLineConfig;
       let coreStr : string = KnFormatter.NodeToString(
         node.Core,
@@ -425,7 +440,7 @@ export class KnFormatter {
           (formatState.IndentLevel + 1),
           FormatConfig.SingleLineConfig,
         ),
-        `${SyntaxConfig.PrefixStr}${SyntaxConfig.KnotTypeParamBeginStr}`,
+        `${SyntaxConfig.PrefixTypeStr}${SyntaxConfig.KnotTypeParamBeginStr}`,
         `${SyntaxConfig.KnotTypeParamEndStr}`);
       sb += paramStr;
     }
@@ -463,15 +478,31 @@ export class KnFormatter {
       sb += paramStr;
     }
 
-    if (node.Complements != null && node.Complements.length > 0) {
-      let complementsStr = KnFormatter.VectorToStringCustom(
-        node.Complements,
+    if (node.Definition != null) {
+      let definitionStr = KnFormatter.NodeToString(
+        node.Definition,
         new FormatState(
-          (formatState.IndentLevel + 1),
-          formatState.Config,
-        ),
-        `\n${innerIndent}~<`, `>`);
-        sb += complementsStr;
+          (formatState.IndentLevel),
+          FormatConfig.SingleLineConfig,
+        )
+      );
+      sb += ` ~${definitionStr}`;
+    }
+
+    if (node.Complements != null && node.Complements.length > 0) {
+      let complementStrList = []
+      for (let i = 0; i < node.Complements.length; i++) {
+        let complementItemStr = KnFormatter.NodeToString(
+          node.Complements[i],
+          new FormatState(
+            (formatState.IndentLevel + 1),
+            FormatConfig.SingleLineConfig,
+          )
+        );
+        complementStrList.push(SyntaxConfig.SuffixComplementStr + complementItemStr);
+      }
+      let complementsStr = StringExt.Join(complementStrList, " ");
+      sb += ` ${complementsStr}`;
     }
 
     if (node.Attr != null) {

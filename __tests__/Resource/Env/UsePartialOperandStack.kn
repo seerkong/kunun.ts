@@ -1,7 +1,5 @@
 [main {
-    [var a
-      [1 2 save_operands]
-    ]
+    [var ~a [1 2 save_operands]]
     [..a +;]
   }
 ]

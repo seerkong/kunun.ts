@@ -1,0 +1,7 @@
+[main {
+    [var ~a 0]
+    [var ~b 0]
+    [5 set_to ~ a set_to ~ b def_to ~ c def_to ~ d]
+    [a b +; c +; d +;]
+  }
+]

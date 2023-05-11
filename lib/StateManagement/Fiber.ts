@@ -30,6 +30,17 @@ export class Fiber {
     Fiber.nextId += 1;
   }
 
+  public Copy() : Fiber {
+    let r = new Fiber();
+    // TODO 保持复制后上级fiber id的正确性
+    r.state = this.GetState();
+    r.CurrentEnvId = this.CurrentEnvId;
+    r.OperandStack = this.OperandStack.Copy();
+    r.InstructionStack = this.InstructionStack.Copy();
+    r.CurrentNodeCursor = this.CurrentNodeCursor;
+    return r;
+  }
+
   public static CreateRootFiber(): Fiber {
     let fiber = new Fiber();
     fiber.state = FiberState.Running;

@@ -15,7 +15,7 @@ export interface IKnKnot {
   ContextParam?: any[];
   Param?: any[];
 
-  // Definition?: any;
+  Definition?: any;
   Complements?: any[];
 
   Attr?: any;
@@ -42,7 +42,7 @@ export class KnKnot implements IKnKnot {
   public Param?: any[];
   
 
-  // public Definition?: any;
+  public Definition?: any[];
   public Complements?: any[];
 
   public Attr?: any;
@@ -53,7 +53,7 @@ export class KnKnot implements IKnKnot {
     this.Annotations = node.Annotations;
     this.Flags = node.Flags;
 
-    // this.Definition = node.Definition;
+    this.Definition = node.Definition;
     this.Complements = node.Complements;
 
     this.Core = node.Core;
@@ -78,13 +78,13 @@ export class KnKnot implements IKnKnot {
   }
 
 
-  public IsCoreSingleLine() : boolean {
-    if (this.Core == null) {
+  public static IsCoreSingleLine(knot : KnKnot) : boolean {
+    if (knot.Core == null) {
       return true;
     }
-    let coreType = NodeHelper.GetType(this.Core);
+    let coreType = NodeHelper.GetType(knot.Core);
     if (coreType == KnNodeType.KnWord) {
-      return (this.Core as KnWord).IsSingleLineWord();
+      return KnWord.IsSingleLineWord(knot.Core as KnWord);
     }
     if (coreType == KnNodeType.KnMap || coreType == KnNodeType.KnVector
       || coreType == KnNodeType.KnKnot || coreType == KnNodeType.KnCloseQuote
@@ -94,17 +94,17 @@ export class KnKnot implements IKnKnot {
     return true;
   }
 
-  public HasNext() : boolean {
-    return (this.Next != null);
+  public static HasNext(knot : KnKnot) : boolean {
+    return (knot.Next != null);
   }
 
-  public IsNextNodeSingleLine() {
-    let nextNode = this.Next as KnKnot;
-    let isNextNodeCoreSingleLine = nextNode.IsCoreSingleLine();
+  public static IsNextNodeSingleLine(knot : KnKnot) {
+    let nextNode = knot.Next as KnKnot;
+    let isNextNodeCoreSingleLine = KnKnot.IsCoreSingleLine(nextNode);
     return (isNextNodeCoreSingleLine)
       && nextNode.TypeParam == null && nextNode.ContextParam == null
       && nextNode.Param == null 
-      // && nextNode.Definition == null
+      && nextNode.Definition == null
       && nextNode.Complements == null && nextNode.Attr == null
       && nextNode.Block == null
   }

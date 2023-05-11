@@ -27,12 +27,12 @@
     ]
 
     [mixin M1 for A
-      [method i (a1 ~Int a2 ~Int) ~<Int> {
+      [method i (a1 ~Int a2 ~Int) ~(Int) {
 
         }
       ]
       [calc_prop j set (value) {
-          [set m value]
+          [set ~m value]
         }
         get () {
           m
@@ -41,11 +41,11 @@
     ]
 
     [extension for A
-      [method i (a1 ~Int a2 ~Int) ~<Int> {
+      [method i (a1 ~Int a2 ~Int) ~(Int) {
         }
       ]
       [property j set (value) {
-          [set m value]
+          [set ~m value]
         }
         get () {
           m
@@ -58,20 +58,20 @@
       m ~ Int =
         [field public]
       n =
-        [property :public set :{m}(value) {
-            [set m value]
+        [property !public set !(m)(value) {
+            [set ~m value]
           }
-          :public get {
+          !public get {
             m
           }
         ]
       o =
-        [property :public get :{m n} {
+        [property !public get !(m n) {
             [append (m n)]
           }
         ]
-      q ~ [method (Tree Int) ~<Int>] =
-        [method (tree ~Tree count ~Int) ~<Int>
+      q ~ [method (Tree Int) ~(Int)] =
+        [method (tree ~Tree count ~Int) ~(Int)
           {
             [* (5 count)]
           }
@@ -82,7 +82,7 @@
     # file partial1.kn
     [partial MyObj {
         [field m]
-        [method i (a1 ~Int a2 ~Int) ~<Int>
+        [method i (a1 ~Int a2 ~Int) ~(Int)
           {
           }
         ]
@@ -111,19 +111,19 @@
         [ctor (m n) {
           }
         ]
-        [field m :public set :private get]
-        [property :public set :{m}(value) {
-            [set m value]
+        [field m !public set !private get]
+        [property !public set !(m)(value) {
+            [set ~m value]
           }
-          :public get {
+          !public get {
             m
           }
         ]
-        [property :public get :{m n} {
+        [property !public get !(m n) {
           [append (m n)]
           }
         ]
-        [method (tree ~Tree count ~Int) ~<Int>
+        [method (tree ~Tree count ~Int) ~(Int)
           {
             [* (5 count)]
           }

@@ -32,6 +32,13 @@ import { SetIntervalHandler } from './Handler/PrefixKeyword/SetInterval';
 import { SaveOperandValuesHandler } from './Handler/InfixKeyword/SaveOperandValuesHandler';
 import { AwaitHostFuncHandler } from './Handler/PrefixKeyword/AwaitHostFuncHandler';
 import { KnKnot } from './Model';
+import { SetToHandler } from './Handler/InfixKeyword/SetToHandler';
+import { DefineToHandler } from './Handler/InfixKeyword/DefineToHandler';
+import { LogicalAndHandler } from './Handler/InfixKeyword/LogicalAndHandler';
+import { LogicalOrHandler } from './Handler/InfixKeyword/LogicalOrHandler';
+import { OptionalOrElseHandler } from './Handler/InfixKeyword/OptionalOrElseHandler';
+import { JsCallHandler } from './Handler/PrefixKeyword/JsCallHandler';
+import { JsApplyHandler } from './Handler/PrefixKeyword/JsApplyHandler';
 
 export class ExtensionRegistry {
   private static InstructionHandlerMap : {[ k : string] : (knState: KnState, opContState : Instruction) => void } = {
@@ -41,6 +48,7 @@ export class ExtensionRegistry {
     [KnOpCode.ValStack_Duplicate] : ValueStackHandler.RunDuplicate,
     [KnOpCode.ValStack_PopFrameAndPushTopVal] : ValueStackHandler.RunPopFrameAndPushTopVal,
     [KnOpCode.ValStack_PopFrameIgnoreResult] : ValueStackHandler.RunPopFrameIgnoreResult,
+    [KnOpCode.ValStack_IsTopValTrue] : ValueStackHandler.RunIsTopValTrue,
     
     [KnOpCode.Env_DiveProcessEnv] : EnvTreeHandler.RunDiveProcessEnv,
     [KnOpCode.Env_DiveLocalEnv] : EnvTreeHandler.RunDiveLocalEnv,
@@ -60,7 +68,9 @@ export class ExtensionRegistry {
     [KnOpCode.Ctrl_IterForEachLoop] : ForeachHandler.RunIterForeachLoop,
     [KnOpCode.Ctrl_IterForLoop] : ForLoopHandler.RunIterForLoop,
     [KnOpCode.Ctrl_MakeContExcludeTopNInstruction] : ContinuationHandler.RunMakeContExcludeTopNInstruction,
-    
+    [KnOpCode.Ctrl_JsCall] : JsCallHandler.RunJsCall,
+    [KnOpCode.Ctrl_JsApply] : JsApplyHandler.RunJsApply,
+
     [KnOpCode.Ctrl_CurrentFiberToIdle] : FiberScheduleHandler.RunCurrentFiberToIdle,
     [KnOpCode.Ctrl_CurrentFiberToSuspended] : FiberScheduleHandler.RunCurrentFiberToSuspended,
     [KnOpCode.Ctrl_AwakenMultiFibers] : FiberScheduleHandler.RunAwakenMultiFibers,
@@ -81,6 +91,7 @@ export class ExtensionRegistry {
     [KnOpCode.Node_RunSetProperty] : PropertyHandler.RunSetProperty,
     [KnOpCode.Node_RunGetSubscript] : SubscriptHandler.RunGetSubscript,
     [KnOpCode.Node_RunSetSubscript] : SubscriptHandler.RunSetSubscript,
+    [KnOpCode.Node_RunMakeSubscript] : SubscriptHandler.RunMakeSubscript,
     [KnOpCode.Node_MakeUnquote] : null,
   };
 
@@ -106,6 +117,8 @@ export class ExtensionRegistry {
     'foreach': ForeachHandler.ExpandForeach,
     'for': ForLoopHandler.ExpandForLoop,
     'table': TableHandler.ExpandDeclareTable,
+    'js_call': JsCallHandler.ExpandJsCall,
+    'js_apply': JsApplyHandler.ExpandJsApply,
     '++': SelfUpdate.SelfUpdate_PlusOne,
     '--': SelfUpdate.SelfUpdate_MinusOne,
     '+=': SelfUpdate.SelfUpdate_Add,
@@ -117,6 +130,11 @@ export class ExtensionRegistry {
   private static InfixKeyWordExpanderMap: { [key: string]: (knState: KnState, nodeToRun: any) => any } = {
     '=': ObjectAssignHandler.ExpandObjectAssign,
     'save_operands': SaveOperandValuesHandler.ExpandSaveStack,
+    'def_to': DefineToHandler.ExpandDefineTo,
+    'set_to': SetToHandler.ExpandSetTo,
+    'and': LogicalAndHandler.ExpandAnd,
+    'or': LogicalOrHandler.ExpandOr,
+    'or_else': OptionalOrElseHandler.ExpandOrElse,
   }
 
   public static GetInstructionHandler(name: string) : (knState: KnState, opContState : Instruction) => void {

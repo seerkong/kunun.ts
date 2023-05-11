@@ -4,12 +4,12 @@
         [field n = 1]
       }
       prop {
-        [field_prop :public m ~Int]
-        [field_prop :public n ~Int]
-        [calc_prop o ~Int :public set :(m)(self value) {
+        [field_prop !public m ~Int]
+        [field_prop !public n ~Int]
+        [calc_prop o ~Int !public set !(m)(self value) {
             [self @.m = value]
           }
-          :public get :(m n)(self) {
+          !public get !(m n)(self) {
             [+ ([self .m] [self .n])]
           }
         ]

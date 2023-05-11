@@ -16,11 +16,15 @@ export class SyntaxConfig {
   public static MapEndStr = ')';
   public static MapPairSeperatorStr = '=';
 
-  public static PrefixToken = TokenType.Colon;
-  public static PrefixStr = ':';
+  public static PrefixTypeToken = TokenType.Colon;
+  public static PrefixTypeStr = ':';
+  public static PrefixToken = TokenType.ExclamationMark;
+  public static PrefixStr = '!';
 
-  public static SuffixToken = TokenType.Tilde;
-  public static SuffixStr = '~';
+  public static SuffixTypeToken = TokenType.Tilde;
+  public static SuffixTypeStr = '~';
+  public static SuffixComplementToken = TokenType.UpArrow;
+  public static SuffixComplementStr = '^';
 
   public static KnotStartToken = TokenType.BeginBracket;
   public static KnotEndToken = TokenType.EndBracket;

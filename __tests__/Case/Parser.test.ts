@@ -1,4 +1,5 @@
 import { Parser } from '../../lib/Converter/Parser';
+import { KnFormatter } from '../../lib/Converter/KnFormatter';
 // import { describe, it } from "mocha";
 import assert from "assert";
 import fs from 'fs'
@@ -15,7 +16,7 @@ function parseFile(fileName: string) {
 describe("parser", function() {
   // describe("Number", function() {
   //   it("float Number", function() {
-  //     let v = Parser.parse("5.321");
+  //     let v = Parser.Parse("5.321");
   //     console.log(v)
   //     assert.equal(v, 5.321);
   //   });
@@ -23,10 +24,25 @@ describe("parser", function() {
 
   // describe("Word", function() {
   //   it("Word", function() {
-  //     let v = Parser.parse(" [a] ");
+  //     let v = Parser.Parse(" [a] ");
   //     console.log(v)
   //   });
   // });
+
+  describe("Prefix", function() {
+    it("WordWithPrefix", function() {
+      let v = Parser.Parse("!public m");
+      console.log(v)
+    });
+  });
+
+  describe("MultiLineString", function() {
+    it("MultiLineString", function() {
+      let ast = parseFile('Parser/MultiLineString.kn');
+      let formatedCode = KnFormatter.Stringify(ast)
+      console.log("exec kunun code:\n", formatedCode);
+    });
+  });
 
   describe("knot", function() {
     it("arr_Words", function() {

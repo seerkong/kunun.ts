@@ -1,0 +1,6 @@
+[main {
+    [var ~a 5]
+    [6 set_to ~a]
+    a
+  }
+]

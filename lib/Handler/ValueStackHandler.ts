@@ -28,4 +28,14 @@ export class ValueStackHandler {
   public static RunPopFrameIgnoreResult(knState: KnState, opContState : Instruction) {
     knState.GetCurrentFiber().OperandStack.PopFrameAllValues();
   }
+
+  public static RunIsTopValTrue(knState: KnState, opContState : Instruction) {
+    let lastVal = knState.GetCurrentFiber().OperandStack.PopValue();
+    if (lastVal) {
+      knState.GetCurrentFiber().OperandStack.PushValue(true);
+    }
+    else {
+      knState.GetCurrentFiber().OperandStack.PushValue(false);
+    }
+  }
 }

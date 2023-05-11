@@ -4,8 +4,8 @@
         [field n = 1]
       }
       prop {
-        [field_prop :public m ~Int]
-        [field_prop :public n ~Int]
+        [field_prop !public m ~Int]
+        [field_prop !public n ~Int]
       }
     ]
     val

@@ -34,6 +34,14 @@ export class KnState {
     this.ResetFiberMgr();
   }
 
+  public Copy() : KnState {
+    let r = new KnState();
+    r.EnvTree = this.EnvTree;
+    r.FiberMgr = this.FiberMgr.Copy();
+    r.ExecHistory = [];
+    return r;
+  }
+
   // current active fiber state start
   public get CurrentEnvId(): number {
     let curFiber = this.GetCurrentFiber();

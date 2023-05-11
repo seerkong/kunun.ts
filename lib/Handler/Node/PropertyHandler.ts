@@ -22,7 +22,13 @@ export class PropertyHandler {
       TableHandler.ExpandTablePropertyByKey(knState, stackTopVal, key);
     }
     else {
-      let prop = stackTopVal[key];
+      let prop = null;
+      // TODO 处理对 Proxy 对象 的方法调用 比如 aPropObj.push(1)
+      // if (Object.prototype.toString.call(stackTopVal) === '[object Proxy]') {
+      //   prop = stackTopVal['[[Target]]'][key];
+      // } else {
+        prop = stackTopVal[key];
+      // }
       knState.GetCurrentFiber().OperandStack.PushValue(prop);
     }
   }
@@ -40,7 +46,11 @@ export class PropertyHandler {
       TableHandler.SetTablePropertyByKey(knState, assignTarget, key, assignValue);
     }
     else {
-      assignTarget[key] = assignValue;
+      // if (Object.prototype.toString.call(assignTarget) === '[object Proxy]') {
+      //   assignTarget['[[Target]]'][key] = assignValue;
+      // } else {
+        assignTarget[key] = assignValue;
+      // }
     }
   }
 }

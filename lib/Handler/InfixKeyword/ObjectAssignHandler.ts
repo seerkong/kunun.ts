@@ -9,7 +9,7 @@ import { KnState } from "../../KnState";
 import { NodeHelper } from "../../Util/NodeHelper";
 
 export class ObjectAssignHandler {
-  public static ExpandObjectAssign(knState: KnState, nodeToRun: any) {
+  public static ExpandObjectAssign(knState: KnState, nodeToRun: any) : number {
     let assignToValExpr = nodeToRun.Next.Core;
     let indexExpr = knState.GetCurrentFiber().OperandStack.PopValue();
     
@@ -49,6 +49,8 @@ export class ObjectAssignHandler {
     }    
 
     knState.OpBatchCommit();
+
+    return 2;
   }
 
 }
