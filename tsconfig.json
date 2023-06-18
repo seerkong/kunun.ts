@@ -13,11 +13,11 @@
         "noImplicitAny": false,
         "removeComments": true,
         "preserveConstEnums": true,
+        "ignoreDeprecations": "5.0",
         "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,
         "resolveJsonModule": true,
         "esModuleInterop": true,
-        
         "target": "esnext",
         // "module": "esnext",
         "module": "commonjs",
