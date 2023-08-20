@@ -1,5 +1,5 @@
 [do {
-    [var ~result
+    [var result
       [set_timeout
         [func () {
             [Writeln ("in set timeout fiber handler func")]

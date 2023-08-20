@@ -32,7 +32,7 @@ export enum TokenType {
     Undefined,
 
     Property,            // .
-    UnquoteSplicing,             // ..
+    UnquoteExpand,             // ..
     // EllipsisDots,                // ...
     Subscript,          // .:
 }

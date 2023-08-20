@@ -3,13 +3,13 @@ import { Instruction } from "../../StateManagement/InstructionStack";
 import { KnState } from "../../KnState";
 import { KnWord } from "../../Model";
 
-// [var ~a 5]
+// [var a 5]
 export class DeclareVarHandler {
   public static ExpandDeclareVar(knState: KnState, nodeToRun: any) {
-    let varName = (nodeToRun.Core as KnWord).Definition.Value;
+    let varName = (nodeToRun.Next.Core as KnWord).Value;
     let varExpr = null;
-    if (nodeToRun.Next != null) {
-      varExpr = nodeToRun.Next.Core;
+    if (nodeToRun.Next.Next != null) {
+      varExpr = nodeToRun.Next.Next.Core;
     }
     
     

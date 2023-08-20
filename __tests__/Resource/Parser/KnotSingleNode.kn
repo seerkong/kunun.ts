@@ -1,17 +1,20 @@
-!{System IO}
-![a (1 2)]
-!Deprecated
-[
-  !public a
-  :<T M> !(1 2) (1 2) ~String
-  ^[where %T = a M = b%]
-  %
-  a =
-    1
-  b =
-    2
-  % {
-    [add ;]
+
+!{System Core}
+![m]
+![n]
+!TM !TN
+!%
+TM = x
+TN = y
+%
+!(
+    [this %x y%]
+    [env %i j%]
+    Effect1
+)
+:[fn (a b) ~<b a>]
+[func !public abc ^m ^n :<TM TN> (a ~TM b ~TN) ~<TN TM> ^x ^y %a = 1 b =2% {
+    [add;]
   }
   a {
   }

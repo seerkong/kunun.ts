@@ -34,7 +34,7 @@ describe("Interop", function() {
       let env : Env = ksState.GetCurEnv();
       env.Define("console", console);
 
-      let code1 = Parser.Parse('[var ~a 5]');
+      let code1 = Parser.Parse('[var a 5]');
       let r1 = await Interpreter.ExecWithStateAsync(ksState, code1);
       assert.equal(r1, 5);
 

@@ -22,7 +22,7 @@ describe("InfixMacro", function () {
     });
 
     it("or_else_append", async function () {
-      let code = '[do { [var ~ model $(text ="abc")] ["input:" model.text or_else "" append;] }]';
+      let code = '[do { [var  model $(text ="abc")] ["input:" model.text or_else "" append;] }]';
       let r = Interpreter.EvalSync(code);
       assert.equal(r, "input:abc");
     });

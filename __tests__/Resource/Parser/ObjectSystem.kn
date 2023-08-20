@@ -32,7 +32,7 @@
         }
       ]
       [calc_prop j set (value) {
-          [set ~m value]
+          [set m value]
         }
         get () {
           m
@@ -45,7 +45,7 @@
         }
       ]
       [property j set (value) {
-          [set ~m value]
+          [set m value]
         }
         get () {
           m
@@ -59,7 +59,7 @@
         [field public]
       n =
         [property !public set !(m)(value) {
-            [set ~m value]
+            [set m value]
           }
           !public get {
             m
@@ -113,7 +113,7 @@
         ]
         [field m !public set !private get]
         [property !public set !(m)(value) {
-            [set ~m value]
+            [set m value]
           }
           !public get {
             m

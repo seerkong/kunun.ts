@@ -1,5 +1,5 @@
 [do {
-    [var ~ b 0]
+    [var  b 0]
     [foreach x in
       ${
         1
@@ -7,7 +7,7 @@
         3
       } {
         [Writeln (x)]
-        [set ~b x]
+        [set b x]
       }
     ]
     b

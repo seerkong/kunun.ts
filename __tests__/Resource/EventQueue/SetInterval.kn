@@ -1,5 +1,5 @@
 [do {
-    [var ~setIntervalResult
+    [var setIntervalResult
       [set_interval
         [func () {
             [Writeln ("in set interval fiber handler func")]
@@ -10,7 +10,7 @@
     ]
     [Writeln ("after set interval, setIntervalResult:")]
     [Writeln (setIntervalResult)]
-    [var ~result
+    [var result
       [set_timeout
         [func () {
             [Writeln ("in set timeout fiber handler func")]

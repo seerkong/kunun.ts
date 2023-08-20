@@ -58,25 +58,25 @@ describe("HostFunc", function () {
     });
 
     it("str_length_3", async function () {
-      let code = '[do { [var ~ model $(text ="abcde")] [model.text.length] }]';
+      let code = '[do { [var  model $(text ="abcde")] [model.text.length] }]';
       let r = Interpreter.EvalSync(code);
       assert.equal(r, 5);
     });
 
     it("str_length_4", async function () {
-      let code = '[do { [var ~ model $(text ="abcde")] [[model.text] and [model.text.length 5 ==;] ] }]';
+      let code = '[do { [var  model $(text ="abcde")] [[model.text] and [model.text.length 5 ==;] ] }]';
       let r = Interpreter.EvalSync(code);
       assert.equal(r, true);
     });
 
     it("str_length_5", async function () {
-      let code = '[do { [var ~ model $(text ="abcd")] [[model.text] and [model.text.length 5 ==;] ] }]';
+      let code = '[do { [var  model $(text ="abcd")] [[model.text] and [model.text.length 5 ==;] ] }]';
       let r = Interpreter.EvalSync(code);
       assert.equal(r, false);
     });
 
     it("str_length_6", async function () {
-      let code = '[do { [var ~ model $(text1 ="abcde")] [[model.text] and [model.text.length 5 ==;] ] }]';
+      let code = '[do { [var  model $(text1 ="abcde")] [[model.text] and [model.text.length 5 ==;] ] }]';
       let r = Interpreter.EvalSync(code);
       assert.equal(r, false);
     });

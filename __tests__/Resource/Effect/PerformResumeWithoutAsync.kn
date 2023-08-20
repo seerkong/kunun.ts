@@ -1,41 +1,41 @@
 [do {
-    [func Run (val1 val2) {
+    [func ~Run (val1 val2) {
         [Writeln ("run perform start")]
-        [var ~result
+        [var result
           [perform $add (val1 val2)]
         ]
         [Writeln ("after perform add")]
         result
       }
     ]
-    [func Run2 (val1 val2) {
+    [func ~Run2 (val1 val2) {
         [Writeln ("run perform start")]
-        [var ~temp
+        [var temp
           [perform add (val1 val2)]
         ]
         [Writeln ("after perform add")]
-        [var ~result
+        [var result
           [perform multi (temp 2)]
         ]
         [Writeln ("after perform multi")]
         result
       }
     ]
-    [func AddHandler (resume v1 v2) {
+    [func ~AddHandler (resume v1 v2) {
         [Writeln ("before resume add (v1 v2)")]
         [resume ([v1 v2 +;])]
         [Writeln ("should not go here")]
       }
     ]
-    [func MultiHandler (resume v1 v2) {
+    [func ~MultiHandler (resume v1 v2) {
         [Writeln ("before resume multi (v1 v2)")]
         [resume ([v1 v2 *;])]
         [Writeln ("should not go here")]
       }
     ]
-    [var ~result]
+    [var result]
     [try {
-        [set ~result
+        [set result
           [Run2 (1 2)]
         ]
       }

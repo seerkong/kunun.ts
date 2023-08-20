@@ -236,7 +236,7 @@ export class Lexer {
                         return Token.Create(TokenType.Word, '...', currentLine, currentColumn);
                     }
                     else {
-                        return Token.Create(TokenType.UnquoteSplicing, '..', currentLine, currentColumn);
+                        return Token.Create(TokenType.UnquoteExpand, '..', currentLine, currentColumn);
                     }
                 }
                 else {

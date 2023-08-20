@@ -1,9 +1,9 @@
 [do {
-    [func add4args (a b c d) {
-        [var ~x
+    [func ~add4args (a b c d) {
+        [var x
           [+ (a b)]
         ]
-        [var ~y
+        [var y
           [+ (c d)]
         ]
         [+ (x y)]

@@ -3,46 +3,59 @@ import { NodeHelper } from "../Util/NodeHelper";
 import { KnWord } from "./KnWord";
 
 export interface IKnKnot {
+
   // 仅作用于最外层
+  IsData?: boolean;
+  Modifiers?: any[];
   Annotations?: any[];
   Flags?: any[];
-  Modifiers?: any[];
-
-  Core?: any;
-  SegmentStop?: boolean;
-
-  TypeParam?: any[];
+  TypeWhere?: any[];
   ContextParam?: any[];
+  Definition?: any[];
+  
+  
+    
+    
+  // 仅作用于内层
+  Core?: any;
+  TypeParam?: any[];
   Param?: any[];
-
-  Definition?: any;
+  SegmentStop?: boolean;
+  
+  TypeResult?: any[];
+  
+    
   Complements?: any[];
-
+  
   Attr?: any;
   Block?: any[];
-
   Next?: KnKnot;
+
 }
 
 export class KnKnot implements IKnKnot {
   public _Type = KnNodeType.KnKnot;
   // 仅作用于最外层
   public IsData: boolean = false;
+  public Modifiers?: any[];
   public Annotations?: any[];
   public Flags?: any[];
-  public Modifiers?: any[];
-  
-
-
-  public Core?: any;
-  public SegmentStop?: boolean = false;
-  // 仅作用于内层
-  public TypeParam?: any[];
+  public TypeWhere?: any[];
   public ContextParam?: any[];
-  public Param?: any[];
-  
-
   public Definition?: any[];
+
+
+  
+  
+  // 仅作用于内层
+  public Core?: any;
+  public TypeParam?: any[];
+  public Param?: any[];
+  public SegmentStop?: boolean = false;
+
+  public TypeResult?: any[];
+
+  
   public Complements?: any[];
 
   public Attr?: any;
@@ -50,17 +63,22 @@ export class KnKnot implements IKnKnot {
   public Next?: KnKnot;
 
   public constructor(node : IKnKnot) {
+    this.IsData = node.IsData;
+    this.Modifiers = node.Modifiers;
     this.Annotations = node.Annotations;
     this.Flags = node.Flags;
 
-    this.Definition = node.Definition;
-    this.Complements = node.Complements;
+    this.TypeWhere = node.TypeWhere;
+    this.ContextParam = node.ContextParam;
 
+    this.Definition = node.Definition;
     this.Core = node.Core;
     this.TypeParam = node.TypeParam;
-    this.ContextParam = node.ContextParam;
-    this.SegmentStop = node.SegmentStop;
     this.Param = node.Param;
+    this.SegmentStop = node.SegmentStop;
+    this.TypeResult = node.TypeResult;
+    this.Complements = node.Complements;
+    
     this.Attr = node.Attr;
     
     this.Block = node.Block;

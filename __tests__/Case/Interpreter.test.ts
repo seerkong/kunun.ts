@@ -252,7 +252,7 @@ describe("Interpreter", function () {
 
 
     it("ResetHostArray", async function () {
-      let code = '[do { [var ~ tabledata $(data =${1 2 3})] [tabledata @.data = ${}] [tabledata.data.length] }]';
+      let code = '[do { [var  tabledata $(data =${1 2 3})] [tabledata @.data = ${}] [tabledata.data.length] }]';
       let r = Interpreter.EvalSync(code);
       assert.equal(r, []);
     });

@@ -24,11 +24,13 @@ enum PrefixType {
     ContextParam, // get :(field1 field2)() { [field1 field2 +;] }
 
     Definition, // :String aStr
+    TypeWhere,
 }
 
 
 enum SuffixType {
     Definition, // a ~{int}
+    TypeResult,
     Complement, // a ^SSS ^[where %A = [implements B]%]
 }
 
@@ -49,10 +51,12 @@ class PrefixContext {
 
     public TypeParams = [];
     public ContextParams = [];
+    public TypeWhere = null;
 }
 
 class SuffixContext {
     public Definition  = null;
+    public TypeResult  = null;
     public Complements = [];
 }
 
@@ -74,12 +78,15 @@ export class Parser {
     static WORD_KNOT_PREFIX_TYPES = [
         PrefixType.Annotation,
         PrefixType.Flag,
-        PrefixType.Modifier
+        PrefixType.Modifier,
+        
+        PrefixType.ContextParam,
+        PrefixType.TypeWhere,
+        PrefixType.Definition
     ];
     
     static KNOT_INNER_PREFIX_TYPES = [
         PrefixType.TypeParam,
-        PrefixType.ContextParam
     ];
 
     constructor(lexer) {
@@ -134,42 +141,13 @@ export class Parser {
 
 
     Value(config = {AcceptPrefix: true, AcceptSuffix: true}) {
-        if (this.currentToken.Type === SyntaxConfig.PrefixToken) {
+        if (this.currentToken.Type === SyntaxConfig.PrefixToken
+            || this.currentToken.Type === SyntaxConfig.PrefixTypeToken
+        ) {
             return this.ValueWithPrefix(config);
         }
         else if (this.currentToken.Type === TokenType.Dollar) {
             return this.SyntaxPrefix();
-        }
-        else if (this.currentToken.Type === TokenType.String) {
-            return this.String();
-        }
-        else if (this.currentToken.Type === TokenType.Number) {
-            return this.Number();
-        }
-        else if (this.currentToken.Type === TokenType.Boolean) {
-            return this.Boolean();
-        }
-        else if (this.currentToken.Type === TokenType.Property) {
-            return this.Property();
-        }
-        else if (this.currentToken.Type === TokenType.Subscript) {
-            return this.Subscript();
-        }
-        else if (this.currentToken.Type === TokenType.QuasiQuote) {
-            return this.QuasiQuote();
-        }
-        else if (this.currentToken.Type === TokenType.Comma) {
-            return this.Unquote();
-        }
-        else if (this.currentToken.Type === TokenType.UnquoteSplicing) {
-            return this.UnquoteSplicing();
-        }
-        else if (this.currentToken.Type === TokenType.At) {
-            return this.Quote();
-        }
-        else if (this.currentToken.Type === TokenType.BiggerThan
-            || this.currentToken.Type === TokenType.LowerThan) {
-                return this.Word(config);
         }
         else if (this.currentToken.Type === SyntaxConfig.MapStartToken) {
             return this.KnMap();
@@ -180,39 +158,76 @@ export class Parser {
         else if (this.currentToken.Type === SyntaxConfig.KnotStartToken) {
             return this.KnKnot();
         }
-        // else if (this.currentToken.Type === TokenType.EllipsisDots) {
-        //     return this.Word(config);
-        // }
+
+        else if (this.currentToken.Type === TokenType.String) {
+            return this.String();
+        }
         else if (this.currentToken.Type === TokenType.Word) {
             return this.Word(config);
         }
+        else if (this.currentToken.Type === TokenType.Number) {
+            return this.Number();
+        }
+        else if (this.currentToken.Type === TokenType.Boolean) {
+            return this.Boolean();
+        }
+
+        else if (this.currentToken.Type === TokenType.Property) {
+            return this.Property();
+        }
+        else if (this.currentToken.Type === TokenType.Subscript) {
+            return this.Subscript();
+        }
+        else if (this.currentToken.Type === TokenType.QuasiQuote) {
+            return this.QuasiQuote();
+        }
+        else if (this.currentToken.Type === TokenType.Comma) {
+            return this.UnquoteReplace();
+        }
+        else if (this.currentToken.Type === TokenType.UnquoteExpand) {
+            return this.UnquoteExpand();
+        }
+        else if (this.currentToken.Type === TokenType.At) {
+            return this.CloseQuote();
+        }
+        else if (this.currentToken.Type === TokenType.BiggerThan
+            || this.currentToken.Type === TokenType.LowerThan) {
+                return this.Word(config);
+        }
+        
+        // else if (this.currentToken.Type === TokenType.EllipsisDots) {
+        //     return this.Word(config);
+        // }
+        
         let tokenInner = this.currentToken.Value;
         this.Consume(null);
         return new KnWord(tokenInner);
         // this.Error();
     }
 
-    PrefixTokenType(prevTokenType: TokenType, char) : PrefixType {
+    PrefixTokenType(nextChar) : PrefixType {
         if (this.currentToken.Type == SyntaxConfig.PrefixTypeToken) {
-            if (char == SyntaxConfig.KnotTypeParamBeginStr) {
+            if (nextChar == SyntaxConfig.KnotTypeParamBeginStr) {
                 return PrefixType.TypeParam;
             }
             return PrefixType.Definition;
         }
 
         if (this.currentToken.Type == SyntaxConfig.PrefixToken) {
-            if (char == SyntaxConfig.KnotAnnotationBeginStr) {
+            if (nextChar == SyntaxConfig.KnotAnnotationBeginStr) {
                 return PrefixType.Annotation;
-            } else if (char == SyntaxConfig.KnotModifierBeginStr) {
+            } else if (nextChar == SyntaxConfig.KnotModifierBeginStr) {
                 return PrefixType.Modifier;
-            } else if (char == SyntaxConfig.KnotContextParamBeginStr) {
+            } else if (nextChar == SyntaxConfig.KnotContextParamBeginStr) {
                 return PrefixType.ContextParam;
-            } else if (/^[_a-zA-Z=@\+\-\*\/]/.test(char)) {
+            } else if (nextChar == SyntaxConfig.KnotAttrStartStr) {
+                return PrefixType.TypeWhere;
+            } else if (/^[_a-zA-Z=@\+\-\*\/]/.test(nextChar)) {
                 return PrefixType.Flag;
             }
         }
 
-        this.Error('illegal prefix token type : `' + char + '`');
+        this.Error('illegal prefix token type : `' + nextChar + '`');
     }
 
     ParsePrefixItem(acceptPrefixes: PrefixType[]) : PrefixItem {
@@ -224,66 +239,83 @@ export class Parser {
         }
 
         let charAfterPrefixToken = this.lexer.Peek(1, 0);
-        let prefixType : PrefixType = this.PrefixTokenType(this.currentToken.Type, charAfterPrefixToken);
+        let prefixType : PrefixType = this.PrefixTokenType(charAfterPrefixToken);
         if (!ArrayExt.Contains(acceptPrefixes, prefixType)) {
             return null;
         }
 
         this.Consume(this.currentToken.Type);
-        if (prefixType === PrefixType.Definition) {
-            let itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
-            return new PrefixItem(PrefixType.Definition, itemVal);
-        }
-        else if (this.currentToken.Type === SyntaxConfig.KnotContextParamBeginToken) {
-            let itemVal = this.KnVectorInner(
-                SyntaxConfig.KnotContextParamBeginToken, SyntaxConfig.KnotContextParamEndToken);
-            return new PrefixItem(PrefixType.ContextParam, itemVal);
-        }
-        else if (this.currentToken.Type === SyntaxConfig.KnotTypeParamBeginToken) {
-            let itemVal = this.KnVectorInner(
-                SyntaxConfig.KnotTypeParamBeginToken,
-                SyntaxConfig.KnotTypeParamEndToken);
-            return new PrefixItem(PrefixType.TypeParam, itemVal);
-        }
-        else if (this.currentToken.Type === TokenType.Word) {
+        if (prefixType === PrefixType.Flag) {
             let itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
             return new PrefixItem(PrefixType.Flag, itemVal);
         }
-        else if (this.currentToken.Type === SyntaxConfig.KnotAnnotationBeginToken) {
+        else if (prefixType === PrefixType.Annotation) {
             let itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
             return new PrefixItem(PrefixType.Annotation, itemVal);
         }
-        else if (this.currentToken.Type === SyntaxConfig.KnotModifierBeginToken) {
+        else if (prefixType === PrefixType.Modifier) {
             let itemVal = this.KnVectorInner(
                 SyntaxConfig.KnotModifierBeginToken,
                 SyntaxConfig.KnotModifierEndToken);
             return new PrefixItem(PrefixType.Modifier, itemVal);
         }
+        else if (prefixType === PrefixType.TypeParam) {
+            let itemVal = this.KnVectorInner(
+                SyntaxConfig.KnotTypeParamBeginToken,
+                SyntaxConfig.KnotTypeParamEndToken);
+            return new PrefixItem(PrefixType.TypeParam, itemVal);
+        }
+        else if (prefixType === PrefixType.ContextParam) {
+            let itemVal = this.KnVectorInner(
+                SyntaxConfig.KnotContextParamBeginToken, SyntaxConfig.KnotContextParamEndToken);
+            return new PrefixItem(PrefixType.ContextParam, itemVal);
+        }
+
+        else if (prefixType === PrefixType.Definition) {
+            let itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
+            return new PrefixItem(PrefixType.Definition, itemVal);
+        }
+        else if (prefixType === PrefixType.TypeWhere) {
+            let itemVal = this.KnMapInner(SyntaxConfig.KnotAttrStartToken, SyntaxConfig.KnotAttrEndToken);
+            return new PrefixItem(PrefixType.TypeWhere, itemVal);
+        }
+        
         return null;
     }
 
     ParseSuffixItem() : SuffixItem {
         let suffixItemType = SuffixType.Definition;
+        let itemVal = null;
         if (this.currentToken.Type === SyntaxConfig.SuffixComplementToken) {
             suffixItemType = SuffixType.Complement;
+            this.Consume(this.currentToken.Type);
+            itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
         }
         else if (this.currentToken.Type === SyntaxConfig.SuffixTypeToken) {
-            suffixItemType = SuffixType.Definition;
+            this.Consume(this.currentToken.Type);
+            if (this.currentToken.Type === SyntaxConfig.KnotTypeParamBeginToken) {
+                suffixItemType = SuffixType.TypeResult;
+                itemVal = this.KnVectorInner(SyntaxConfig.KnotTypeParamBeginToken, SyntaxConfig.KnotTypeParamEndToken);
+            }
+            else {
+                suffixItemType = SuffixType.Definition;
+                itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
+            }
         }
-        this.Consume(this.currentToken.Type);
-        let itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
+        
         return new SuffixItem(suffixItemType, itemVal);
     }
 
     ParsePrefixContext(acceptPrefixes: PrefixType[]) : PrefixContext {
-        let typeVars = [];
         let flags  = [];
+        let modifiers = [];
         let annotations = [];
+
+        let contextParams = null;
+        let typeWhere = null;
         let definition = null;
 
-        let genericParams = [];
-        let contextParams = [];
-        
+        let typeParam = null;
         
         while (this.currentToken.Type === SyntaxConfig.PrefixToken
             || this.currentToken.Type === SyntaxConfig.PrefixTypeToken
@@ -293,38 +325,45 @@ export class Parser {
                 break;
             }
             switch (prefix.Type) {
-                case PrefixType.Definition:
-                    definition = prefix.Value;
-                    break;
-                case PrefixType.Annotation:
-                    annotations.push(prefix.Value);
-                    break;
                 case PrefixType.Flag:
                     flags.push(prefix.Value);
                     break;
                 case PrefixType.Modifier:
-                    typeVars = prefix.Value;
+                    modifiers = prefix.Value;
                     break;
-                case PrefixType.TypeParam:
-                    genericParams.push(prefix.Value);
+                case PrefixType.Annotation:
+                    annotations.push(prefix.Value);
                     break;
                 case PrefixType.ContextParam:
-                    contextParams.push(prefix.Value);
+                    contextParams = prefix.Value;
                     break;
+                case PrefixType.TypeWhere:
+                    typeWhere = prefix.Value;
+                    break;
+                case PrefixType.Definition:
+                    definition = prefix.Value;
+                    break;    
+                case PrefixType.TypeParam:
+                    typeParam = prefix.Value;
+                    break;
+                
             }
         }
         let result = new PrefixContext();
-        result.Definition = definition;
-        result.Modifiers = typeVars;
         result.Flags = flags;
+        result.Modifiers = modifiers;
         result.Annotation = annotations;
-        result.TypeParams = genericParams;
         result.ContextParams = contextParams;
+        result.TypeWhere = typeWhere;
+        result.Definition = definition;
+        result.TypeParams = typeParam;
+        
         return result;
     }
 
     ParseSuffixContext() : SuffixContext {
         let definition = null;
+        let typeResult = null;
         let complements  = [];
         
         while (this.currentToken.Type === SyntaxConfig.SuffixTypeToken
@@ -338,6 +377,9 @@ export class Parser {
                 case SuffixType.Definition:
                     definition = suffix.Value;
                     break;
+                case SuffixType.TypeResult:
+                    typeResult = suffix.Value;
+                    break;
                 case SuffixType.Complement:
                     complements.push(suffix.Value);
                     break;
@@ -345,6 +387,7 @@ export class Parser {
         }
         let result = new SuffixContext();
         result.Definition = definition;
+        result.TypeResult = typeResult;
         result.Complements = complements;
         return result;
     }
@@ -356,21 +399,26 @@ export class Parser {
         if (valueType !== KnNodeType.KnWord && valueType !== KnNodeType.KnKnot) {
             return value;
         }
-        if (prefixContext.Definition != null) {
-            value.Definition = prefixContext.Definition;
-        }
-        if (prefixContext.ContextParams.length > 0) {
-            value.ContextParams = prefixContext.ContextParams;
-        }
         if (prefixContext.Flags.length > 0) {
             value.Flags = prefixContext.Flags;
-        }
-        if (prefixContext.Annotation.length > 0) {
-            value.Annotations = prefixContext.Annotation;
         }
         if (prefixContext.Modifiers.length > 0) {
             value.Modifiers = prefixContext.Modifiers;
         }
+        if (prefixContext.Annotation.length > 0) {
+            value.Annotations = prefixContext.Annotation;
+        }
+        if (prefixContext.ContextParams != null && prefixContext.ContextParams.length > 0) {
+            value.ContextParams = prefixContext.ContextParams;
+        }
+        if (prefixContext.TypeWhere != null) {
+            value.TypeWhere = prefixContext.TypeWhere;
+        }
+
+        if (prefixContext.Definition != null) {
+            value.Definition = prefixContext.Definition;
+        }
+        
         return value;
     }
 
@@ -428,17 +476,17 @@ export class Parser {
         let v = this.Value();
         return new KnQuasiQuote(v);
     }
-    Unquote() {
+    UnquoteReplace() {
         this.Consume(TokenType.Comma);
         let v = this.Value();
         return new KnUnquote(v) ;
     }
-    UnquoteSplicing() {
-        this.Consume(TokenType.UnquoteSplicing);
+    UnquoteExpand() {
+        this.Consume(TokenType.UnquoteExpand);
         let v = this.Value();
         return new KnUnquoteSplicing(v);
     }
-    Quote() {
+    CloseQuote() {
         this.Consume(TokenType.At);
         let v = this.Value();
         return new KnCloseQuote(v);
@@ -533,8 +581,6 @@ export class Parser {
     }
 
     KnKnot() : KnKnot {
-        let prefixContext = this.ParsePrefixContext(Parser.WORD_KNOT_PREFIX_TYPES);
-
         this.Consume(SyntaxConfig.KnotStartToken);
 
         let nodes = [];
@@ -546,32 +592,21 @@ export class Parser {
                 top = new KnKnot({});
                 nodes.push(top);
             }
-            
-            if (nodes.length == 1) {
-                // set outer prefix
-                top.Annotations = prefixContext.Annotation;
-                top.Flags = prefixContext.Flags;
-                top.Modifiers = prefixContext.Modifiers;
+
+            if (this.currentToken.Type === SyntaxConfig.PrefixTypeToken) {
+                let charAfterPrefixToken = this.lexer.Peek(1, 0);
+                let prefixType = this.PrefixTokenType(charAfterPrefixToken);
+                if (PrefixType.TypeParam == prefixType) {
+                    if (!this.KnotAcceptTypeParam(top)) {
+                        top = new KnKnot({});
+                        nodes.push(top);
+                    }
+                    let prefixContextInSegment = this.ParsePrefixContext(Parser.KNOT_INNER_PREFIX_TYPES);
+                    top.TypeParam = prefixContextInSegment.TypeParams;
+                }
+                
             }
 
-            let charAfterPrefixToken = this.lexer.Peek(1, 0);
-            if ((this.currentToken.Type === SyntaxConfig.PrefixToken
-                    && charAfterPrefixToken == SyntaxConfig.KnotContextParamBeginStr
-                )
-                ||
-                (this.currentToken.Type === SyntaxConfig.PrefixTypeToken
-                    && charAfterPrefixToken == SyntaxConfig.KnotTypeParamBeginStr
-                )
-                ) {
-                // set inner prefix
-                let prefixContextInSegment = this.ParsePrefixContext(Parser.KNOT_INNER_PREFIX_TYPES);
-                if (prefixContextInSegment.TypeParams.length > 0) {
-                    top.TypeParam = prefixContextInSegment.TypeParams[prefixContextInSegment.TypeParams.length - 1];
-                }
-                if (prefixContextInSegment.ContextParams.length > 0) {
-                    top.ContextParam = prefixContextInSegment.ContextParams[prefixContextInSegment.ContextParams.length - 1];
-                }
-            }
             else if (this.currentToken.Type === TokenType.Semicolon) {
                 this.Consume(null);
                 if (!this.KnotAcceptSegmentStop(top)) {
@@ -593,13 +628,13 @@ export class Parser {
                 || this.currentToken.Type === SyntaxConfig.SuffixComplementToken
             ) {
                 let suffixContext = this.ParseSuffixContext();
-                if (suffixContext.Definition != null) {
-                    if (!this.KnotAcceptDefinition(top)
+                if (suffixContext.TypeResult != null) {
+                    if (!this.KnotAcceptTypeResult(top)
                     ) {
                         top = new KnKnot({});
                         nodes.push(top);
                     }
-                    top.Definition = suffixContext.Definition;
+                    top.TypeResult = suffixContext.TypeResult;
                 }
                 if (suffixContext.Complements != null) {
                     if (!this.KnotAcceptComplements(top)
@@ -646,7 +681,11 @@ export class Parser {
     }
 
     KnotAcceptCore(knot) {
-        return (knot.Core == null) && this.KnotAcceptParam(knot);
+        return (knot.Core == null) && this.KnotAcceptTypeParam(knot);
+    }
+
+    KnotAcceptTypeParam(knot) {
+        return (knot.TypeParam == null)  && this.KnotAcceptSegmentStop(knot);
     }
 
     KnotAcceptSegmentStop(knot) {
@@ -654,11 +693,11 @@ export class Parser {
     }
 
     KnotAcceptParam(knot: KnKnot) {
-        return (knot.Param == null) && this.KnotAcceptDefinition(knot);
+        return (knot.Param == null && knot.SegmentStop != true) && this.KnotAcceptTypeResult(knot);
     }
 
-    KnotAcceptDefinition(knot: KnKnot) {
-        return (knot.Definition == null) && this.KnotAcceptComplements(knot);
+    KnotAcceptTypeResult(knot: KnKnot) {
+        return (knot.TypeResult == null) && this.KnotAcceptComplements(knot);
     }
 
     KnotAcceptComplements(knot: KnKnot) {

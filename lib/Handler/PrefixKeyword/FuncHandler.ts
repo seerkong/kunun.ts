@@ -20,15 +20,12 @@ export class FuncHandler {
     let paramWordArr = [];
     let funcBody = null;
 
-    if (nodeToRun.Next != null && NodeHelper.GetType(nodeToRun.Next.Core) == KnNodeType.KnWord) {
-      funcName = NodeHelper.GetInnerString(nodeToRun.Next.Core);
-      paramWordArr = nodeToRun.Next.Param;
-      funcBody = nodeToRun.Next.Block;
+    if (nodeToRun.Core != null && NodeHelper.GetType(nodeToRun.Core.Definition) == KnNodeType.KnWord) {
+      funcName = NodeHelper.GetInnerString(nodeToRun.Core.Definition);
     }
-    else {
-      paramWordArr = nodeToRun.Param;
-      funcBody = nodeToRun.Block;
-    }
+
+    paramWordArr = nodeToRun.Param;
+    funcBody = nodeToRun.Block;
     
     // let paramWordStrArr = []
     // for (let paramWord of paramWordArr) {

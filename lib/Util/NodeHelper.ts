@@ -98,21 +98,9 @@ export class NodeHelper {
     let result = null; // end of knot
     for (let i = nodes.length - 1; i >= 0; i--) {
       let node = nodes[i];
-      result = new KnKnot({
-        Core: node.Core,
-        SegmentStop: node.SegmentStop,
-
-        TypeParam: node.TypeParam,
-        ContextParam: node.ContextParam,
-        Param: node.Param,
-
-        Definition: node.Definition,
-        Complements: node.Complements,
-
-        Attr: node.Attr,
-        Block: node.Block,
-        Next: result
-      });
+      let tmp = result;
+      result = new KnKnot(node);
+      result.Next = tmp;
     }
     return result;
   }

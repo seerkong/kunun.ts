@@ -1,9 +1,9 @@
 [do {
-    [func Add (args ...) {
-        [var ~result 0]
+    [func ~Add (args ...) {
+        [var result 0]
         [foreach x in args {
             [Writeln (x)]
-            [set ~result
+            [set result
               [+ (x result)]
             ]
           }
