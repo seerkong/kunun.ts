@@ -62,7 +62,7 @@ export class TableHandler {
 
   public static MakeTableFields(fieldKnot: KnKnot) : any[] {
     let result = [];
-    let fieldRows = fieldKnot.Block;
+    let fieldRows = fieldKnot.Body;
     for (let i = 0; i < fieldRows.length; i++) {
       let declareNode = fieldRows[i];
       let fieldName = declareNode.Next.Core.Value;
@@ -87,7 +87,7 @@ export class TableHandler {
 
   public static MakeTableProperties(propertyKnot: KnKnot) : any[] {
     let result = [];
-    let propRows = propertyKnot.Block;
+    let propRows = propertyKnot.Body;
     for (let i = 0; i < propRows.length; i++) {
       let declareNode = propRows[i];
       let propType = declareNode.Core.Value;
@@ -141,7 +141,7 @@ export class TableHandler {
       }
       let paramTable : KnWord[] = iter.Param == null ? [] : iter.Param;
 
-      let funcBody = iter.Block;
+      let funcBody = iter.Body;
       let funcName = `${coreName}_${propName}`
       let func = new KnPropertyFunc(requiredFields, paramTable, funcBody, funcName);
       if (coreName === 'get') {
@@ -168,7 +168,7 @@ export class TableHandler {
 
   public static MakeTableMethods(methodKnot: KnKnot) : any[] {
     let result = [];
-    let methodRows = methodKnot.Block;
+    let methodRows = methodKnot.Body;
     for (let i = 0; i < methodRows.length; i++) {
       let declareNode : KnKnot = methodRows[i];
       let methodName = declareNode.Next.Core.Value;
@@ -177,8 +177,8 @@ export class TableHandler {
 
       let paramTable : KnWord[] = declareNode.Next.Param == null ? [] : declareNode.Next.Param;
 
-      let returnType = declareNode.Next.Complements;
-      let funcBody = declareNode.Next.Block;
+      let returnType = declareNode.Next.Complement;
+      let funcBody = declareNode.Next.Body;
       let method = new KnMethodFunc(
         paramTable,
         returnType,

@@ -84,6 +84,13 @@ describe("formatter", function() {
       console.log(str)
       console.log(ast)
     });
+    it("knot_only_key", function() {
+      let code = '[this %(x y)]'
+      let ast = Parser.Parse(code)
+      let str = KnFormatter.Stringify(ast, true);
+      console.log(str)
+      console.log(ast)
+    });
     it("knot_single_node", function() {
       let ast = parseFile('Parser/KnotSingleNode.kn');
       let str = KnFormatter.Stringify(ast, true);
@@ -102,6 +109,12 @@ describe("formatter", function() {
       console.log(str)
       console.log(ast)
     });
+    it("knot_multi_feature_and_section", function() {
+      let ast = parseFile('Parser/KnotMultiFeatureAndSection.kn');
+      let str = KnFormatter.Stringify(ast, true);
+      console.log(str)
+      console.log(ast)
+    });
   });
 
 
@@ -110,7 +123,7 @@ describe("formatter", function() {
       let ast : KnKnot = parseFile('ObjectSystem/Object.kn');
       let str = KnFormatter.Stringify(ast, true);
       console.log(str)
-      let objDeclareNode : any = ast.Block![0];
+      let objDeclareNode : any = ast.Body![0];
       let nameObjPair = TableHandler.MakeTable(objDeclareNode);
       let objInstance = nameObjPair[1];
       console.log(JSON.stringify(objInstance, null, 2));

@@ -56,10 +56,8 @@ export class SyntaxConfig {
   public static KnotParamBeginStr = '(';
   public static KnotParamEndStr = ')';
 
-  public static KnotAttrStartToken = TokenType.Percent;
-  public static KnotAttrEndToken = TokenType.Percent;
-  public static KnotAttrStartStr = '%';
-  public static KnotAttrEndStr = '%';
+  public static MoreAttrOrBlockToken = TokenType.Percent;
+  public static MoreAttrOrBlockStartStr = '%';
 
   public static KnotBlockStartToken = TokenType.BeginCurlyBracket;
   public static KnotBlockEndToken = TokenType.EndCurlyBracket;

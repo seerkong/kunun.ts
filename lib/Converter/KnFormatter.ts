@@ -100,11 +100,11 @@ export class KnFormatter {
     let modifiersStr = "";
     let defStr = "";
     let complementsStr = "";
-    if (node.Annotations != null && node.Annotations.length > 0) {
+    if (node.Annotation != null && node.Annotation.length > 0) {
       let prefixes = []
-      for (let i = 0; i < node.Annotations.length; i++) {
+      for (let i = 0; i < node.Annotation.length; i++) {
         let prefixItemStr = KnFormatter.NodeToString(
-          node.Annotations[i],
+          node.Annotation[i],
           new FormatState(
             (formatState.IndentLevel),
             FormatConfig.MultiLineConfig,
@@ -123,9 +123,9 @@ export class KnFormatter {
       flagStr = StringExt.Join(flags, " ");
       flagStr += " ";
     }
-    if (node.Modifiers != null && node.Modifiers.length > 0) {
+    if (node.Modifier != null && node.Modifier.length > 0) {
       modifiersStr = KnFormatter.VectorToStringCustom(
-        node.Modifiers,
+        node.Modifier,
         new FormatState(
           (formatState.IndentLevel),
           FormatConfig.SingleLineConfig,
@@ -142,11 +142,11 @@ export class KnFormatter {
         )
       );
     }
-    if (node.Complements != null && node.Complements.length > 0) {
+    if (node.Complement != null && node.Complement.length > 0) {
       let complementStrList = []
-      for (let i = 0; i < node.Complements.length; i++) {
+      for (let i = 0; i < node.Complement.length; i++) {
         let complementItemStr = KnFormatter.NodeToString(
-          node.Complements[i],
+          node.Complement[i],
           new FormatState(
             (formatState.IndentLevel + 1),
             FormatConfig.SingleLineConfig,
@@ -335,8 +335,10 @@ export class KnFormatter {
     let afterAnnotationSection = annotationsJoiner;
     let contextParamBefore = `${SyntaxConfig.PrefixStr}${SyntaxConfig.KnotContextParamBeginStr}`;
     let contextParamAfter = `${SyntaxConfig.KnotContextParamEndStr} `;
-    let typeWhereBefore = `${SyntaxConfig.PrefixStr}${SyntaxConfig.KnotAttrStartStr}`;
-    let typeWhereAfter = `${SyntaxConfig.KnotAttrEndStr} `;
+    // let typeWhereBefore = `${SyntaxConfig.PrefixStr}${SyntaxConfig.KnotAttrStartStr}`;
+    // let typeWhereAfter = `${SyntaxConfig.KnotAttrEndStr} `;
+    let typeWhereBefore = "";
+    let typeWhereAfter = "";
     let definitionBefore = `${SyntaxConfig.PrefixTypeStr}`;
     let definitionAfter = " ";
 
@@ -355,7 +357,7 @@ export class KnFormatter {
       contextParamAfter = `${SyntaxConfig.KnotContextParamEndStr}\n${containerIndent}`;
 
       // typeWhereBefore = `${SyntaxConfig.PrefixStr}${SyntaxConfig.KnotAttrStartStr}\n${containerIndent}`;
-      typeWhereAfter = `${SyntaxConfig.KnotAttrEndStr}\n${containerIndent}`;
+      // typeWhereAfter = `${SyntaxConfig.KnotAttrEndStr}\n${containerIndent}`;
 
       definitionBefore = `${containerIndent}${SyntaxConfig.PrefixStr}`;
       definitionAfter = `\n${containerIndent}`;
@@ -369,20 +371,20 @@ export class KnFormatter {
     let typeWhereStr = "";
     let definitionStr = "";
 
-    if (node.Modifiers != null && node.Modifiers.length > 0) {
+    if (node.Modifier != null && node.Modifier.length > 0) {
       modifiersStr = KnFormatter.VectorToStringCustom(
-        node.Modifiers,
+        node.Modifier,
         new FormatState(
           (formatState.IndentLevel + 1),
           FormatConfig.SingleLineConfig,
         ),
         modifiersBefore, modifiersAfter);
     }
-    if (node.Annotations != null && node.Annotations.length > 0) {
+    if (node.Annotation != null && node.Annotation.length > 0) {
       let prefixes = []
-      for (let i = 0; i < node.Annotations.length; i++) {
+      for (let i = 0; i < node.Annotation.length; i++) {
         let prefixItemStr = KnFormatter.NodeToString(
-          node.Annotations[i],
+          node.Annotation[i],
           new FormatState(
             (formatState.IndentLevel),
             FormatConfig.SingleLineConfig,
@@ -541,7 +543,7 @@ export class KnFormatter {
       sb += typeParamStr;
     }
 
-    if (node.SegmentStop === true) {
+    if (node.Apply === true) {
       sb += ';';
     }
     else if (node.Param != null) {
@@ -578,11 +580,11 @@ export class KnFormatter {
       sb += typeResultStr;
     }
 
-    if (node.Complements != null && node.Complements.length > 0) {
+    if (node.Complement != null && node.Complement.length > 0) {
       let complementStrList = []
-      for (let i = 0; i < node.Complements.length; i++) {
+      for (let i = 0; i < node.Complement.length; i++) {
         let complementItemStr = KnFormatter.NodeToString(
-          node.Complements[i],
+          node.Complement[i],
           new FormatState(
             (formatState.IndentLevel + 1),
             FormatConfig.SingleLineConfig,
@@ -608,22 +610,45 @@ export class KnFormatter {
           (formatState.IndentLevel + 1),
           formatState.Config,
         ),
-        SyntaxConfig.KnotAttrStartStr, SyntaxConfig.KnotAttrEndStr
+        SyntaxConfig.MoreAttrOrBlockStartStr + SyntaxConfig.MapStartStr, SyntaxConfig.MapEndStr
       );
 
       sb += attrStr;
-      if (node.Block != null || node.Next != null) {
-        sb += `\n${innerIndent}`;
+
+    }
+
+    if (node.Feature != null) {
+      for (let tag in node.Feature) {
+        let confValue = node.Feature[tag];
+        if (formatState.Config.KnotAttrMultiLine) {
+          sb += `\n${innerIndent}`;
+        }
+        else if (!sb.endsWith(" ")) {
+          sb += " ";
+        }
+        let attrStr = KnFormatter.MapToStringCustom(
+          confValue,
+          new FormatState(
+            (formatState.IndentLevel + 1),
+            formatState.Config,
+          ),
+          SyntaxConfig.MoreAttrOrBlockStartStr + tag + " " + SyntaxConfig.MapStartStr, SyntaxConfig.MapEndStr
+        );
+  
+        sb += attrStr;
       }
     }
 
-    if (node.Block != null) {
+    if (node.Body != null) {
+      if (formatState.Config.KnotAttrMultiLine) {
+        sb += `\n${innerIndent}`;
+      }
       if (!sb.endsWith(" ")) {
         sb += " ";
       }
 
       let blockStr : string = KnFormatter.VectorToStringCustom(
-        node.Block,
+        node.Body,
         new FormatState(
           (formatState.IndentLevel + 1),
           formatState.Config,
@@ -631,6 +656,31 @@ export class KnFormatter {
         SyntaxConfig.KnotBlockStartStr, SyntaxConfig.KnotBlockEndStr
       );
       sb += blockStr;
+    }
+
+    if (node.Section != null) {
+      for (let tag in node.Section) {
+        let sectionBlock = node.Section[tag];
+        if (formatState.Config.KnotAttrMultiLine) {
+          sb += `\n${innerIndent}`;
+        }
+        if (!sb.endsWith(" ")) {
+          sb += " ";
+        }
+
+        let blockStr : string = KnFormatter.VectorToStringCustom(
+          sectionBlock,
+          new FormatState(
+            (formatState.IndentLevel + 1),
+            formatState.Config,
+          ),
+          SyntaxConfig.MoreAttrOrBlockStartStr + tag + " " + SyntaxConfig.KnotBlockStartStr, SyntaxConfig.KnotBlockEndStr
+        );
+        sb += blockStr;
+      }
+    }
+    if (node.Next != null) {
+      sb += `\n${innerIndent}`;
     }
     return sb;
   }

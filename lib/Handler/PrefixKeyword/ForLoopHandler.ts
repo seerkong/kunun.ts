@@ -12,7 +12,7 @@ export class ForLoopHandler {
     let initVarMap = forStatement.Attr;
     let preConditionExpr = forStatement.Next.Core;
     let afterBlockExpr = forStatement.Next.Next.Core;
-    let loopBody = forStatement.Next.Next.Block;
+    let loopBody = forStatement.Next.Next.Body;
 
     knState.OpBatchStart();
     knState.AddOp(KnOpCode.ValStack_PushFrame);

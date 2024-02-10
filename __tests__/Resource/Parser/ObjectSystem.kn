@@ -54,7 +54,7 @@
     ]
 
     [object val
-      %
+      %(
       m ~ Int =
         [field public]
       n =
@@ -76,7 +76,7 @@
             [* (5 count)]
           }
         ]
-      %
+      )
     ]
 
     # file partial1.kn
@@ -90,7 +90,7 @@
     ]
 
     [class MyObj
-      %
+      %(
       inherit =
         Object
       protocol =
@@ -103,7 +103,7 @@
           M1
           M2
         }
-      %
+      )
       {
         [ctor () {
           }
@@ -132,13 +132,13 @@
     ]
 
     [protocol P_10
-      %
+      %(
       inherit =
         {
           P_0
           P_1
         }
-      % {
+      ) {
         [field m]
         [property n get]
         [property o get set]
@@ -148,13 +148,13 @@
     ]
 
     [interface I_10
-      %
+      %(
       inherit =
         {
           I_0
           I_1
         }
-      %
+      )
       {
         [property n get]
         [property o get set]

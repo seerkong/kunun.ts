@@ -9,10 +9,10 @@ export class IfElseHandler {
     
     let exprAndBlockPairs = [];
     let conditionExpr = nodeToRun.Next.Core;
-    let ifTrueBranch = nodeToRun.Next.Block;
+    let ifTrueBranch = nodeToRun.Next.Body;
     let ifFalseBranch = null;
     if (nodeToRun.Next.Next != null) {
-      ifFalseBranch = nodeToRun.Next.Next.Block;
+      ifFalseBranch = nodeToRun.Next.Next.Body;
     }
     exprAndBlockPairs.push({
       Expr: conditionExpr,  // condition expr

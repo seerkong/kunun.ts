@@ -27,7 +27,7 @@ export class OpenKnotDataHandler {
     knState.AddOp(KnOpCode.ValStack_PushValue, knot.Core);
     ArrayHandler.ExpandOpenArray(knState, knot.Param);
     MapHandler.ExpandOpenMap(knState, knot.Attr);
-    ArrayHandler.ExpandOpenArray(knState, knot.Block);
+    ArrayHandler.ExpandOpenArray(knState, knot.Body);
     knState.AddOp(KnOpCode.Node_MakeKnotNode);
     knState.AddOp(KnOpCode.ValStack_PopFrameAndPushTopVal);
 
@@ -44,7 +44,7 @@ export class OpenKnotDataHandler {
       Core: evaledNodes[0],
       Param: evaledNodes[1],
       Attr: evaledNodes[2],
-      Block: evaledNodes[3],
+      Body: evaledNodes[3],
       Next: null
     });
     knState.GetCurrentFiber().OperandStack.PushValue(result);

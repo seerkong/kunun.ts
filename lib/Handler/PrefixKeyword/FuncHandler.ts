@@ -25,7 +25,7 @@ export class FuncHandler {
     }
 
     paramWordArr = nodeToRun.Param;
-    funcBody = nodeToRun.Block;
+    funcBody = nodeToRun.Body;
     
     // let paramWordStrArr = []
     // for (let paramWord of paramWordArr) {

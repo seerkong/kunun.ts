@@ -10,7 +10,7 @@ export class ForeachHandler {
   public static ExpandForeach(knState: KnState, nodeToRun: KnKnot) {
     let itemVarName = NodeHelper.GetInnerString(nodeToRun.Next.Core);
     let collectionVarWord = nodeToRun.Next.Next.Next.Core;
-    let loopBody = nodeToRun.Next.Next.Next.Block;
+    let loopBody = nodeToRun.Next.Next.Next.Body;
 
     knState.OpBatchStart();
     knState.AddOp(KnOpCode.ValStack_PushFrame);

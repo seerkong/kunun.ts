@@ -10,7 +10,7 @@ import { KnKnot } from "../../Model/KnKnot";
 export class TryHandler {
   public static ExpandTry(knState: KnState, nodeToRun: any) {
     let tryNode = nodeToRun as KnKnot;
-    let tryBlock = tryNode.Block;
+    let tryBlock = tryNode.Body;
 
     let effectHandlerMap = {};
     let continuationMap = {};

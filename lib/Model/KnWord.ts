@@ -2,13 +2,13 @@ import { KnNodeType } from "./KnType";
 
 export class KnWord {
   public _Type = KnNodeType.KnWord;
-  public Annotations: any[];
+  public Annotation: any[];
   public Flags: any[];
-  public Modifiers: any[];
+  public Modifier: any[];
   
 
   public Definition: any;
-  public Complements: any[];
+  public Complement: any[];
   public Value: any;
 
   public constructor(inner: string) {
@@ -16,7 +16,7 @@ export class KnWord {
   }
 
   public static IsSingleLineWord(w : KnWord) : boolean {
-    return (w.Annotations == null || w.Annotations.length == 0)
-      && (w.Complements == null || w.Complements.length == 0);
+    return (w.Annotation == null || w.Annotation.length == 0)
+      && (w.Complement == null || w.Complement.length == 0);
   }
 }

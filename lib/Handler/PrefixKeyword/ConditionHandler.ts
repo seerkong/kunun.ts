@@ -12,12 +12,12 @@ export class ConditionHandler {
     while (iter != null) {
       let clauseCore = iter.Core;
       if (NodeHelper.GetInnerString(clauseCore) === "else") {
-        fallbackBlock = iter.Block;
+        fallbackBlock = iter.Body;
       }
       else {
         exprAndBlockPairs.push({
           Expr: iter.Core,  // condition expr
-          Block: iter.Block,  // condition true block
+          Block: iter.Body,  // condition true block
         });
       }
       iter = iter.Next;

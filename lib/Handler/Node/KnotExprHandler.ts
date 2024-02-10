@@ -30,9 +30,9 @@ export class KnotExprHandler {
     knState.OpBatchStart();
     if (core == null) {
 
-      if (knot.Block != null) {
+      if (knot.Body != null) {
         // as a block
-        BlockHandler.ExpandBlock(knState, knot.Block)
+        BlockHandler.ExpandBlock(knState, knot.Body)
       }
       else if (knot.Param != null) {
         // curring
@@ -57,7 +57,7 @@ export class KnotExprHandler {
     }
     else {
       knState.AddOp(KnOpCode.Node_RunNode, core);
-      if (knot.SegmentStop === true) {
+      if (knot.Apply === true) {
         // func apply
         knState.AddOp(KnOpCode.Ctrl_ApplyToFrameTop);
       }
@@ -69,7 +69,7 @@ export class KnotExprHandler {
         }
         knState.AddOp(KnOpCode.Ctrl_ApplyToFrameBottom);
       }
-      else if (knot.Attr != null || knot.Block != null) {
+      else if (knot.Attr != null || knot.Body != null) {
         // TODO
       }
 

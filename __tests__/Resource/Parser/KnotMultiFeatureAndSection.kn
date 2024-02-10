@@ -1,0 +1,15 @@
+[core
+  (p1 p2)
+  %(attr1 attr2)
+  %f1 (a = 1 b = 2)
+  %f2 (m = 1 n = 2)
+  {
+    body
+  }
+  %s1 {
+    section1
+  }
+  %s2 {
+    section2
+  }
+]

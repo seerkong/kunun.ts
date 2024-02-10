@@ -6,8 +6,8 @@ export interface IKnKnot {
 
   // 仅作用于最外层
   IsData?: boolean;
-  Modifiers?: any[];
-  Annotations?: any[];
+  Modifier?: any[];
+  Annotation?: any[];
   Flags?: any[];
   TypeWhere?: any[];
   ContextParam?: any[];
@@ -20,15 +20,17 @@ export interface IKnKnot {
   Core?: any;
   TypeParam?: any[];
   Param?: any[];
-  SegmentStop?: boolean;
+  Apply?: boolean;
   
   TypeResult?: any[];
   
     
-  Complements?: any[];
+  Complement?: any[];
   
   Attr?: any;
-  Block?: any[];
+  Feature?: any;
+  Body?: any[];
+  Section?: any;
   Next?: KnKnot;
 
 }
@@ -37,8 +39,8 @@ export class KnKnot implements IKnKnot {
   public _Type = KnNodeType.KnKnot;
   // 仅作用于最外层
   public IsData: boolean = false;
-  public Modifiers?: any[];
-  public Annotations?: any[];
+  public Modifier?: any[];
+  public Annotation?: any[];
   public Flags?: any[];
   public TypeWhere?: any[];
   public ContextParam?: any[];
@@ -51,21 +53,23 @@ export class KnKnot implements IKnKnot {
   public Core?: any;
   public TypeParam?: any[];
   public Param?: any[];
-  public SegmentStop?: boolean = false;
+  public Apply?: boolean = false;
 
   public TypeResult?: any[];
 
   
-  public Complements?: any[];
+  public Complement?: any[];
 
   public Attr?: any;
-  public Block?: any[];
+  public Feature?: {[prop:string] : any} = {};
+  public Body?: any[];
+  public Section?: {[prop:string] : any} = {};
   public Next?: KnKnot;
 
   public constructor(node : IKnKnot) {
     this.IsData = node.IsData;
-    this.Modifiers = node.Modifiers;
-    this.Annotations = node.Annotations;
+    this.Modifier = node.Modifier;
+    this.Annotation = node.Annotation;
     this.Flags = node.Flags;
 
     this.TypeWhere = node.TypeWhere;
@@ -75,13 +79,15 @@ export class KnKnot implements IKnKnot {
     this.Core = node.Core;
     this.TypeParam = node.TypeParam;
     this.Param = node.Param;
-    this.SegmentStop = node.SegmentStop;
+    this.Apply = node.Apply;
     this.TypeResult = node.TypeResult;
-    this.Complements = node.Complements;
+    this.Complement = node.Complement;
     
     this.Attr = node.Attr;
+    this.Feature = node.Feature;
     
-    this.Block = node.Block;
+    this.Body = node.Body;
+    this.Section = node.Section;
     this.Next = node.Next;
   }
 
@@ -123,7 +129,7 @@ export class KnKnot implements IKnKnot {
       && nextNode.TypeParam == null && nextNode.ContextParam == null
       && nextNode.Param == null 
       && nextNode.Definition == null
-      && nextNode.Complements == null && nextNode.Attr == null
-      && nextNode.Block == null
+      && nextNode.Complement == null && nextNode.Attr == null
+      && nextNode.Body == null
   }
 }

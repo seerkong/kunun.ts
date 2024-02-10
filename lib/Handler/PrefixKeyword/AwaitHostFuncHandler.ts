@@ -45,7 +45,7 @@ export class AwaitHostFuncHandler {
     let funcName = awaitHostFnNode.Next.Core;
     let args = awaitHostFnNode.Next.Param;
     let exceptionArgs = awaitHostFnNode.Next.Next.Param;
-    let exceptionBlock = awaitHostFnNode.Next.Next.Block;
+    let exceptionBlock = awaitHostFnNode.Next.Next.Body;
 
     let currentFiber = knState.GetCurrentFiber();
 

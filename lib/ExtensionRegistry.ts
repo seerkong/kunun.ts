@@ -97,10 +97,10 @@ export class ExtensionRegistry {
 
   private static PrefixKeyWordExpanderMap: { [key: string]: (knState: KnState, nodeToRun: any) => any } = {
     'do': function(knState: KnState, nodeToRun: KnKnot) : any {
-      BlockHandler.ExpandBlock(knState, nodeToRun.Block)
+      BlockHandler.ExpandBlock(knState, nodeToRun.Body)
     },
     'main': function(knState: KnState, nodeToRun: KnKnot) : any {
-      BlockHandler.ExpandBlock(knState, nodeToRun.Block)
+      BlockHandler.ExpandBlock(knState, nodeToRun.Body)
     },
     'func': function(knState: KnState, nodeToRun: any) : any {
       FuncHandler.ExpandDeclareFunc(knState, nodeToRun)
