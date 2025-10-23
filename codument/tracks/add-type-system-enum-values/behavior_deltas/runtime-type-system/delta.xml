@@ -1,0 +1,20 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/enum-value-types">
+    <requirement id="enum-value-types">
+      <statement>The type system SHALL support closed nominal enum types and scoped enum value symbols.</statement>
+      <suite id="enum-binding" name="Enum Binding">
+        <case id="bind-enum-declaration">
+          <given>A source declares an enum with value members</given>
+          <when>The binder processes the declaration</when>
+          <then>The TypeSystem SHALL register the enum type and qualified enum values</then>
+        </case>
+        <case id="raw-string-not-enum">
+          <given>A function expects an enum type</given>
+          <when>The body returns a raw string</when>
+          <then>The checker SHALL reject the return as incompatible</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>
+

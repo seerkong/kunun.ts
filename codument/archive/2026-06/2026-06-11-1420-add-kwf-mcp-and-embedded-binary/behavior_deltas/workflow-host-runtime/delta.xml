@@ -1,0 +1,47 @@
+<behavior-patch capability="workflow-host-runtime" version="1">
+  <upsert selector="behavior://workflow-host-runtime/requirements/mcp-server">
+    <requirement id="mcp-server">
+        <statement>kwf SHALL 提供 `kwf mcp stdio` 子命令启动 stdio transport 的 MCP server；全部 workflow 操作（运行、状态、事件、结果、pause/resume/stop、列表、示例与 skill 获取）SHALL 以 `kwf_` 前缀 tools 暴露，tools 与 CLI 子命令 SHALL 共享同一 Backend 业务层（无重复实现）；stdio 模式下 stdout SHALL 仅承载 JSON-RPC，诊断信息仅写 stderr。</statement>
+        <suite id="mcp" name="MCP server">
+          <case id="handshake-and-tool-list">
+            <given>以 mcp stdio 启动的 kwf 进程</given>
+            <when>客户端发送 initialize 并请求 tools/list</when>
+            <then>SHALL 返回含全部 kwf_ tools 的列表且 stdout 无协议外输出</then>
+          </case>
+          <case id="run-via-tool">
+            <given>已连接的 MCP 客户端与 mock 适配器配置</given>
+            <when>调用 kwf_run_workflow（wait=true）后调用 kwf_run_result</when>
+            <then>workflow SHALL 完成且结果与 CLI 运行同一 workflow 一致</then>
+          </case>
+          <case id="shared-backend">
+            <given>CLI 子命令与对应 MCP tool</given>
+            <when>审查实现</when>
+            <then>二者 SHALL 调用同一 Backend 方法（代码级单一来源）</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workflow-host-runtime/requirements/embedded-assets-binary">
+    <requirement id="embedded-assets-binary">
+        <statement>提示词模板、SKILL 文档、示例 .kon、配置样例等文本资产 SHALL 在代码仓库中保持独立文本文件，经 bunfs（import ... with type:"file"）于编译期嵌入单可执行文件，运行时统一经资产加载层读取（开发态与编译态同一 API）；`bun build --compile` SHALL 产出自包含 kwf 二进制：能运行示例 workflow 至完成、启动 MCP server、并在无仓库检出的目录下输出内嵌示例与 skill 文本；detached worker 重入 SHALL 在编译态正确工作。</statement>
+        <suite id="binary" name="单可执行与内嵌资产">
+          <case id="assets-are-files">
+            <given>仓库源码</given>
+            <when>检查提示词与示例资产</when>
+            <then>SHALL 为独立文本文件而非源码内字符串字面量（schema 纠错提示词等）</then>
+          </case>
+          <case id="compiled-smoke">
+            <given>bun build --compile 产出的 kwf 二进制与空白工作目录</given>
+            <when>执行 examples 列表/导出、运行导出的示例（mock 适配器）、mcp stdio 握手</when>
+            <then>SHALL 全部成功且不依赖仓库源码路径</then>
+          </case>
+          <case id="dev-parity">
+            <given>未编译的 bun 源码运行方式</given>
+            <when>调用同一资产加载层</when>
+            <then>行为 SHALL 与编译态一致（同一 API，无条件分支泄漏到调用方）</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

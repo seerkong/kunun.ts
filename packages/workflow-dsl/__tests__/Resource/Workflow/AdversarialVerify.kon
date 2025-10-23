@@ -1,0 +1,87 @@
+(var FINDINGS_OUTPUT_SCHEMA {
+  type = "object"
+  properties = {
+    findings = {type = "array"}
+  }
+  required = ["findings"]
+})
+
+(ai_workflow #adversarialVerify
+  :input = {target = "candidate implementation"}
+  :output = [findings judged]
+  :[
+    (ai_phase #Find
+      :[
+        (var findings (ai_agent #findRisks :{
+          label = "finder"
+          sys_prompt = "You are a risk finder for an adversarial verification workflow."
+          user_prompt =
+          """
+          Find candidate implementation risks.
+
+          Target:
+          \(target)
+          """
+          output_schema = FINDINGS_OUTPUT_SCHEMA
+        }))
+      ])
+    (ai_phase #Verify
+      :[
+        (var judged (ai_pipeline #skepticReview
+          :{
+            input = (findings.:findings)
+            item = finding
+            value = verdict
+            index = findingIndex
+          }
+          :[
+            (stage #SkepticA :[
+              (ai_agent #skepticA :{
+                label = "skeptic-a"
+                sys_prompt = "You are a skeptical reviewer focused on correctness."
+                user_prompt =
+                """
+                Try to REFUTE this finding using independent reasoning.
+                Default to refuted=true if unsure.
+
+                Finding index: \(findingIndex)
+                Title: \((finding.:title))
+                Detail: \((finding.:detail))
+                """
+              })
+            ])
+            (stage #SkepticB :[
+              (ai_agent #skepticB :{
+                label = "skeptic-b"
+                sys_prompt = "You are a skeptical reviewer focused on operability."
+                user_prompt =
+                """
+                Challenge this finding from an operability perspective.
+
+                Finding index: \(findingIndex)
+                Title: \((finding.:title))
+                Detail: \((finding.:detail))
+                Previous verdict:
+                \(verdict)
+                """
+              })
+            ])
+            (stage #Majority :[
+              (ai_agent #majorityVote :{
+                label = "majority"
+                sys_prompt = "You are the reducer that reconciles adversarial reviews."
+                user_prompt =
+                """
+                Keep this finding only if the verification majority accepts it.
+
+                Finding:
+                \(finding)
+
+                Latest verdict:
+                \(verdict)
+                """
+              })
+            ])
+          ]))
+      ])
+  ])

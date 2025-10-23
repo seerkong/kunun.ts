@@ -1,0 +1,13 @@
+(var true_branch_visited false)
+(var false_branch_visited false)
+(if (:gt 5 3) :[
+  (set true_branch_visited true)
+] else :[
+  (set true_branch_visited false)
+])
+(if (:gt 2 3) :[
+  (set false_branch_visited false)
+] else :[
+  (set false_branch_visited true)
+])
+(true_branch_visited false_branch_visited :and)

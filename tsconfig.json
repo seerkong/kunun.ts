@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "allowJs": true,
+        "skipLibCheck": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "allowSyntheticDefaultImports": true,
@@ -19,25 +20,37 @@
         "resolveJsonModule": true,
         "esModuleInterop": true,
         "target": "esnext",
-        // "module": "esnext",
-        "module": "commonjs",
+        // import attributes (with { type: "file" }) require esnext/preserve
+        "module": "esnext",
         "moduleResolution": "node",
         "lib": ["esnext"],
         
         "outDir": "dist",
-        "baseUrl": "./lib",
+        "baseUrl": ".",
         "paths": {
+            "kunun-core": ["packages/core/lib/index.ts"],
+            "kunun-core/*": ["packages/core/lib/*"],
+            "kunun-converter": ["packages/converter/lib/index.ts"],
+            "kunun-converter/*": ["packages/converter/lib/*"],
+            "kunun-runtime": ["packages/runtime/lib/index.ts"],
+            "kunun-runtime/*": ["packages/runtime/lib/*"],
+            "kunun-workflow-dsl": ["packages/workflow-dsl/lib/index.ts"],
+            "kunun-workflow-dsl/*": ["packages/workflow-dsl/lib/*"],
+            "kunun-type-system": ["packages/type-system/lib/index.ts"],
+            "kunun-type-system/*": ["packages/type-system/lib/*"],
+            "kunun-type-annotations": ["packages/type-annotations/lib/index.ts"],
+            "kunun-type-annotations/*": ["packages/type-annotations/lib/*"],
+            "kunun": ["packages/kunun/lib/index.ts"],
+            "kunun-workflow-host": ["packages/workflow-host/lib/index.ts"],
+            "kunun-workflow-host/*": ["packages/workflow-host/lib/*"]
         },
     },
     "include": [
         "packages/*/lib/**/*.ts",
-        "packages/*/lib/**/*.d.ts",
-        "lib/**/*.ts",
-        "lib/**/*.d.ts"
+        "packages/*/lib/**/*.d.ts"
     ],
     "exclude": [
         "node_modules",
-        "dist",
-        "__tests__"
+        "dist"
     ]
 }

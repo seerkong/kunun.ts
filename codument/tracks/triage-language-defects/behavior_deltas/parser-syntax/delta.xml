@@ -1,0 +1,55 @@
+<behavior-patch capability="parser-syntax" version="1">
+  <upsert selector="behavior://parser-syntax/requirements/suffix-complement-eof-safety">
+    <requirement id="suffix-complement-eof-safety">
+      <statement>The Kon parser SHALL NOT crash when a `^` suffix-complement token appears in a trailing / end-of-stream position; it SHALL either parse the construct or emit a clear diagnostic, and SHALL NOT throw an internal "End of stream" / null-dereference error.</statement>
+      <suite id="caret-suffix" name="Caret suffix at end of stream">
+        <case id="caret-after-atom-eof">
+          <given>Kon source ends with an atom immediately followed by `^`, e.g. `a^`, `(a^)`, or `a^b`</given>
+          <when>The parser enters the `^` suffix-complement branch</when>
+          <then>The parser SHALL NOT throw the internal "End of stream" error (observed at `KnConverter.Kon.Parser.Parse("a^")`) and SHALL produce a node or a clear diagnostic</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://parser-syntax/requirements/hyphenated-head-no-silent-truncation">
+    <requirement id="hyphenated-head-no-silent-truncation">
+      <statement>The Kon parser SHALL NOT silently truncate a hyphenated symbol or knot head. A `#`-symbol such as `#foo-bar` SHALL NOT collapse to a bare `#`, and a knot head such as `foo-bar` SHALL NOT silently drop the `-bar` remainder. The parser SHALL parse the full intended token, or reject it with a diagnostic — never discard part of it silently.</statement>
+      <suite id="hyphen-in-head" name="Hyphen in symbol / knot head">
+        <case id="hash-symbol-hyphen">
+          <given>Kon source contains a `#`-symbol with a hyphen, e.g. `#foo-bar`</given>
+          <when>The parser reads the symbol</when>
+          <then>The parser SHALL NOT produce a bare `#` word that silently discards `foo-bar` (current observed behavior)</then>
+        </case>
+        <case id="knot-head-hyphen">
+          <given>Kon source contains a knot head with a hyphen, e.g. `(foo-bar 1 2)`</given>
+          <when>The parser reads the knot core</when>
+          <then>The parser SHALL NOT silently reduce the core to `foo` and drop `-bar` without any diagnostic (current observed behavior)</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://parser-syntax/requirements/interpolation-nested-double-quote">
+    <requirement id="interpolation-nested-double-quote">
+      <statement>A double-quoted interpreted string SHALL allow a `\(...)` interpolation whose embedded expression itself contains a double-quoted string literal, or SHALL reject it with a clear diagnostic. The inner `"` SHALL NOT prematurely terminate the outer string and silently garble the parse.</statement>
+      <suite id="nested-quote-in-interp" name="Nested double-quote inside interpolation">
+        <case id="dq-string-in-interp-expr">
+          <given>A double-quoted string with an interpolation whose expression contains a double-quoted literal, e.g. an interpolation that calls a string function with `"a"` and `"b"` arguments</given>
+          <when>The parser reads the outer string</when>
+          <then>The inner double quotes SHALL NOT prematurely close the outer string and produce a garbled map-shaped result; the construct SHALL parse correctly or be clearly rejected</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://parser-syntax/requirements/non-ascii-identifier-support">
+    <requirement id="non-ascii-identifier-support">
+      <statement>Non-ASCII characters (e.g. CJK) SHALL be usable as identifiers / bare words, or SHALL be clearly documented as unsupported. The lexer SHALL NOT throw a bare "Invalid Token" for an otherwise well-formed non-ASCII word outside string literals.</statement>
+      <suite id="non-ascii-words" name="Non-ASCII identifiers">
+        <case id="cjk-identifier">
+          <given>A non-ASCII word such as a CJK identifier appears outside a string literal</given>
+          <when>The lexer tokenizes it</when>
+          <then>The lexer SHALL produce an identifier token (or a clear, documented diagnostic), not the generic "Invalid Token" error it currently throws (the Identifier regex is ASCII-only; non-ASCII is only accepted inside string literals)</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

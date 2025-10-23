@@ -1,0 +1,52 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <upsert selector="behavior://runtime-interpreter/requirements/string-interpolation-runtime">
+    <requirement id="string-interpolation-runtime">
+        <statement>The RuntimeInterpreter SHALL evaluate interpreted string interpolations by executing embedded parser expressions in the current runtime environment and concatenating their string values into the literal result.</statement>
+        <suite id="interpolation-evaluation" name="Interpolation evaluation">
+          <case id="kon-name-interpolation">
+            <given>A Kon source string defines a visible variable named name</given>
+            <when>RuntimeInterpreter evaluates an interpreted string containing a Kon profile interpolation for that name</when>
+            <then>The result SHALL include the current value of name converted to text.</then>
+          </case>
+          <case id="kon-expression-interpolation">
+            <given>A Kon interpreted multiline string contains an embedded Kon expression</given>
+            <when>RuntimeInterpreter evaluates the string</when>
+            <then>The embedded expression SHALL be evaluated in the current runtime and its result SHALL be inserted into the output string.</then>
+          </case>
+          <case id="knl-expression-interpolation">
+            <given>A Knl interpreted multiline string contains an embedded Knl expression using square-bracket interpolation syntax</given>
+            <when>RuntimeInterpreter evaluates parser output for that string</when>
+            <then>The embedded expression SHALL be evaluated with Knl parser semantics and inserted into the output string.</then>
+          </case>
+          <case id="raw-runtime-preservation">
+            <given>A raw single-line or raw multiline string contains escape-like or interpolation-like text</given>
+            <when>RuntimeInterpreter evaluates the raw string node</when>
+            <then>The runtime SHALL return the literal text without escape expansion and without expression evaluation.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/string-escape-runtime">
+    <requirement id="string-escape-runtime">
+        <statement>The RuntimeInterpreter SHALL preserve interpreted string escape semantics for delimiter characters, backslash, newline, tab, and carriage return.</statement>
+        <suite id="escape-evaluation" name="Escape evaluation">
+          <case id="double-quote-output">
+            <given>An interpreted string source escapes double quote characters</given>
+            <when>RuntimeInterpreter evaluates the string</when>
+            <then>The result SHALL contain literal double quote characters.</then>
+          </case>
+          <case id="literal-interpolation-marker-output">
+            <given>An interpreted string source escapes the backslash before profile-specific interpolation syntax</given>
+            <when>RuntimeInterpreter evaluates the string</when>
+            <then>The result SHALL contain the interpolation marker text literally rather than evaluating it.</then>
+          </case>
+          <case id="standard-control-escapes">
+            <given>An interpreted string source contains newline, tab, or carriage-return escapes</given>
+            <when>RuntimeInterpreter evaluates the string</when>
+            <then>The result SHALL contain the corresponding control characters.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

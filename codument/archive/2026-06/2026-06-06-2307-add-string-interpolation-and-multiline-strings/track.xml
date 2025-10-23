@@ -1,0 +1,140 @@
+<Track id="add-string-interpolation-and-multiline-strings" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>添加 `"..."`、`"""..."""`、`'...'`、`'''...'''` 四类字符串字面量；解释型字符串支持转义和 profile-specific 插值，raw 字符串保持字面内容。</Goal>
+    <Description>添加 `"..."`、`"""..."""`、`'...'`、`'''...'''` 四类字符串字面量；解释型字符串支持转义和 profile-specific 插值，raw 字符串保持字面内容。</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-06T13:14:04Z</CreatedAt>
+    <UpdatedAt>2026-06-06T15:07:32Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+    <cdt:Risks>
+      <cdt:Risk id="R1" name="Regex lexer complexity" level="medium">
+      <impact>继续扩展单一正则可能导致 multiline/interpolation 边界错误。</impact>
+      <probability>medium</probability>
+      <mitigation>实现时优先增加专门字符串扫描路径，并用嵌套插值测试保护。</mitigation>
+      </cdt:Risk>
+      <cdt:Risk id="R2" name="Profile mismatch" level="medium">
+      <impact>插值表达式可能被错误 profile 解析。</impact>
+      <probability>low</probability>
+      <mitigation>从当前 SyntaxConfig 派生插值 delimiter，并在 Kon/Knl 各写测试。</mitigation>
+      </cdt:Risk>
+    </cdt:Risks>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_add-string-interpolation-and-multiline-strings" name="add-string-interpolation-and-multiline-strings" version="1">
+    <Description>添加 `"..."`、`"""..."""`、`'...'`、`'''...'''` 四类字符串字面量；解释型字符串支持转义和 profile-specific 插值，raw 字符串保持字面内容。</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="Parser string syntax">
+            <Description>以 TDD 方式实现 parser 对新字符串字面量和 profile-specific 插值的识别。</Description>
+            <cdt:ContextFiles>
+              <cdt:File>lib/Converter/Lexer/Lexer.ts</cdt:File>
+              <cdt:File>lib/Converter/KnParserV1.ts</cdt:File>
+              <cdt:File>lib/Converter/SyntaxConfig.ts</cdt:File>
+              <cdt:File>lib/Converter/KonSyntaxConfig.ts</cdt:File>
+              <cdt:File>lib/Converter/KnlSyntaxConfig.ts</cdt:File>
+              <cdt:File>lib/Model/KnNodeType.ts</cdt:File>
+              <cdt:File>lib/Util/KnNodeHelper.ts</cdt:File>
+              <cdt:File>__tests__/Case/KonParserSyntax.test.ts</cdt:File>
+              <cdt:File>__tests__/Case/Parser.test.ts</cdt:File>
+            </cdt:ContextFiles>
+            <SubNodes>
+              <Task id="T1.1" name="编写 parser 字符串语法失败测试" status="DONE" priority="P0">
+                <Description>增加 parser tests，覆盖四种字符串字面量、delimiter-like 内容、Kon 插值和 Knl 插值。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.1-AC1" checked="true">测试覆盖 `"..."` 和 `"""..."""` 的解释型字符串</cdt:Criterion>
+                  <cdt:Criterion id="T1.1-AC2" checked="true">测试覆盖 `'...'` 和 `'''...'''` 的 raw 字符串</cdt:Criterion>
+                  <cdt:Criterion id="T1.1-AC3" checked="true">测试覆盖 Kon `\(...)` 与 Knl `\[...]` 插值解析</cdt:Criterion>
+                  <cdt:Criterion id="T1.1-AC4" checked="true">新增测试在实现前按预期失败</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T1.2" name="实现字符串扫描和 parser AST" status="DONE" priority="P0">
+                <Description>扩展 lexer/parser，使其能可靠读取 multiline 字符串和插值片段，并按需要新增 AST 节点。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.2-AC1" checked="true">解释型字符串支持标准转义和 multiline 内容</cdt:Criterion>
+                  <cdt:Criterion id="T1.2-AC2" checked="true">raw 字符串不处理转义和插值</cdt:Criterion>
+                  <cdt:Criterion id="T1.2-AC3" checked="true">插值表达式使用当前 SyntaxConfig 对应 profile 解析</cdt:Criterion>
+                  <cdt:Criterion id="T1.2-AC4" checked="true">parser 测试通过且不回归既有 parser syntax 测试</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T1.3" name="修正三引号多行字符串缩进语义" status="DONE" priority="P0">
+                <Description>根据用户确认的语法，三引号字符串 delimiter 必须独占一行并左侧对齐；内容行按 delimiter 左侧缩进裁剪，非空内容不得比 delimiter 缩进更浅。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.3-AC1" checked="true">三双引号和三单引号都要求 opening/closing delimiter 独占一行并缩进对齐</cdt:Criterion>
+                  <cdt:Criterion id="T1.3-AC2" checked="true">多行字符串内容按 delimiter 左侧缩进裁剪</cdt:Criterion>
+                  <cdt:Criterion id="T1.3-AC3" checked="true">非空内容行缩进浅于 delimiter 时 parser 报错</cdt:Criterion>
+                  <cdt:Criterion id="T1.3-AC4" checked="true">RuntimeInterpreter 资源脚本按对齐语法更新并通过执行测试</cdt:Criterion>
+                  <cdt:Criterion id="T1.3-AC5" checked="true">opening/closing delimiter 与其他非空 token 共享一行时 parser 报错</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P2" name="RuntimeInterpreter evaluation">
+            <Description>让 RuntimeInterpreter 在当前环境中执行插值表达式并返回正确字符串结果。</Description>
+            <cdt:ContextFiles>
+              <cdt:File>lib/RuntimeInterpreter/RuntimeInterpreter.ts</cdt:File>
+              <cdt:File>lib/RuntimeInterpreter/RuntimeState.ts</cdt:File>
+              <cdt:File>__tests__/Case/RuntimeInterpreterSourceLowering.test.ts</cdt:File>
+              <cdt:File>__tests__/Resource/RuntimeInterpreter/Source</cdt:File>
+            </cdt:ContextFiles>
+            <SubNodes>
+              <Task id="T2.1" name="编写 RuntimeInterpreter 字符串求值失败测试" status="DONE" priority="P0">
+                <Description>增加非 workflow RuntimeInterpreter tests/resources，覆盖变量插值、表达式插值、raw 保留和转义输出。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.1-AC1" checked="true">测试覆盖 Kon 单行和多行插值</cdt:Criterion>
+                  <cdt:Criterion id="T2.1-AC2" checked="true">测试覆盖 Knl 插值 parser 输出的运行时求值</cdt:Criterion>
+                  <cdt:Criterion id="T2.1-AC3" checked="true">测试覆盖 raw 字符串中的插值文本不执行</cdt:Criterion>
+                  <cdt:Criterion id="T2.1-AC4" checked="true">新增测试在 runtime 实现前按预期失败</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.2" name="实现 RuntimeInterpreter 插值字符串求值" status="DONE" priority="P0">
+                <Description>在 RuntimeInterpreter 中识别插值字符串 AST，求值表达式片段并拼接输出。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.2-AC1" checked="true">插值表达式在当前 runtime environment 中求值</cdt:Criterion>
+                  <cdt:Criterion id="T2.2-AC2" checked="true">插值结果按字符串拼接规则转换为文本</cdt:Criterion>
+                  <cdt:Criterion id="T2.2-AC3" checked="true">raw 字符串保持字面值</cdt:Criterion>
+                  <cdt:Criterion id="T2.2-AC4" checked="true">非 workflow RuntimeInterpreter 测试通过</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.3" name="补充 RuntimeInterpreter 字符串脚本资源覆盖" status="DONE" priority="P0">
+                <Description>新增更多实际 Kon 脚本资源，展示字符串字面量、转义、raw、多行插值在函数、对象、循环和普通表达式中的使用。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.3-AC1" checked="true">新增脚本资源覆盖四类字符串字面量和 delimiter-like 内容</cdt:Criterion>
+                  <cdt:Criterion id="T2.3-AC2" checked="true">新增脚本资源覆盖函数、对象方法、foreach 中的字符串插值</cdt:Criterion>
+                  <cdt:Criterion id="T2.3-AC3" checked="true">新增脚本资源覆盖多行字符串中的变量和表达式插值</cdt:Criterion>
+                  <cdt:Criterion id="T2.3-AC4" checked="true">新增资源均有 RuntimeInterpreter 执行测试断言</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P3" name="Regression and documentation alignment">
+            <Description>运行相关测试和 Codument 校验，确认 parser/runtime 规范、实现和资源一致。</Description>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="3" on-exhausted="block"/></Hook></Hooks>
+            <SubNodes>
+              <Task id="T3.1" name="运行相关自动化测试" status="DONE" priority="P0">
+                <Description>运行 parser syntax 与非 workflow RuntimeInterpreter 相关测试，避免 workflow 半成品测试影响判断。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.1-AC1" checked="true">parser syntax 相关测试通过</cdt:Criterion>
+                  <cdt:Criterion id="T3.1-AC2" checked="true">非 workflow RuntimeInterpreter 测试通过</cdt:Criterion>
+                  <cdt:Criterion id="T3.1-AC3" checked="true">旧 Interpreter 行为未被本 track 修改</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.2" name="验证 Codument track" status="DONE" priority="P1">
+                <Description>运行 codument validate 并修正 track 结构或 XML 规范问题。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.2-AC1" checked="true">codument validate add-string-interpolation-and-multiline-strings --strict 通过，或记录 CLI 不可用原因</cdt:Criterion>
+                  <cdt:Criterion id="T3.2-AC2" checked="true">proposal、design、behavior_deltas 与 track.xml 保持一致</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

@@ -1,0 +1,67 @@
+<Track id="refactor-extract-workflow-dsl-package" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>用户决策：底层只做通用机制，不做特例</Goal>
+    <Description>用户决策：底层只做通用机制，不做特例</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-11T06:39:12Z</CreatedAt>
+    <UpdatedAt>2026-06-11T07:30:00Z</UpdatedAt>
+    <cdt:Type>refactor</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_refactor-extract-workflow-dsl-package" name="refactor-extract-workflow-dsl-package" version="1">
+    <Description>用户决策：底层只做通用机制，不做特例</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="runtime 通用化（TDD）">
+            <Description>默认 lowering 无名字特例；显式 jobExpansion/buildJobs；通用 DispatchUntilStop</Description>
+            <SubNodes>
+              <Task id="T1.1" name="通用 job 展开与 DispatchUntilStop（TDD）" status="DONE" priority="P0">
+                <Description>红测：任意名扩展 perArg 展开、buildJobs 回调、默认单 job、DispatchUntilStop yield/empty；实现：RuntimeState 删除 getWorkflowPrimitiveName 与名字分支，options 增 jobExpansion/buildJobs；RuntimeInterpreter 增 DispatchUntilStop；既有 mock/extension 测试改显式声明（断言的 job id/path 语义保持）</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.1-AC1" checked="true">runtime 源码无 ai_ 前缀/名字分支（grep 0 处；ai_parallel 名未声明展开时为单 job 的语义测试锁定）</cdt:Criterion>
+                  <cdt:Criterion id="T1.1-AC2" checked="true">runtime 包全量测试通过（146/146；GenericExpansion 4 用例红→绿；mock 测试改显式 perArg/buildJobs 声明且断言 path 逐字保持）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P2" name="拆包迁移">
+            <Description>packages/workflow-dsl 自洽；runtime 无 DSL；消费方切换</Description>
+            <SubNodes>
+              <Task id="T2.1" name="迁出 kunun-workflow-dsl 包" status="DONE" priority="P0">
+                <Description>新包（deps: kunun-core, kunun-runtime）；WorkflowDsl 迁入并以 jobExpansion/buildJobs 显式声明替代名字依赖、用 DispatchUntilStop 替代 depa-actor 直连；DSL/Resume/Resource 测试与 Workflow .kon 资源随迁；runtime 删除模块与导出</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.1-AC1" checked="true">workflow-dsl 包内 21 用例全过（git mv 保留历史，测试与 Workflow .kon 资源随迁）；runtime 无 ai_/DSL 导出；执行循环改 DispatchUntilStop，包不依赖 depa-actor</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.2" name="消费方切换与依赖审计" status="DONE" priority="P0">
+                <Description>workflow-host 与 kunun 总包改依赖 kunun-workflow-dsl（总包 re-export 保持 DSL 面）；tsconfig paths；依赖方向审计 core←converter←runtime←workflow-dsl←{host,总包}</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.2-AC1" checked="true">全量 338 pass / 0 fail（含 Examples/CompiledBinary 重建二进制/Mcp）</cdt:Criterion>
+                  <cdt:Criterion id="T2.2-AC2" checked="true">依赖审计零违例：core∅←converter←runtime(+depa-actor)←workflow-dsl←{host(runtime+dsl), 总包}；assets.ts 的 7 处仓库根相对引用为既定 bunfs 资产决策非代码导入</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P3" name="收敛与文档">
+            <Description>全量验证、二进制冒烟、文档与 attractors 回写</Description>
+            <SubNodes>
+              <Task id="T3.1" name="全量验证与回写" status="DONE" priority="P0">
+                <Description>bun test 全量、tsc、build:bin + CompiledBinary、validate --strict；attractors 包边界更新；README workspace 布局表更新；findings/决策回写</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.1-AC1" checked="true">全量 338 绿、tsc 零错误、CompiledBinary 冒烟过；attractors/README 已更新</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="2" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

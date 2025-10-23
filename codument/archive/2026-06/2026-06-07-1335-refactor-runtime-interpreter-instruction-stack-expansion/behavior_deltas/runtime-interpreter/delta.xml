@@ -1,0 +1,58 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <upsert selector="behavior://runtime-interpreter/requirements/instruction-stack-expansion-runtime">
+    <requirement id="instruction-stack-expansion-runtime">
+        <statement>The RuntimeInterpreter SHALL execute language semantics through explicit instruction-stack expansion rather than tree-walk recursive evaluation for compound AST nodes.</statement>
+        <suite id="execution-model" name="Instruction stack execution model">
+          <case id="node-run-expands">
+            <given>A RuntimeInterpreter fiber receives a parsed AST node through the public execution API</given>
+            <when>The runtime handles the node execution instruction</when>
+            <then>The handler SHALL expand the node into one or more RuntimeInstruction records on the current fiber instruction stack instead of recursively evaluating the whole node in the handler call.</then>
+          </case>
+          <case id="compound-forms-use-opcodes">
+            <given>A script uses block, function call, branch, loop, try-catch, object, property, subscript, workflow, or effect syntax</given>
+            <when>The runtime executes the script</when>
+            <then>The runtime SHALL represent the remaining work for the compound form as explicit instructions and operand-stack frames.</then>
+          </case>
+          <case id="literals-may-push-values">
+            <given>A node is already a literal value or an evaluated runtime value</given>
+            <when>The runtime expands the node</when>
+            <then>The runtime MAY lower it directly to a value-push instruction without introducing extra evaluator recursion.</then>
+          </case>
+        </suite>
+        <suite id="continuation-state" name="Continuation state">
+          <case id="no-hidden-js-recursion">
+            <given>A workflow safe-point is reached inside nested calls, loops, or try-catch blocks</given>
+            <when>The runtime captures a checkpoint</when>
+            <then>The checkpoint SHALL contain enough instruction stack, operand stack, environment, fiber, and control-frame state to resume without relying on the original JavaScript call stack.</then>
+          </case>
+          <case id="loop-resume-from-stack">
+            <given>A checkpoint is captured in the middle of a loop body</given>
+            <when>The runtime hydrates and resumes the checkpoint</when>
+            <then>The next iteration, break, continue, and loop-local binding behavior SHALL be driven by restored instructions and frames.</then>
+          </case>
+          <case id="try-resume-from-stack">
+            <given>A checkpoint is captured inside a try body or finally body</given>
+            <when>The runtime hydrates and resumes the checkpoint</when>
+            <then>The active catch, finally, and pending abrupt-completion behavior SHALL be represented by restored instructions and frames.</then>
+          </case>
+        </suite>
+        <suite id="compatibility" name="Compatibility boundary">
+          <case id="public-api-preserved">
+            <given>A caller uses existing RuntimeInterpreter public entry points</given>
+            <when>The execution model is refactored</when>
+            <then>The public entry points SHALL remain available and return the same results for existing RuntimeInterpreter tests.</then>
+          </case>
+          <case id="parser-unchanged">
+            <given>The parser has already been synchronized with current Kon syntax</given>
+            <when>This runtime refactor is implemented</when>
+            <then>The parser syntax and parser output contracts SHALL NOT be changed as part of this track.</then>
+          </case>
+          <case id="legacy-interpreter-not-required">
+            <given>The old Interpreter implementation remains in the project</given>
+            <when>The RuntimeInterpreter is refactored</when>
+            <then>The new RuntimeInterpreter SHALL NOT depend on old Interpreter runtime state or old ExtensionRegistry globals for ordinary execution.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

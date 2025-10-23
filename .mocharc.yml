@@ -1,5 +1,0 @@
-color: true
-# recursive:
-#     - "test/**/*.test.ts"
-require:
-    - "ts-node/register"

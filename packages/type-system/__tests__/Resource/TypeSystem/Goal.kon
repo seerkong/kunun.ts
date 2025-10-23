@@ -1,0 +1,70 @@
+(type #T1
+  :[
+    (method #a |-> Int|)
+    (method #b |-> String|)
+  ])
+
+(type #T2
+  :[
+    (method #b |-> Int|)
+    (method #c |-> Bool|)
+  ])
+
+(type #T3
+  @merge = [T1 T2])
+
+(type #Tail
+  :[
+    (method #c |-> Bool|)
+  ])
+
+(type #T1Generic <P Q>
+  :[
+    (method #a |-> P|)
+    (method #b |-> String|)
+    ..Q
+  ])
+
+(type #ClosedT
+  :[
+    (method #a |-> Int|)
+    ..never
+  ])
+
+(type #SourceQualified
+  :[
+    (method #T1:::b |-> String|)
+  ])
+
+(trait #ToString
+  :[
+    (method #to_string |!Any self -> String|)
+  ])
+
+(class #A
+  @implements = [ToString]
+  :[
+    (!String field #name)
+    (method #to_string |!Any self -> String|)
+  ])
+
+#(effect decl #IoError)
+(type #IoError :[])
+
+#(effect decl #Print)
+(type #Print
+  :[
+    (op #write |!String text -> Unit|)
+  ])
+
+#(effect row :[ IoError Print ])
+(fn #readConfig |-> String|
+  :[
+    "default-config"
+  ])
+
+#(effect handler #ioErrorHandler handles :[ IoError ])
+(fn #handleIoError |!Any request -> String|
+  :[
+    "default-config"
+  ])

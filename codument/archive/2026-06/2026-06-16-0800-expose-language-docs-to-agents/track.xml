@@ -1,0 +1,96 @@
+<Track id="expose-language-docs-to-agents" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>把 kunun 语言手册接通给 AI：scaffold 注入紧凑生成内核（修复回归），并将整套手册嵌入 kwf 二进制、经 kwf docs CLI 与 MCP 工具暴露索引/章节/搜索。</Goal>
+    <Description>范围 ①+②。① 生成内核：新建 dynamic-workflow/00-cheatsheet.md，scaffold 注入它而非已无 DSL 语法的导航 SKILL.md。② 检索与索引：assets 内嵌 reference/ 与 dynamic-workflow/，新增 kwf docs list|show|search 与 kwf_list_docs/kwf_get_doc/kwf_search_docs。不含自纠错循环。</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-15T00:00:00Z</CreatedAt>
+    <UpdatedAt>2026-06-16T00:00:00Z</UpdatedAt>
+  </Metadata>
+
+  <Ports scope="track">
+    <MaterialBundle role="input"  name="behavior-deltas" domain="behavior"  path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="behavior"        domain="codument"  path="vfs://@/codument/behaviors/"/>
+  </Ports>
+
+  <TaskSpace id="space_expose-language-docs-to-agents" name="expose-language-docs-to-agents" version="1">
+    <Description>① 生成内核（workflow-agent-integration），② 文档检索与索引（workflow-host-runtime）。</Description>
+    <SubNodes>
+
+      <TaskGroup id="P1" name="生成内核与 scaffold 注入" status="DONE" order="0">
+        <Description>新建紧凑防陷阱的生成 cheatsheet，并把 kwf agent scaffold 的注入源从导航 SKILL.md 改为该 cheatsheet（修复回归）。</Description>
+        <SubNodes>
+          <Task id="T1.1" name="编写 dynamic-workflow/00-cheatsheet.md 生成内核" status="DONE" order="0" priority="P0">
+            <Description>约 8KB：6 节点 + 配置键表、:input/:output、关键陷阱清单（ai_phase 才 yield、camelCase 名、三引号定界/缩进、需 output_schema 才能字段访问）、1 个端到端示例。内嵌示例须经 kwf dry-run 验证。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.1-AC1" checked="true">cheatsheet 覆盖全部 6 节点+键与关键陷阱，内嵌示例经 kwf dry-run 通过</cdt:Criterion>
+              <cdt:Criterion id="T1.1-AC2" checked="true">体积控制在约 8KB 内（不超出 scaffold 注入预算）</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="scaffold 注入生成内核（TDD）" status="DONE" order="1" priority="P0">
+            <Description>assets 暴露 cheatsheet，cli.ts agent 分支注入它而非 getSkill() 切片；移除失效的 '## DSL reference' 切片逻辑。</Description>
+            <SubNodes>
+              <Task id="T1.2.1" name="写测试：注入内容含 DSL 节点语法+陷阱清单，且非导航文档" status="DONE" order="0" priority="P0"/>
+              <Task id="T1.2.2" name="改 assets.ts 暴露 cheatsheet + cli.ts 注入逻辑" status="DONE" order="1" priority="P0"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.2-AC1" checked="true">scaffold 系统提示来自 cheatsheet，含 DSL 语法与陷阱；不再回退到导航 SKILL.md</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+        </Hooks>
+      </TaskGroup>
+
+      <TaskGroup id="P2" name="手册嵌入、kwf docs CLI 与 MCP 工具" status="DONE" order="1">
+        <Description>把 reference/ 与 dynamic-workflow/ 嵌入二进制并经 CLI/MCP 暴露列索引/取章节/搜索。</Description>
+        <SubNodes>
+          <Task id="T2.1" name="assets 内嵌手册 + backend 资源 API（TDD）" status="DONE" order="0" priority="P1">
+            <Description>仿 example 资源层，with{type:file} 内嵌 reference/*.md 与 dynamic-workflow/*.md；新增 listDocNames()/readDocAsset()，并在 backend 暴露 docs 列举/读取/搜索方法。</Description>
+            <SubNodes>
+              <Task id="T2.1.1" name="写测试：列举返回全部章节、读取内容与源一致、未知路径报错" status="DONE" order="0" priority="P1"/>
+              <Task id="T2.1.2" name="实现 assets 内嵌 + backend docs 方法" status="DONE" order="1" priority="P1"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.1-AC1" checked="true">dev 与编译态经同一 API 返回手册章节，内容与 repo 源一致</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.2" name="kwf docs CLI 子命令（TDD）" status="DONE" order="1" priority="P1">
+            <Description>docs list / show &lt;path&gt; / search &lt;kw&gt;；未知路径明确报错且非零退出。</Description>
+            <SubNodes>
+              <Task id="T2.2.1" name="写测试：list/show/search 行为与退出码" status="DONE" order="0" priority="P1"/>
+              <Task id="T2.2.2" name="实现 docs 子命令" status="DONE" order="1" priority="P1"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.2-AC1" checked="true">list 打印索引、show 打印章节、search 返回命中路径+上下文；未知路径非零退出</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.3" name="docs MCP 工具（TDD）" status="DONE" order="2" priority="P1">
+            <Description>kwf_list_docs / kwf_get_doc / kwf_search_docs，复用同一 backend，JSON shape 与 CLI 一致，isError 跟随结果。</Description>
+            <SubNodes>
+              <Task id="T2.3.1" name="写测试：三工具形状、与 CLI 一致、未知路径 isError" status="DONE" order="0" priority="P1"/>
+              <Task id="T2.3.2" name="实现三个 MCP 工具" status="DONE" order="1" priority="P1"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.3-AC1" checked="true">三工具可用且与 docs CLI 行为一致，未知路径 isError=true</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.4" name="编译态冒烟 + 文档入口联动" status="DONE" order="3" priority="P2">
+            <Description>扩展 CompiledBinary 测试覆盖 dist-bin/kwf docs；SKILL.md 导航与 dynamic-workflow/README.md 增列 cheatsheet 与 kwf docs 入口。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.4-AC1" checked="true">编译态 kwf docs list/show 可用；SKILL.md 与 README 增列新入口</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+          <Hook on="phase:after"><cdt:GapLoop max-rounds="5" on-exhausted="block"/></Hook>
+        </Hooks>
+      </TaskGroup>
+
+    </SubNodes>
+  </TaskSpace>
+
+  <Schedule />
+</Track>

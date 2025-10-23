@@ -1,0 +1,28 @@
+#(effect handler #addHandler handles :[
+  add
+])
+(fn #AddHandler |resume val1 val2|
+  :[
+    (:resume (val1 val2 :+))
+  ]
+)
+
+#(effect handler #multiHandler handles :[
+  multi
+])
+(fn #MultiHandler |resume val1 val2|
+  :[
+    (:resume (val1 val2 :*))
+  ]
+)
+
+(fn #runApp |-> Unit|
+  :[
+    (var sum (perform #add |1 2|))
+    (perform #multi |sum 2|)
+  ]
+)
+
+(runApp)
+%(effect handle #addHandler)
+%(effect handle #multiHandler)

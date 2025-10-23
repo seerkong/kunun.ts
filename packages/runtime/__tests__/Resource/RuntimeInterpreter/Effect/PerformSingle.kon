@@ -1,0 +1,9 @@
+(fn #AddHandler :|resume val1 val2| :[
+  (:resume (val1 val2 :+))
+  999
+])
+(try :[
+  (perform #add :|1 2|)
+]
+  handle #add AddHandler
+)

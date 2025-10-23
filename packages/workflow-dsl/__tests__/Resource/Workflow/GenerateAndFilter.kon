@@ -1,0 +1,75 @@
+(ai_workflow #generateAndFilter
+  :input = {topic = "Cut build times"}
+  :output = [topic batches unique graded]
+  :[
+    (ai_phase #Generate
+      :[
+        (var topic "Cut build times")
+        (var lenses ["cache" "tests" "dependencies"])
+        (var batches (ai_parallel #ideaBatches
+          :{
+            input = lenses
+            item = lens
+            index = lensIndex
+          }
+          :[
+            (ai_agent #generateBatch :{
+              label = "generator-\(lensIndex)"
+              sys_prompt = "You generate candidate items for a later filter stage."
+              user_prompt =
+              """
+              Generate build-time improvement ideas.
+
+              Topic:
+              \(topic)
+
+              Lens:
+              \(lens)
+              """
+            })
+          ]))
+      ])
+    (ai_phase #Filter
+      :[
+        (var unique ["cache artifacts" "split tests" "reuse dependencies"])
+        (var graded (ai_pipeline #gradeUniqueIdeas
+          :{
+            input = unique
+            item = idea
+            value = current
+            index = ideaIndex
+          }
+          :[
+            (stage #Grade :[
+              (ai_agent #gradeIdea :{
+                label = "grade"
+                sys_prompt = "You are a pipeline stage that scores one candidate item."
+                user_prompt =
+                """
+                Grade this unique build-time idea.
+
+                Idea index: \(ideaIndex)
+                Idea:
+                \(idea)
+                """
+              })
+            ])
+            (stage #Keep :[
+              (ai_agent #keepIdea :{
+                label = "keep"
+                sys_prompt = "You are a pipeline stage that filters scored candidates."
+                user_prompt =
+                """
+                Keep only high-value ideas.
+
+                Original idea:
+                \(idea)
+
+                Current grade:
+                \(current)
+                """
+              })
+            ])
+          ]))
+      ])
+  ])

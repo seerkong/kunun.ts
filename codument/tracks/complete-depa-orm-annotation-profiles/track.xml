@@ -1,0 +1,77 @@
+<Track id="complete-depa-orm-annotation-profiles" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>Complete depa-orm-ready annotation profiles in kunun-type-annotations.</Goal>
+    <Description>Fill remaining depa-orm adapter gaps for field properties, relation order identifiers, validation helpers, and entity/datasource profiles.</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>auto</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-07-04T13:02:59+03:00</CreatedAt>
+    <UpdatedAt>2026-07-04T13:07:49+03:00</UpdatedAt>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="input" name="type-annotations-source" domain="repo" path="vfs://@/packages/type-annotations/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_complete-depa-orm-annotation-profiles" name="complete-depa-orm-annotation-profiles" version="1">
+    <Description>Complete depa-orm annotation profile support.</Description>
+    <SubNodes>
+      <TaskGroup id="P1" name="Field and relation profile coverage" status="DONE" order="0">
+        <Description>Add missing field properties and relation order identifier parsing.</Description>
+        <SubNodes>
+          <Task id="T1.1" name="Support field properties key" status="DONE" order="0" priority="P0">
+            <Description>Parse canonical `properties = [...]` and legacy `property` into field property descriptors.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.1-AC1" checked="true">Tests cover canonical `properties` and compatibility `property` forms.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="Extend relation order descriptors" status="DONE" order="1" priority="P0">
+            <Description>Parse DataQueryIdentifier-like order fields including namespace, alias, order_set, entity_name, and relative_path.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.2-AC1" checked="true">Relation tests assert extended order fields are preserved.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+        </Hooks>
+      </TaskGroup>
+      <TaskGroup id="P2" name="Validation helpers" status="DONE" order="1">
+        <Description>Add depa-oriented validation helpers for relation annotation descriptors.</Description>
+        <SubNodes>
+          <Task id="T2.1" name="Add relation validation helper" status="DONE" order="0" priority="P0">
+            <Description>Validate relation type, cardinality, cascade values, endpoint shapes, join-key counts, and through path continuity.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.1-AC1" checked="true">Validation tests cover invalid enum values and through continuity gaps.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+        </Hooks>
+      </TaskGroup>
+      <TaskGroup id="P3" name="Entity and datasource profiles" status="DONE" order="2">
+        <Description>Add typed ORM entity and datasource annotation profiles and focused verification.</Description>
+        <SubNodes>
+          <Task id="T3.1" name="Add entity and datasource profiles" status="DONE" order="0" priority="P0">
+            <Description>Parse entity type, primary key, db, logical delete, datasource key, name, kind, env_conn, and options metadata.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T3.1-AC1" checked="true">Tests cover direct markers and annotated Knots for entity/datasource profiles.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.2" name="Run verification" status="DONE" order="1" priority="P0">
+            <Description>Run type-annotations tests, focused type-system tests, typecheck, XML validation, and codument strict validation.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T3.2-AC1" checked="true">All focused verification commands pass.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+        </Hooks>
+      </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule/>
+</Track>

@@ -1,0 +1,88 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <upsert selector="behavior://runtime-interpreter/requirements/depa-actor-substrate">
+    <requirement id="depa-actor-substrate">
+        <statement>The project SHALL provide a new optional interpreter runtime that uses depa-actor@0.2.0 execution kernel primitives from the local file dependency file:/Users/kongweixian/infra-dev/depa-actor as its generic execution substrate.</statement>
+        <suite id="substrate" name="Substrate Integration">
+          <case id="uses-linked-depa-actor">
+            <given>depa-actor is configured as a local file dependency pointing to /Users/kongweixian/infra-dev/depa-actor</given>
+            <when>The new interpreter runtime is built</when>
+            <then>The runtime SHALL import depa-actor primitives for instruction stack, operand stack, and generic dispatch while resolving the package version from depa-actor's own package.json.</then>
+          </case>
+          <case id="does-not-reimplement-generic-kernel">
+            <given>depa-actor exposes stack/frame and dispatch primitives</given>
+            <when>The runtime needs those mechanics</when>
+            <then>The runtime SHALL reuse the depa-actor primitives instead of duplicating generic stack or dispatcher implementations.</then>
+          </case>
+          <case id="legacy-path-unchanged">
+            <given>A caller uses the existing Interpreter API</given>
+            <when>The new runtime interpreter is added</when>
+            <then>The existing interpreter path SHALL remain available and behaviorally unchanged unless a caller opts into the new runtime.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/extensible-runtime-port">
+    <requirement id="extensible-runtime-port">
+        <statement>The new interpreter runtime SHALL prioritize porting runtime capabilities from ExtensibleScopedRowType Kon.Interpreter before attempting type-system migration.</statement>
+        <suite id="runtime-capabilities" name="Runtime Capabilities">
+          <case id="runtime-owned-registry">
+            <given>The runtime is created</given>
+            <when>Default handlers and keyword expanders are registered</when>
+            <then>The runtime SHALL own its handler registry rather than relying only on a static global registry.</then>
+          </case>
+          <case id="dual-stack-fiber-state">
+            <given>A fiber is created in the new runtime</given>
+            <when>The fiber executes instructions</when>
+            <then>The fiber SHALL have an instruction stack, operand stack, current environment id, and execution history compatible with the dual-stack VM model.</then>
+          </case>
+          <case id="block-entry-point">
+            <given>A caller evaluates a parsed block or source string</given>
+            <when>The new interpreter starts execution</when>
+            <then>The runtime SHALL push a land-success instruction and a block/node execution instruction and then dispatch until success, fail, or no runnable fiber remains.</then>
+          </case>
+          <case id="basic-runtime-features-first">
+            <given>The ExtensibleScopedRowType runtime has object, property/subscript, host function, environment, and fiber capabilities</given>
+            <when>This project ports the runtime</when>
+            <then>The first implementation SHALL cover a focused baseline of those runtime capabilities before adding typed runtime behavior.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/parser-runtime-boundary">
+    <requirement id="parser-runtime-boundary">
+        <statement>The new interpreter runtime SHALL consume the current parser output without changing parser syntax as part of this track.</statement>
+        <suite id="parser-boundary" name="Parser Boundary">
+          <case id="uses-existing-kon-parser">
+            <given>The Kon parser profile has been synchronized in the previous parser track</given>
+            <when>The new interpreter evaluates Kon source</when>
+            <then>The runtime SHALL use the existing parser/converter output as input rather than redefining parser syntax.</then>
+          </case>
+          <case id="parser-regression-guard">
+            <given>Parser changes previously exposed interpreter test concerns</given>
+            <when>The new runtime is implemented</when>
+            <then>The test suite SHALL include runtime tests that distinguish parser failures from interpreter execution failures.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/future-type-system-ready">
+    <requirement id="future-type-system-ready">
+        <statement>The new runtime SHALL expose extension points needed for future ExtensibleScopedRowType type-system migration without implementing the type checker in this track.</statement>
+        <suite id="type-system-readiness" name="Type System Readiness">
+          <case id="typed-context-placeholder">
+            <given>The future type system needs runtime context and prototype resolution</given>
+            <when>The runtime state is designed</when>
+            <then>The runtime SHALL reserve a typed runtime context extension point without requiring type checking for ordinary evaluation.</then>
+          </case>
+          <case id="non-goal-type-checker">
+            <given>This track implements the new runtime interpreter</given>
+            <when>Type annotations or source-qualified type syntax appear</when>
+            <then>The runtime SHALL preserve structures needed by future type-system work but SHALL NOT implement full type binding or checking in this track.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

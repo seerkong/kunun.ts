@@ -1,0 +1,166 @@
+<behaviors capability="parser-syntax" version="1">
+  <requirement id="three-profile-syntax">
+    <statement>The converter SHALL expose three syntax profiles named Knl, Kon, and Kjson with distinct map/vector/knot container styles and profile-specific separator rules.</statement>
+    <suite id="profile-containers" name="Profile container forms">
+      <case id="knl-containers">
+        <given>The Knl parser profile is selected</given>
+        <when>The parser reads map, vector, and knot values</when>
+        <then>The parser SHALL treat parentheses as maps, curly braces as vectors, and square brackets as knots.</then>
+      </case>
+      <case id="kon-containers">
+        <given>The Kon parser profile is selected</given>
+        <when>The parser reads map, vector, and knot values</when>
+        <then>The parser SHALL treat curly braces as maps, square brackets as vectors, and parentheses as knots.</then>
+      </case>
+      <case id="kjson-containers">
+        <given>The Kjson parser profile is selected</given>
+        <when>The parser reads map, vector, and knot values</when>
+        <then>The parser SHALL preserve the JSON-like curly-brace map and square-bracket vector style.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="whitespace-separators">
+    <statement>The Knl and Kon parser profiles SHALL use whitespace-only separation for array/vector and map entries and SHALL reject comma separators in these containers.</statement>
+    <suite id="separator-rules" name="Knl and Kon separator rules">
+      <case id="kon-rejects-array-comma">
+        <given>The Kon parser profile is selected</given>
+        <when>The parser reads an array containing comma-separated elements</when>
+        <then>The parser SHALL reject the input.</then>
+      </case>
+      <case id="knl-rejects-map-comma">
+        <given>The Knl parser profile is selected</given>
+        <when>The parser reads a map containing comma-separated entries</when>
+        <then>The parser SHALL reject the input.</then>
+      </case>
+      <case id="kjson-keeps-json-like-separators">
+        <given>The Kjson parser profile is selected</given>
+        <when>The parser reads JSON-like map or vector syntax</when>
+        <then>The parser SHALL keep accepting the profile's JSON-like separator behavior.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="external-kon-parity">
+    <statement>The Kon parser profile SHALL match the external Kon parser syntax for parser-level constructs, excluding interpreter behavior.</statement>
+    <suite id="kon-constructs" name="External Kon parser constructs">
+      <case id="container-subscript">
+        <given>The Kon parser profile is selected</given>
+        <when>The parser reads a chain containing the `::` token</when>
+        <then>The parser SHALL tokenize and parse `::` as a container subscript operation in line with the external parser implementation.</then>
+      </case>
+      <case id="source-qualified-name">
+        <given>The Kon parser profile is selected</given>
+        <when>The parser reads a word or chain name containing the `:::` token, such as `T1:::b` or `com.example.ClassA:::b`</when>
+        <then>The parser SHALL tokenize and parse `:::` as a source qualifier separator and preserve source and member name information for formatting.</then>
+      </case>
+      <case id="chain-metadata-and-body">
+        <given>The Kon parser profile is selected</given>
+        <when>The parser reads chain name, generic params, in/out table, conf, body, attributes, sections, and slots</when>
+        <then>The parser SHALL preserve equivalent AST information for formatting and downstream processing.</then>
+      </case>
+      <case id="quote-and-spread">
+        <given>The Kon parser profile is selected</given>
+        <when>The parser reads quasiquote, unquote, unquote-splice, unquote-map, or row-spread syntax</when>
+        <then>The parser SHALL create AST nodes that preserve the quote or spread kind and inner value.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="external-doc-sync">
+    <statement>The parser syntax baseline SHALL follow the external Kon documentation and implementation where `:::` is source qualification, `::` is container subscript, and `.:` is slot/static subscript.</statement>
+    <suite id="docs" name="External documentation correction">
+      <case id="external-baseline-recorded">
+        <given>The external project has implemented and documented `:::` source qualification</given>
+        <when>This TypeScript project synchronizes Kon parser syntax</when>
+        <then>The track SHALL use `:::` source qualification, `::` container subscript, and `.:` slot/static subscript as the synchronization baseline.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="string-literals">
+    <statement>The parser syntax SHALL support interpreted and raw string literals in both single-line and multiline forms.</statement>
+    <suite id="literal-forms" name="String literal forms">
+      <case id="double-quoted-single-line">
+        <given>A parser profile reads a double-quoted string literal</given>
+        <when>The literal is delimited by one double quote on each side</when>
+        <then>The parser SHALL parse it as an interpreted single-line string that supports escapes and interpolation.</then>
+      </case>
+      <case id="triple-double-quoted-multiline">
+        <given>A parser profile reads a triple-double-quoted string literal</given>
+        <when>The literal spans one or more source lines</when>
+        <then>The parser SHALL parse it as an interpreted multiline string that supports escapes and interpolation, with opening and closing delimiters on aligned delimiter-only lines.</then>
+      </case>
+      <case id="single-quoted-raw-single-line">
+        <given>A parser profile reads a single-quoted string literal</given>
+        <when>The literal is delimited by one single quote on each side</when>
+        <then>The parser SHALL parse it as a raw single-line string without escape processing and without interpolation.</then>
+      </case>
+      <case id="triple-single-quoted-raw-multiline">
+        <given>A parser profile reads a triple-single-quoted string literal</given>
+        <when>The literal spans one or more source lines</when>
+        <then>The parser SHALL parse it as a raw multiline string without escape processing and without interpolation, with opening and closing delimiters on aligned delimiter-only lines.</then>
+      </case>
+    </suite>
+    <suite id="multiline-indentation" name="Multiline string indentation">
+      <case id="strip-delimiter-indent">
+        <given>A triple-quoted string delimiter has leading whitespace before the quote characters</given>
+        <when>The parser reads the multiline string content</when>
+        <then>The parser SHALL remove that same leading indentation from each content line before producing the string value.</then>
+      </case>
+      <case id="reject-under-indented-content">
+        <given>A non-empty multiline string content line has a non-whitespace character before the delimiter indentation column</given>
+        <when>The parser reads the triple-quoted string</when>
+        <then>The parser SHALL reject the string as malformed.</then>
+      </case>
+      <case id="reject-unaligned-closing-delimiter">
+        <given>A triple-quoted string closing delimiter is not aligned with the opening delimiter</given>
+        <when>The parser reads the triple-quoted string</when>
+        <then>The parser SHALL reject the string as malformed.</then>
+      </case>
+      <case id="reject-inline-triple-string">
+        <given>A triple-quoted string has content on the opening delimiter line</given>
+        <when>The parser reads the triple-quoted string</when>
+        <then>The parser SHALL reject the string because triple-quoted strings are multiline-only.</then>
+      </case>
+      <case id="reject-non-exclusive-delimiter-lines">
+        <given>A triple-quoted string opening or closing delimiter shares its source line with any non-whitespace content</given>
+        <when>The parser reads the triple-quoted string</when>
+        <then>The parser SHALL reject the string because triple-quoted delimiters must be delimiter-only lines.</then>
+      </case>
+    </suite>
+    <suite id="delimiter-content" name="Delimiter-like content">
+      <case id="interpreted-single-quote-content">
+        <given>An interpreted double-quoted string contains single quote characters</given>
+        <when>The parser reads the literal</when>
+        <then>The parser SHALL allow single quote and triple-single-quote text as ordinary content.</then>
+      </case>
+      <case id="interpreted-double-quote-escape">
+        <given>An interpreted double-quoted string needs to contain its own delimiter text</given>
+        <when>The source uses escaped double quote characters</when>
+        <then>The parser SHALL support escaped double quote output for both single and triple double-quoted interpreted strings.</then>
+      </case>
+      <case id="raw-delimiter-collision">
+        <given>A raw string contains its own closing delimiter sequence</given>
+        <when>The parser reads the literal</when>
+        <then>The parser SHALL end the raw string at that delimiter and SHALL NOT introduce variable-length delimiter syntax.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="profile-specific-string-interpolation">
+    <statement>The parser syntax SHALL define string interpolation using backslash followed by the active profile's knot delimiter pair.</statement>
+    <suite id="profile-interpolation-delimiters" name="Profile-specific interpolation delimiters">
+      <case id="kon-parenthesized-interpolation">
+        <given>The Kon parser profile is selected</given>
+        <when>The parser reads an interpreted string containing backslash-parenthesized content</when>
+        <then>The parser SHALL parse the content between the parentheses as a Kon expression interpolation.</then>
+      </case>
+      <case id="knl-bracketed-interpolation">
+        <given>The Knl parser profile is selected</given>
+        <when>The parser reads an interpreted string containing backslash-bracketed content</when>
+        <then>The parser SHALL parse the content between the square brackets as a Knl expression interpolation.</then>
+      </case>
+      <case id="raw-strings-ignore-interpolation">
+        <given>Any parser profile reads a raw string literal</given>
+        <when>The raw string contains text that looks like interpolation syntax</when>
+        <then>The parser SHALL preserve that text literally and SHALL NOT parse embedded expressions.</then>
+      </case>
+    </suite>
+  </requirement>
+</behaviors>

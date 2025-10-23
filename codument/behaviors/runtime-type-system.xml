@@ -1,0 +1,488 @@
+<behaviors capability="runtime-type-system" version="1">
+  <requirement id="extensible-scoped-row-type-port">
+    <statement>The project SHALL migrate the ExtensibleScopedRowType type-system behavior into a TypeScript runtime-type-system capability without changing parser syntax.</statement>
+    <suite id="baseline-audit" name="Baseline Audit">
+      <case id="port-map">
+        <given>The ExtensibleScopedRowType project contains type-system docs, implementation, and tests</given>
+        <when>The migration starts</when>
+        <then>The project SHALL create a migration matrix mapping each relevant type-system behavior to TypeScript implementation tasks and tests</then>
+      </case>
+      <case id="parser-syntax-reused">
+        <given>The current parser already supports `:::` source-qualified names</given>
+        <when>The type system reads parser output</when>
+        <then>The type system SHALL consume existing AST source qualifier data and SHALL NOT redefine parser tokens for source qualification</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="type-model-and-environment">
+    <statement>The project SHALL provide type model, symbol, scope, environment, diagnostic, and source-qualified name primitives for static type checking.</statement>
+    <suite id="model" name="Type Model">
+      <case id="type-ast">
+        <given>A source file declares type-level rows, classes, traits, generics, or effects</given>
+        <when>The parser AST is lowered for type checking</when>
+        <then>The type system SHALL represent the declarations in a dedicated type AST or equivalent typed intermediate model</then>
+      </case>
+      <case id="source-qualified-symbol">
+        <given>A type reference or member reference uses `source:::name`</given>
+        <when>The binder resolves the reference</when>
+        <then>The binder SHALL preserve both the source qualifier and the member name for symbol lookup and diagnostics</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="row-type-binding">
+    <statement>The type system SHALL bind and check row types, row member access, row merge, and source-qualified row members.</statement>
+    <suite id="row-members" name="Row Member Binding">
+      <case id="qualified-member-access">
+        <given>Multiple row sources may expose members with the same local name</given>
+        <when>Code references a member using `T1:::b` or an equivalent source-qualified form</when>
+        <then>The type system SHALL resolve the member against the named source and avoid ambiguous local-member lookup</then>
+      </case>
+      <case id="ambiguous-member-diagnostic">
+        <given>A merged row contains multiple unqualified members with the same local name</given>
+        <when>Code references that local name without a source qualifier</when>
+        <then>The type system SHALL report an ambiguity diagnostic instead of selecting an arbitrary member</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="class-trait-and-generic-binding">
+    <statement>The type system SHALL bind class, trait, member signature, generic type parameter, and generic instantiation semantics compatible with ExtensibleScopedRowType.</statement>
+    <suite id="class-trait" name="Class and Trait Binding">
+      <case id="member-signatures">
+        <given>A class or trait declares fields, properties, methods, or operator-style members with type signatures</given>
+        <when>The binder processes the declaration</when>
+        <then>The type system SHALL make the member signatures available for expression checking and diagnostics</then>
+      </case>
+      <case id="generic-type-params">
+        <given>A row, class, trait, or function declares type parameters</given>
+        <when>The declaration is instantiated with type arguments</when>
+        <then>The type system SHALL bind type parameters and validate arity and constraints according to the migrated baseline</then>
+      </case>
+    </suite>
+    <suite id="inheritance-projection" name="Inheritance and Projection">
+      <case id="c3-linearization">
+        <given>A class has multiple base classes with shared ancestors</given>
+        <when>The type system computes method resolution order</when>
+        <then>The type system SHALL use C3 linearization and SHALL report inconsistent base ordering instead of using ad hoc depth-first order</then>
+      </case>
+      <case id="member-qualifier-rules">
+        <given>Rows or classes contain virtual, override, final, or inherit members</given>
+        <when>The type system materializes inherited rows or resolves members</when>
+        <then>The type system SHALL enforce override requirements, final override rejection, inherit forwarding, and virtual member pruning compatible with ExtensibleScopedRowType</then>
+      </case>
+      <case id="trait-projection-view">
+        <given>A class implements a trait and exposes additional members outside the trait</given>
+        <when>A value is projected to the trait</when>
+        <then>The type system SHALL allow the projection but SHALL restrict member lookup to the trait view</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="typed-effect-system">
+    <statement>The type system SHALL provide static checking for typed effects and handlers on top of the current untyped runtime effect model.</statement>
+    <suite id="effect-checking" name="Typed Effect Checking">
+      <case id="effect-signature">
+        <given>An effect declaration defines input and output type signatures</given>
+        <when>A script performs that effect</when>
+        <then>The type system SHALL validate performed arguments and expected result type before runtime execution when type checking is enabled</then>
+      </case>
+      <case id="handler-coverage">
+        <given>A typed effect is performed inside a statically checked scope</given>
+        <when>The type system checks available handlers</when>
+        <then>The type system SHALL validate that handler signatures cover the performed effect according to the migrated baseline</then>
+      </case>
+    </suite>
+    <suite id="effect-diagnostics" name="Effect Diagnostics">
+      <case id="handler-no-effect">
+        <given>A handler is applied to an expression whose residual effect row does not include any handled effects</given>
+        <when>The type checker applies the handler</when>
+        <then>The checker SHALL report that the handler does not affect the residual effects</then>
+      </case>
+      <case id="closed-boundary-residual">
+        <given>A checked function has a closed effect boundary</given>
+        <when>The function body leaves residual effects outside the declared row</when>
+        <then>The checker SHALL report the residual effects at the closed boundary</then>
+      </case>
+      <case id="stack-shaped-call-composition">
+        <given>A source-level function or method returns multiple outputs</given>
+        <when>The outputs are consumed by a later checked call</when>
+        <then>The checker SHALL preserve and validate the full output stack shape</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="runtime-integration">
+    <statement>The RuntimeInterpreter SHALL expose opt-in type-check integration while preserving untyped execution as the default behavior.</statement>
+    <suite id="runtime-entrypoints" name="Runtime Integration">
+      <case id="default-untyped">
+        <given>A caller evaluates a script with RuntimeInterpreter defaults</given>
+        <when>The script contains no explicit type-check request</when>
+        <then>The interpreter SHALL execute using the existing untyped runtime behavior</then>
+      </case>
+      <case id="opt-in-typecheck">
+        <given>A caller enables type checking before execution</given>
+        <when>The script fails static type checking</when>
+        <then>The interpreter SHALL return or throw type diagnostics according to the public API and SHALL NOT execute the invalid script body</then>
+      </case>
+    </suite>
+    <suite id="typed-runtime-context" name="Typed Runtime Context">
+      <case id="typed-object-storage">
+        <given>A typed runtime context creates an object from a typed class declaration</given>
+        <when>The caller reads or writes declared fields</when>
+        <then>The typed runtime context SHALL use addressable typed storage and SHALL reject fields not exposed by the active view</then>
+      </case>
+      <case id="projection-field-boundary">
+        <given>A typed object is projected to a class or trait view</given>
+        <when>The caller reads fields or resolves property accessors</when>
+        <then>The typed runtime context SHALL resolve through the projected type view and SHALL reject members outside that view</then>
+      </case>
+      <case id="prototype-hydration">
+        <given>A typed runtime object is created with a Kon prototype object</given>
+        <when>The prototype contains field defaults and accessors</when>
+        <then>The typed runtime context SHALL hydrate declared field defaults and preserve getter/setter lookup compatible with ExtensibleScopedRowType</then>
+      </case>
+    </suite>
+    <suite id="typed-runtime-execution" name="Typed Runtime Execution Bridge">
+      <case id="typed-method-dispatch">
+        <given>A typed object has prototype methods matching typed row members</given>
+        <when>The typed runtime context invokes a method directly or through a class/trait projection</when>
+        <then>The context SHALL dispatch only methods exposed by the active typed view and SHALL use trait projections to select the top implementation</then>
+      </case>
+      <case id="inherit-method-forwarding">
+        <given>A derived typed class declares an `inherit` method and does not provide its own implementation</given>
+        <when>The typed runtime invokes that method</when>
+        <then>The runtime SHALL forward to the inherited base implementation compatible with ExtensibleScopedRowType</then>
+      </case>
+      <case id="typed-effect-scope-dispatch">
+        <given>A typed class exposes same-name methods with different effect row contexts</given>
+        <when>The typed runtime context invokes the method inside an active effect scope</when>
+        <then>The context SHALL select the compatible contextual member and SHALL report ambiguity when the active scope cannot choose one implementation</then>
+      </case>
+      <case id="typed-kon-value-conversion">
+        <given>A typed runtime bridge reads and writes values through Kon node APIs</given>
+        <when>The caller writes primitive Kon values or unsupported structured values</when>
+        <then>The bridge SHALL preserve primitive/object values and SHALL reject unsupported structured values</then>
+      </case>
+      <case id="real-parent-storage">
+        <given>A typed class has real base classes</given>
+        <when>The typed runtime context creates an instance</when>
+        <then>The object SHALL materialize parent storage for real base classes</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="generic-application-and-perform-signatures">
+    <statement>The type checker SHALL apply generic function type arguments and typed effect operation signatures when checking source expressions.</statement>
+    <suite id="generic-function-application" name="Generic Function Application">
+      <case id="infer-generic-function-arguments">
+        <given>A generic function declares type parameters in its in/out signature</given>
+        <when>A checked caller invokes the function with concrete input stack types</when>
+        <then>The checker SHALL infer compatible type arguments and substitute concrete output stack types</then>
+      </case>
+      <case id="explicit-generic-function-arguments">
+        <given>A generic function is called with explicit type arguments</given>
+        <when>The checker validates the call</when>
+        <then>The checker SHALL validate type argument arity and substitute parameters/outputs before stack compatibility checking</then>
+      </case>
+      <case id="generic-function-mismatch">
+        <given>A generic function type parameter cannot be consistently inferred</given>
+        <when>The checker validates the call</when>
+        <then>The checker SHALL emit a diagnostic instead of falling back to untyped success</then>
+      </case>
+    </suite>
+    <suite id="typed-perform-signatures" name="Typed Perform Signatures">
+      <case id="perform-operation-signature">
+        <given>An effect row declares operation member signatures</given>
+        <when>Source checks a `perform` expression for that operation</when>
+        <then>The checker SHALL validate argument stack shape, output stack shape, and residual effect row using the declared operation signature</then>
+      </case>
+      <case id="perform-handler-runtime-boundary">
+        <given>The runtime executes a `perform` expression with active named effect handlers</given>
+        <when>The checker has typed operation metadata available</when>
+        <then>The typed operation name and runtime effect handler lookup SHALL use the same effect identity boundary</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="typed-runtime-execution-parity">
+    <statement>The typed runtime bridge SHALL expose ExtensibleScopedRowType-compatible script execution and runtime permission behavior without changing default untyped execution.</statement>
+    <suite id="typed-script-execution" name="Typed Script Execution">
+      <case id="typed-block-entrypoint">
+        <given>A source block contains typed class or trait declarations followed by executable statements</given>
+        <when>The caller explicitly uses the typed runtime entrypoint</when>
+        <then>The interpreter SHALL bind declarations, create typed objects, and execute slot access, assignment, property access, receiver calls, and projections through the typed runtime bridge</then>
+      </case>
+      <case id="full-interpreter-typed-block">
+        <given>A typed block contains ordinary RuntimeInterpreter constructs around typed object operations</given>
+        <when>The caller explicitly uses the typed runtime entrypoint</when>
+        <then>The entrypoint SHALL execute through the full RuntimeInterpreter with a typed runtime context installed instead of through a narrow bespoke evaluator</then>
+      </case>
+      <case id="field-default-metadata">
+        <given>A typed class declares a default field using `(field #name = value)` without an explicit type prefix</given>
+        <when>The typed runtime binds and executes the class</when>
+        <then>The binder SHALL register the field with an `Any` fallback type and the runtime SHALL hydrate the default value</then>
+      </case>
+      <case id="typed-dispatch-not-implicit">
+        <given>A caller uses the default RuntimeInterpreter evaluation APIs</given>
+        <when>The script contains ordinary untyped object operations</when>
+        <then>The interpreter SHALL keep the existing untyped behavior and SHALL NOT install typed dispatch implicitly</then>
+      </case>
+    </suite>
+    <suite id="typed-runtime-permissions" name="Typed Runtime Permissions">
+      <case id="effectful-method-requires-scope">
+        <given>A typed method signature carries an effect row</given>
+        <when>The method is invoked outside an active effect scope that permits the row</when>
+        <then>The typed runtime context SHALL reject the call before invoking the implementation</then>
+      </case>
+      <case id="effectful-method-allowed-by-scope">
+        <given>A typed method signature carries an effect row and the active effect scope permits it</given>
+        <when>The method is invoked</when>
+        <then>The typed runtime context SHALL invoke the selected implementation</then>
+      </case>
+    </suite>
+    <suite id="typed-value-boundary" name="Typed Value Boundary">
+      <case id="explicit-runtime-values">
+        <given>Typed runtime code stores primitive, list, map, function, object, or projected object values</given>
+        <when>The value crosses the typed runtime boundary</when>
+        <then>The bridge SHALL preserve the value kind explicitly instead of treating every value as opaque `any`</then>
+      </case>
+      <case id="unsupported-kon-structured-value">
+        <given>A Kon value kind is not supported by the typed runtime boundary</given>
+        <when>The caller writes it into typed storage</when>
+        <then>The bridge SHALL reject it with a clear diagnostic or exception</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="negative-diagnostic-parity">
+    <statement>The parser or binder SHALL preserve ExtensibleScopedRowType negative behavior for unsupported type syntax forms and SHALL NOT silently register misleading type members.</statement>
+    <suite id="negative-diagnostics" name="Negative Diagnostics">
+      <case id="postfix-field-type-annotation">
+        <given>A field declaration uses unsupported postfix type annotation syntax</given>
+        <when>The source is parsed and lowered for type binding</when>
+        <then>The parser or binder SHALL reject it and SHALL NOT silently register a misleading field member</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="interpreter-backed-type-computation">
+    <statement>The type-system core computation SHALL run through an interpreter-backed dispatch boundary while keeping default untyped RuntimeInterpreter behavior unchanged.</statement>
+    <suite id="type-computation-kernel" name="Interpreter-backed Type Computation Kernel">
+      <case id="type-system-host-dispatch">
+        <given>The TypeSystem public API defines rows, generic rows, classes, merged rows, subtyping, and generic instantiations</given>
+        <when>The API performs those computations</when>
+        <then>The computation SHALL dispatch through a RuntimeInterpreter-backed type computation kernel instead of only using scattered direct host logic</then>
+      </case>
+      <case id="direct-core-boundary">
+        <given>The interpreter-backed kernel invokes host operations for type computation</given>
+        <when>The operation needs to build symbols or compare types</when>
+        <then>The kernel SHALL use explicit direct/core implementations internally to avoid recursive host dispatch while preserving an observable interpreter dispatch boundary</then>
+      </case>
+      <case id="type-kernel-preserves-untyped-runtime">
+        <given>A caller uses ordinary RuntimeInterpreter APIs without type-system computation</given>
+        <when>The type computation kernel exists in the project</when>
+        <then>The ordinary untyped interpreter SHALL keep its existing runtime behavior</then>
+      </case>
+    </suite>
+    <suite id="class-body-and-access-checking" name="Class Body and Access Static Checking">
+      <case id="class-method-body-checking">
+        <given>A class method, constructor, or property accessor body references `self` fields or returns values</given>
+        <when>The source is type checked</when>
+        <then>The checker SHALL validate the body against the declared typed class view and member signature</then>
+      </case>
+      <case id="access-modifier-static-boundary">
+        <given>A class member is private, protected, or internal</given>
+        <when>External source code accesses the member through slot or receiver-call syntax</when>
+        <then>The checker SHALL reject the access instead of treating the member as publicly exposed</then>
+      </case>
+    </suite>
+    <suite id="remaining-parity-tests" name="Remaining C# Parity Tests">
+      <case id="subtyping-parity">
+        <given>ExtensibleScopedRowType C# covers closed rows, row tails, function effect rows, and field-as-getter requirements</given>
+        <when>The TypeScript type system is tested</when>
+        <then>The project SHALL keep equivalent focused tests for those subtyping semantics</then>
+      </case>
+      <case id="negative-diagnostic-parity-extension">
+        <given>Unsupported type syntax or malformed metadata cannot produce a meaningful declaration</given>
+        <when>The parser/binder/checker processes the source</when>
+        <then>The project SHALL emit a diagnostic or parser rejection and SHALL NOT silently register misleading members</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="core-typed-runtime-api-parity">
+    <statement>The typed runtime core SHALL expose ExtensibleScopedRowType-compatible class definition, method body, value metadata, global storage, projection invocation, and runtime access boundary APIs.</statement>
+    <suite id="class-definition-core" name="Class Definition Core">
+      <case id="class-definition-stores-method-bodies">
+        <given>A class is defined with typed row members and method bodies</given>
+        <when>The class is registered in the TypeSystem</when>
+        <then>The TypeSystem SHALL retain a ClassDefinition containing the ClassTypeSymbol and matching method bodies</then>
+      </case>
+      <case id="require-class-definition">
+        <given>A caller needs the typed runtime class definition</given>
+        <when>The caller requests the class by name</when>
+        <then>The TypeSystem SHALL expose a RequireClass API returning the stored class definition while preserving RequireClassSymbol</then>
+      </case>
+    </suite>
+    <suite id="typed-value-and-globals" name="Typed Value and Globals">
+      <case id="runtime-value-carries-type">
+        <given>A typed runtime value wraps primitive, object, or projected object data</given>
+        <when>The value crosses the typed runtime boundary</when>
+        <then>The value SHALL retain both value kind and the best available TypeSymbol metadata</then>
+      </case>
+      <case id="typed-runtime-globals">
+        <given>A host stores values in the typed runtime context global table</given>
+        <when>The host later reads those values</when>
+        <then>The context SHALL preserve typed runtime value metadata internally and return the original host value at the API boundary</then>
+      </case>
+    </suite>
+    <suite id="runtime-api-facade-and-access" name="Runtime API Facade and Access">
+      <case id="invoke-with-projection">
+        <given>A caller has an object and a target projection type name</given>
+        <when>The caller invokes a member through the target projection</when>
+        <then>The typed runtime context SHALL provide an InvokeWithProjection facade equivalent to Project followed by Invoke</then>
+      </case>
+      <case id="runtime-access-modifier-boundary">
+        <given>A typed class exposes public, protected, private, or internal members</given>
+        <when>The typed runtime resolves members directly or through class-origin projection</when>
+        <then>The runtime SHALL enforce the migrated access modifier rules and keep dedicated tests for private/protected/internal behavior</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="typed-execution-context-core-parity">
+    <statement>The typed runtime core SHALL provide an ExtensibleScopedRowType-compatible execution context with explicit value objects, object row implementations, projection dispatch, effect permission enforcement, globals, and value conversion boundaries.</statement>
+    <suite id="execution-context-api" name="Typed ExecutionContext API">
+      <case id="instantiate-materializes-method-rows">
+        <given>A class definition contains typed members and method bodies</given>
+        <when>The typed execution context instantiates the class</when>
+        <then>The resulting object value SHALL contain field storage, method row implementations, inherit forwarding placeholders, trait forwarding, and real parent storage</then>
+      </case>
+      <case id="create-object-field-only">
+        <given>A caller needs a field-only typed object</given>
+        <when>The caller uses CreateObject</when>
+        <then>The context SHALL create field storage without method row implementations</then>
+      </case>
+      <case id="projection-dispatch">
+        <given>A caller projects an object to a class or trait view</given>
+        <when>The caller reads/writes fields or invokes methods through that projection</when>
+        <then>The context SHALL restrict the operation to the projected view and dispatch class origins or trait top implementations accordingly</then>
+      </case>
+    </suite>
+    <suite id="value-and-effects" name="Value Objects and Effects">
+      <case id="value-hierarchy">
+        <given>A value crosses the typed execution context boundary</given>
+        <when>The value is wrapped or unwrapped</when>
+        <then>The context SHALL preserve explicit value kind and TypeSymbol metadata through Value objects</then>
+      </case>
+      <case id="effect-permission">
+        <given>A function value signature requires effects</given>
+        <when>The function is invoked outside an allowed effect scope</when>
+        <then>The context SHALL reject the invocation</then>
+      </case>
+      <case id="globals">
+        <given>A host stores typed values in the execution context global table</given>
+        <when>The host reads those values later</when>
+        <then>The context SHALL preserve the original Value object and its TypeSymbol metadata</then>
+      </case>
+    </suite>
+    <suite id="runtime-context-facade" name="KonTypedRuntimeContext Facade">
+      <case id="core-facade">
+        <given>A caller already uses KonTypedRuntimeContext</given>
+        <when>The caller needs C#-style typed execution context behavior</when>
+        <then>The runtime context SHALL expose its core execution context and an Instantiate facade without changing CreateObject prototype bridge behavior</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="final-api-and-projection-parity">
+    <statement>The migrated type system SHALL close remaining ExtensibleScopedRowType API and checker parity gaps for source-level row projection, origin-specific execution operations, value boundaries, helper APIs, and invalid binding behavior.</statement>
+    <suite id="source-row-projection" name="Source Row Projection">
+      <case id="merged-row-projection-restricts-view">
+        <given>A merged row value is projected to one of its source rows</given>
+        <when>Subsequent source-level member access targets the projected value</when>
+        <then>The checker SHALL allow members in the projected source row and reject members outside that view</then>
+      </case>
+    </suite>
+    <suite id="origin-api-and-helpers" name="Origin API and Helpers">
+      <case id="origin-specific-core-api">
+        <given>A typed object has duplicate member names from multiple origins</given>
+        <when>A caller invokes or reads/writes with an explicit origin</when>
+        <then>The typed execution context SHALL expose public origin-specific facade methods equivalent to C# ExecutionContext overloads</then>
+      </case>
+      <case id="helper-api-parity">
+        <given>A caller ports C# type-system tests</given>
+        <when>The caller creates method bodies or effectful function signatures</when>
+        <then>The TS API SHALL provide MethodBuilder.FromLambda and function type effect-row helper overloads</then>
+      </case>
+    </suite>
+    <suite id="value-boundary-and-binding" name="Value Boundary and Binding">
+      <case id="kon-value-boundary">
+        <given>Values cross the typed runtime/Kon boundary in the TS model</given>
+        <when>The values are primitives, object-like values, or unsupported arrays</when>
+        <then>The context SHALL round-trip primitives and object-like values while rejecting unsupported arrays</then>
+      </case>
+      <case id="invalid-binding-context">
+        <given>Type declarations fail to bind</given>
+        <when>A caller asks for a typed runtime binding result</when>
+        <then>The result SHALL be unsuccessful and SHALL NOT provide an executable context</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="ts-api-model-shape-parity">
+    <statement>The migrated type-system APIs SHALL minimize remaining ExtensibleScopedRowType public API and model-shape friction where it fits the current TypeScript model.</statement>
+    <suite id="runtime-api-shape" name="Runtime API Shape">
+      <case id="bind-nodes-facade">
+        <given>A caller already has parsed Kon nodes</given>
+        <when>The caller binds typed runtime declarations</when>
+        <then>KonTypedRuntimeContext SHALL expose a Bind(nodes) facade equivalent to BindSource parsing followed by binding</then>
+      </case>
+      <case id="origin-overload-compatible-api">
+        <given>A caller ports C# typed ExecutionContext code that passes an explicit origin to Invoke, ReadField, or WriteField</given>
+        <when>The caller uses the C# argument order in TypeScript</when>
+        <then>The typed execution context SHALL support the origin-aware call form while preserving explicit InvokeOrigin/ReadFieldOrigin/WriteFieldOrigin helpers</then>
+      </case>
+    </suite>
+    <suite id="model-shape-helpers" name="Model Shape Helpers">
+      <case id="value-constructor-runtime-registry">
+        <given>A typed execution context has initialized runtime primitive types</given>
+        <when>A caller constructs primitive typed Value objects without passing a TypeSystem</when>
+        <then>The value constructors SHALL use the initialized runtime registry while still allowing explicit TypeSystem injection</then>
+      </case>
+      <case id="row-member-helper-parity">
+        <given>A caller inspects row members while porting C# type-system logic</given>
+        <when>The caller checks forwarding or effect-context keys</when>
+        <then>RowMember SHALL expose ShouldForward and EffectContextKey helpers compatible with ExtensibleScopedRowType</then>
+      </case>
+      <case id="typed-object-node-like-marker">
+        <given>The current TypeScript project lacks the C# KnNodeBase hierarchy</given>
+        <when>A typed runtime object crosses TS Kon model boundaries</when>
+        <then>KonTypedObject SHALL expose a dedicated KonTypedObject node type through the existing TypeScript _Type node protocol without forcing a C# inheritance model into TypeScript</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="csharp-public-api-parity">
+    <statement>The migrated TypeScript type-system public API SHALL align with ExtensibleScopedRowType C# public API shapes where doing so does not break the current TypeScript runtime bridge semantics.</statement>
+    <suite id="type-system-api-return-shape" name="TypeSystem API Return Shape">
+      <case id="define-class-returns-class-definition">
+        <given>A caller defines a class through TypeSystem.DefineClass</given>
+        <when>The definition succeeds</when>
+        <then>The API SHALL return a ClassDefinition with Type and Methods, matching the C# public API</then>
+      </case>
+      <case id="class-definition-delegates-common-symbol-reads">
+        <given>Existing TypeScript callers previously read class-symbol fields from DefineClass results</given>
+        <when>They read common symbol properties from the returned ClassDefinition</when>
+        <then>ClassDefinition SHALL delegate common class-symbol getters such as Name, Rows, and MethodResolutionOrder to its Type</then>
+      </case>
+    </suite>
+    <suite id="runtime-context-value-facade" name="Typed Runtime Value Facade">
+      <case id="value-level-field-api">
+        <given>A caller wants C#-style Value field read and write through KonTypedRuntimeContext</given>
+        <when>The caller uses value-level facade methods</when>
+        <then>The context SHALL read and write typed Value objects while preserving existing JS-value ReadField and WriteField APIs</then>
+      </case>
+    </suite>
+    <suite id="binding-result-api-shape" name="Binding Result API Shape">
+      <case id="effect-handler-implementation-name-alias">
+        <given>A caller ports C# code that reads EffectHandlerBinding.ImplementationFunctionName</given>
+        <when>The caller inspects TypeScript effect handler bindings</when>
+        <then>The binding SHALL expose ImplementationFunctionName as an alias for the implementation function name</then>
+      </case>
+      <case id="diagnostic-message-parity">
+        <given>Effect handler application or closed-boundary validation fails</given>
+        <when>The binding result records diagnostics</when>
+        <then>The diagnostic messages SHALL align with the C# public API wording while preserving diagnostic codes</then>
+      </case>
+    </suite>
+  </requirement>
+</behaviors>

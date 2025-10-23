@@ -1,0 +1,62 @@
+(class #A
+  :[
+    (!String field #name)
+    (method #label |-> String|)
+  ])
+
+(class #B
+  @inherits = [A]
+  :[
+    (!String field #title)
+    (method #label |-> String|)
+  ])
+
+(type #T1
+  :[
+    (!String field #b)
+  ])
+
+(type #T2
+  :[
+    (!Int field #b)
+  ])
+
+(type #T3
+  @merge = [T1 T2])
+
+(fn #readName |!B item -> String|
+  :[
+    (item.:name)
+  ])
+
+(fn #readLabel |!B item -> String|
+  :[
+    (item ~label)
+  ])
+
+(fn #readBaseName |!B item -> String|
+  :[
+    ((item ~as A).:name)
+  ])
+
+(fn #readQualifiedB |!T3 item -> String|
+  :[
+    (item.:T1:::b)
+  ])
+
+#(effect decl #Console)
+(type #Console :[])
+
+#(effect row :[ Console ])
+(fn #printMessage |-> Unit|
+  :[])
+
+#(effect handler #consoleHandler handles :[ Console ])
+(fn #consoleHandlerImpl |-> Unit|
+  :[])
+
+(fn #main |-> Unit|
+  :[
+    (printMessage)
+    %(effect handle #consoleHandler)
+  ])

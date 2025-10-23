@@ -1,0 +1,134 @@
+<Mission id="evolve-type-system-for-enum-and-schema-ontology" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>archived</Status>
+    <Goal>Plan and stage Kunun type-system evolution for first-class enum/value support, a separate annotation/metadata extension package, and reusable schema/ontology row-kernel support.</Goal>
+    <Description>Analyze the existing ExtensibleScopedRowType-based type-system implementation and split enum/value, annotation metadata, and schema/ontology RFC requirements into bounded tracks.</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>light</QuestionSeverity>
+    <Revision>5</Revision>
+    <CreatedAt>2026-07-01T16:40:59Z</CreatedAt>
+    <UpdatedAt>2026-07-03T18:37:48+03:00</UpdatedAt>
+  </Metadata>
+  <Ports scope="mission">
+    <MaterialBundle role="state" name="analysis" domain="mission" path="vfs://./analysis/"/>
+    <MaterialBundle role="state" name="reports" domain="mission" path="vfs://./reports/"/>
+    <MaterialBundle role="input" name="type-system-source" domain="repo" path="vfs://@/packages/type-system/"/>
+    <MaterialBundle role="output" name="type-annotations-package" domain="repo" path="vfs://@/packages/type-annotations/"/>
+    <MaterialBundle role="input" name="runtime-type-system-behavior" domain="codument" path="vfs://@/codument/behaviors/runtime-type-system.xml"/>
+    <MaterialBundle role="output" name="tracks" domain="codument" path="vfs://@/codument/tracks/"/>
+  </Ports>
+  <TaskSpace id="space_evolve-type-system-for-enum-and-schema-ontology" name="evolve-type-system-for-enum-and-schema-ontology" version="1" cdt:child-mode="dag">
+    <Description>Iterative mission for adding enum/value, a batteries-included annotation package, and schema/ontology concepts while preserving the existing scoped row core.</Description>
+    <SubNodes>
+      <TaskGroup id="G1" name="Baseline audit and behavior framing" status="DONE" order="0">
+        <Description>Turn the current reading into durable baseline behavior and implementation inventory.</Description>
+        <SubNodes>
+          <Task id="G1-T1" name="Create RFC baseline track" status="DONE" order="0">
+            <Description>Create a track that records behavior deltas for enum/value, annotation/metadata, and schema/ontology requirements, plus a source-level inventory of current type-system seams.</Description>
+            <cdt:TrackLink state="bound" id="audit-type-system-rfc-baseline"/>
+          </Task>
+          <Task id="G1-T2" name="Confirm implementation boundaries" status="DONE" order="1">
+            <Description>Confirm which work belongs in core type-system model, the new annotation package, binder/checker, typed runtime, and external domain adapters.</Description>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+      <TaskGroup id="G2" name="Enum/value MVP" status="DONE" order="1">
+        <Description>Add first-class closed enum types and scoped enum values as the smaller nominal-symbol feature.</Description>
+        <SubNodes>
+          <Task id="G2-T1" name="Create enum/value implementation track" status="DONE" order="0">
+            <Description>Create and execute a track for EnumTypeSymbol, EnumValueSymbol, registry APIs, binder support, checker compatibility, and focused tests.</Description>
+            <cdt:TrackLink state="bound" id="add-type-system-enum-values"/>
+          </Task>
+          <Task id="G2-T2" name="Verify enum migration shape" status="DONE" order="1">
+            <Description>Verify native !RecordStatus usage, raw string rejection, duplicate value diagnostics, and optional Enum&lt;T&gt; migration compatibility.</Description>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+      <TaskGroup id="G3" name="Annotation package foundation" status="DONE" order="2">
+        <Description>Create the batteries-included annotation/metadata package before schema constraints depend on required/storage/description metadata.</Description>
+        <SubNodes>
+          <Task id="G3-T1" name="Create type annotations package track" status="DONE" order="0">
+            <Description>Create and execute a track for the new kunun-type-annotations workspace package, annotation extraction, normalized metadata bags, built-in vocabulary, and package-boundary tests.</Description>
+            <cdt:TrackLink state="bound" id="add-type-annotations-package"/>
+          </Task>
+          <Task id="G3-T2" name="Verify annotation boundary" status="DONE" order="1">
+            <Description>Verify that required, description, storage representation, labels, source visibility, and migration hints are interpreted by kunun-type-annotations rather than hard-coded in type-system core.</Description>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+      <TaskGroup id="G4" name="Schema core foundation" status="DONE" order="3">
+        <Description>Add core schema infrastructure that affects type identity or compatibility, while keeping annotation vocabulary in the extension package.</Description>
+        <SubNodes>
+          <Task id="G4-T1" name="Create branded scalar track" status="DONE" order="0">
+            <Description>Create and execute a track for BrandedScalarTypeSymbol identity and conversion boundaries without storage metadata policy in core.</Description>
+            <cdt:TrackLink state="bound" id="add-type-system-branded-scalars"/>
+          </Task>
+          <Task id="G4-T2" name="Create schema alias registry track" status="DONE" order="1">
+            <Description>Create and execute a track for canonicalization, type/relation/attribute aliases, scoped attribute aliases, and alias cycle diagnostics.</Description>
+            <cdt:TrackLink state="bound" id="add-type-system-schema-alias-registry"/>
+          </Task>
+          <Task id="G4-T3" name="Create schema type and mixin track" status="DONE" order="2">
+            <Description>Create and execute a track for SchemaTypeSymbol, SchemaMixinSymbol, effective rows, precedence, nominal schema subtyping, and core value-type override safety.</Description>
+            <cdt:TrackLink state="bound" id="add-type-system-schema-types-and-mixins"/>
+          </Task>
+          <Task id="G4-T4" name="Verify effective attribute semantics" status="DONE" order="3">
+            <Description>Verify origins, mixin non-subtyping, parent graph subtype checks, and value-type override diagnostics; defer required/optional policy to annotation profiles.</Description>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+      <TaskGroup id="G5" name="Relations, queries, and provider boundary" status="DONE" order="4">
+        <Description>Add first-class relation schema, schema query helpers, and a boundary for external schema facts.</Description>
+        <SubNodes>
+          <Task id="G5-T1" name="Create annotation constraint profile track" status="DONE" order="0">
+            <Description>Create and execute a track in kunun-type-annotations for required/optional tightening, storage/domain metadata interpretation, and schema profile diagnostics.</Description>
+            <cdt:TrackLink state="bound" id="add-schema-annotation-constraint-profiles"/>
+          </Task>
+          <Task id="G5-T2" name="Create relation and query set track" status="DONE" order="1">
+            <Description>Create and execute a track for RelationTypeSymbol, endpoint compatibility, exact/polymorphic type-set APIs, aggregate pre-checks, and SchemaFactProvider interfaces.</Description>
+            <cdt:TrackLink state="bound" id="add-type-system-relations-and-query-sets"/>
+          </Task>
+          <Task id="G5-T3" name="Check provider and runtime adapter boundaries" status="DONE" order="2">
+            <Description>Verify that external schema stores remain providers/adapters, annotation metadata stays outside type-system core, and default untyped runtime behavior is unchanged.</Description>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+      <TaskGroup id="G6" name="Integration verification and closeout" status="DONE" order="5">
+        <Description>Verify the combined enum and schema work against domain-shaped fixtures and prepare durable knowledge promotion.</Description>
+        <SubNodes>
+          <Task id="G6-T1" name="Create integration verification track" status="DONE" order="0">
+            <Description>Create and execute a verification track using ORM-shaped enum fixtures and Cozo-OM-shaped schema fixtures.</Description>
+            <cdt:TrackLink state="bound" id="verify-type-system-domain-integration"/>
+          </Task>
+          <Task id="G6-T2" name="Promote stable behavior and decisions" status="DONE" order="1">
+            <Description>Promote accepted behavior deltas, durable decisions, and implementation knowledge according to Codument archive and knowledge-tier rules.</Description>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule>
+    <Dag for="space_evolve-type-system-for-enum-and-schema-ontology">
+      <Node id="G2">
+        <After ref="G1"/>
+      </Node>
+      <Node id="G3">
+        <After ref="G1"/>
+      </Node>
+      <Node id="G4">
+        <After ref="G3"/>
+      </Node>
+      <Node id="G5">
+        <After ref="G4"/>
+      </Node>
+      <Node id="G6">
+        <After ref="G2"/>
+        <After ref="G5"/>
+      </Node>
+    </Dag>
+  </Schedule>
+  <Hooks>
+    <Hook on="mission:after-node">
+      <cdt:MissionReconcile max-rounds="3" on-drift="replan-or-block"/>
+    </Hook>
+  </Hooks>
+</Mission>

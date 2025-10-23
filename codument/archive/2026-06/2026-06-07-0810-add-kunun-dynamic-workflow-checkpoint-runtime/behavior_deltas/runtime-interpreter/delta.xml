@@ -1,0 +1,104 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <upsert selector="behavior://runtime-interpreter/requirements/dynamic-workflow-checkpoint-runtime">
+    <requirement id="dynamic-workflow-checkpoint-runtime">
+        <statement>The RuntimeInterpreter SHALL support opt-in Kunun dynamic workflow execution through host-registered macro or function extensions that lower to checkpoint-aware effects at safe yield boundaries.</statement>
+        <suite id="extension-lowering" name="Workflow extension lowering">
+          <case id="host-registers-workflow-extensions">
+            <given>A Bun coding agent host creates a RuntimeInterpreter runtime</given>
+            <when>The host registers workflow extensions named ai_workflow, ai_agent, ai_parallel, ai_pipeline, ai_phase, ai_log, and json_schema</when>
+            <then>The runtime SHALL expose those capabilities as host-provided macro or function extensions rather than Kunun language built-ins</then>
+          </case>
+          <case id="macro-lowers-to-effect">
+            <given>A workflow extension is invoked from Kunun source</given>
+            <when>The extension is expanded or lowered</when>
+            <then>The runtime SHALL produce checkpoint-aware instruction or effect records instead of an ordinary host function call</then>
+          </case>
+          <case id="infix-extension-supported">
+            <given>The host registers an infix workflow keyword</given>
+            <when>The parser produces an infix knot for that keyword</when>
+            <then>The runtime SHALL allow the infix keyword expander to lower the node to checkpoint-aware workflow instructions</then>
+          </case>
+        </suite>
+        <suite id="checkpoint-state" name="Safe-point checkpoint state">
+          <case id="ai-agent-yields-continuation">
+            <given>A workflow script invokes an ai_agent extension</given>
+            <when>The runtime reaches the ai_agent dispatch boundary</when>
+            <then>The runtime SHALL capture a checkpoint containing instruction stack, operand stack, current fiber, environment state, effect handlers, and pending job metadata before yielding to the host runtime</then>
+          </case>
+          <case id="resume-ai-agent-result">
+            <given>A captured checkpoint waits for an ai_agent job result</given>
+            <when>The host runtime resumes with a completed result</when>
+            <then>The runtime SHALL hydrate the checkpoint, inject the result into the continuation, and continue execution from the saved instruction position</then>
+          </case>
+          <case id="all-fiber-snapshot">
+            <given>The runtime has multiple fibers</given>
+            <when>A workflow checkpoint is captured</when>
+            <then>The checkpoint SHALL include all relevant fiber records and identify the current fiber</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/dynamic-workflow-control-frames">
+    <requirement id="dynamic-workflow-control-frames">
+        <statement>The RuntimeInterpreter SHALL serialize control-flow frames needed to resume loops and exception handling from dynamic workflow safe points.</statement>
+        <suite id="loop-frame" name="LoopFrame checkpoint behavior">
+          <case id="foreach-loop-resume">
+            <given>A workflow checkpoint is captured inside a foreach or pipeline-like iteration</given>
+            <when>The runtime hydrates the checkpoint</when>
+            <then>The runtime SHALL restore the iteration cursor, iteration count, loop-local environment, break target, and continue target</then>
+          </case>
+          <case id="while-loop-resume">
+            <given>A workflow checkpoint is captured inside a while or for loop</given>
+            <when>The runtime resumes</when>
+            <then>The next condition, body, break, and continue behavior SHALL match execution without checkpointing</then>
+          </case>
+        </suite>
+        <suite id="exception-frame" name="ExceptionFrame checkpoint behavior">
+          <case id="try-body-resume">
+            <given>A checkpoint is captured inside a try body before an ai_agent job completes</given>
+            <when>The resumed ai_agent result causes ordinary continuation</when>
+            <then>The runtime SHALL continue inside the try body and keep the catch/finally frame active until the try completes</then>
+          </case>
+          <case id="ai-agent-failure-enters-catch">
+            <given>A checkpoint is captured inside a try body before an ai_agent job completes</given>
+            <when>The resumed ai_agent job fails according to host policy</when>
+            <then>The runtime SHALL restore the exception frame and enter the matching catch or finally path</then>
+          </case>
+          <case id="abrupt-completion-preserved">
+            <given>A return, throw, break, or continue is pending while a finally block executes</given>
+            <when>The runtime captures and hydrates a checkpoint</when>
+            <then>The runtime SHALL preserve the pending abrupt completion state</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/mock-ai-runtime-verification">
+    <requirement id="mock-ai-runtime-verification">
+        <statement>The test suite SHALL include a mock AI runtime that verifies Kunun workflow extensions, checkpoint capture, host job dispatch, and resume behavior work together end to end.</statement>
+        <suite id="mock-runtime" name="Mock AI runtime integration">
+          <case id="ai-agent-end-to-end">
+            <given>A Kunun workflow invokes a mock ai_agent extension</given>
+            <when>The mock AI runtime completes the job and resumes the checkpoint</when>
+            <then>The workflow SHALL receive the mock result and complete with the expected final value</then>
+          </case>
+          <case id="ai-parallel-partial-resume">
+            <given>A Kunun workflow starts multiple mock ai_agent jobs through an ai_parallel extension</given>
+            <when>Only part of the jobs are completed before checkpoint hydration</when>
+            <then>The runtime SHALL preserve completed job results, continue waiting for pending jobs, and return input-order stable results after all jobs complete</then>
+          </case>
+          <case id="ai-pipeline-stage-resume">
+            <given>A Kunun workflow executes ai_pipeline stages over multiple items</given>
+            <when>A checkpoint is captured during an item stage</when>
+            <then>The runtime SHALL resume the correct item and stage without restarting completed stages</then>
+          </case>
+          <case id="no-behavior-tree-state">
+            <given>A workflow is resumed from checkpoint</given>
+            <when>The test inspects the restored runtime state</when>
+            <then>The continuation SHALL be represented by interpreter stacks and frames rather than behavior-tree node-owned state</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

@@ -1,0 +1,28 @@
+(fn #label :|name| :[
+  """
+  user=\(name)
+  """
+])
+(class #Box
+  :[
+    (field #value)
+    (new |value| :[
+      (set self.:value value)
+    ])
+    (method #describe || :[
+      """
+      box=\((self.:value))
+      """
+    ])
+  ])
+(var box (Box ~new "Kunun"))
+(var items [1 2 3])
+(var rendered [])
+(foreach item in items :[
+  (rendered ~Push "item=\(item)")
+])
+[
+  (label "Ada")
+  (box ~describe)
+  rendered
+]

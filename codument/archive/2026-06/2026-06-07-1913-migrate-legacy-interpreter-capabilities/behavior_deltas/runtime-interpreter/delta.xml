@@ -1,0 +1,160 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <delete selector="behavior://runtime-interpreter/requirements/legacy-test-merge/suites/excluded-scope/cases/event-queue-excluded" />
+
+  <delete selector="behavior://runtime-interpreter/requirements/legacy-test-merge/suites/excluded-scope/cases/async-host-excluded" />
+
+  <delete selector="behavior://runtime-interpreter/requirements/legacy-test-merge/suites/excluded-scope/cases/self-update-excluded" />
+
+  <upsert selector="behavior://runtime-interpreter/requirements/legacy-capability-retirement">
+    <requirement id="legacy-capability-retirement">
+        <statement>The RuntimeInterpreter SHALL migrate confirmed valuable legacy interpreter capabilities before the old interpreter implementation is removed.</statement>
+        <suite id="scope" name="Migration scope">
+          <case id="migrate-async-host-timer-fiber">
+            <given>The old interpreter exposes async host, timer, and fiber orchestration semantics</given>
+            <when>The project prepares to retire the old interpreter</when>
+            <then>The RuntimeInterpreter SHALL provide equivalent low-level pause/resume and scheduling capabilities independent of workflow checkpoint-only semantics.</then>
+          </case>
+          <case id="exclude-old-table">
+            <given>The old interpreter exposes a table object system</given>
+            <when>Legacy interpreter capabilities are migrated</when>
+            <then>The project SHALL NOT migrate the old table object system as part of this capability-retirement work.</then>
+          </case>
+          <case id="exclude-type-system">
+            <given>ExtensibleScopedRowType has a type system that is not yet migrated</given>
+            <when>Legacy interpreter capabilities are migrated</when>
+            <then>The project SHALL NOT implement or synchronize the type system as part of this track.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/legacy-async-fiber-runtime">
+    <requirement id="legacy-async-fiber-runtime">
+        <statement>The RuntimeInterpreter SHALL provide legacy-compatible async host, timer, and fiber scheduling primitives using its instruction-stack and fiber-state model.</statement>
+        <suite id="async-host" name="Async host interop">
+          <case id="await-host-fn-suspends">
+            <given>A script invokes a legacy-compatible async host operation</given>
+            <when>The host operation has not completed</when>
+            <then>The RuntimeInterpreter SHALL suspend the waiting fiber without blocking unrelated runnable fibers.</then>
+          </case>
+          <case id="await-host-fn-resumes">
+            <given>A suspended fiber waits for an async host result</given>
+            <when>The host operation resolves or rejects</when>
+            <then>The RuntimeInterpreter SHALL resume the saved continuation with either the result value or the matching failure path.</then>
+          </case>
+        </suite>
+        <suite id="timer" name="Timer scheduling">
+          <case id="set-timeout">
+            <given>A script schedules a timeout operation</given>
+            <when>The timer is triggered by the host scheduler or mock scheduler</when>
+            <then>The RuntimeInterpreter SHALL awaken the target fiber and continue from the saved instruction position.</then>
+          </case>
+          <case id="set-interval-clear">
+            <given>A script schedules an interval operation</given>
+            <when>The interval fires multiple times and is later cleared</when>
+            <then>The RuntimeInterpreter SHALL run each scheduled callback until the interval handle is cleared and SHALL NOT run callbacks after clearing.</then>
+          </case>
+        </suite>
+        <suite id="scheduler-opcodes" name="Scheduler opcodes">
+          <case id="fiber-state-transitions">
+            <given>A runtime instruction requests current fiber idle, suspended, or finalized state</given>
+            <when>The instruction is dispatched</when>
+            <then>The RuntimeInterpreter SHALL update fiber state deterministically and select the next runnable fiber according to runtime scheduling rules.</then>
+          </case>
+          <case id="yield-to-fiber">
+            <given>A runtime instruction yields from one fiber to another fiber</given>
+            <when>The target fiber is runnable or explicitly awakened</when>
+            <then>The RuntimeInterpreter SHALL switch execution to the target fiber and preserve the yielding fiber continuation.</then>
+          </case>
+          <case id="awaken-multiple-fibers">
+            <given>Multiple suspended fibers are eligible to resume</given>
+            <when>The runtime awakens those fibers</when>
+            <then>The RuntimeInterpreter SHALL transition each target fiber to a runnable state without losing their saved stacks or environments.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/legacy-embedding-reusable-callable">
+    <requirement id="legacy-embedding-reusable-callable">
+        <statement>The RuntimeInterpreter SHALL provide a legacy-compatible reusable embedding callable mode for MakeFuncSync.</statement>
+        <suite id="make-func-sync" name="MakeFuncSync reusable behavior">
+          <case id="non-reusable-default">
+            <given>A host creates a callable with RuntimeInterpreter.MakeFuncSync without reusable mode</given>
+            <when>The host calls the callable repeatedly</when>
+            <then>The callable SHALL preserve existing RuntimeInterpreter default behavior.</then>
+          </case>
+          <case id="reusable-mode">
+            <given>A host creates a callable with reusable mode enabled</given>
+            <when>The host calls the callable repeatedly with different arguments</when>
+            <then>The callable SHALL reuse the intended runtime/function binding while isolating per-call operand and instruction stack state.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/legacy-syntax-compatibility">
+    <requirement id="legacy-syntax-compatibility">
+        <statement>The RuntimeInterpreter SHALL migrate confirmed valuable legacy syntax sugar and compatibility aliases without changing current data syntax.</statement>
+        <suite id="prefix-compatibility" name="Prefix compatibility">
+          <case id="func-do-main">
+            <given>A script uses legacy prefix forms such as func, do, or main</given>
+            <when>The RuntimeInterpreter expands the script</when>
+            <then>The runtime SHALL map those forms to current function or block execution semantics.</then>
+          </case>
+          <case id="self-update-operators">
+            <given>A script uses legacy self-update operators such as --, +=, -=, *=, or /=</given>
+            <when>The RuntimeInterpreter expands the script</when>
+            <then>The runtime SHALL execute the equivalent read-modify-write behavior through instruction-stack expansion.</then>
+          </case>
+          <case id="js-interop-aliases">
+            <given>A script uses legacy JS interop aliases such as js_call or js_apply</given>
+            <when>The RuntimeInterpreter executes the script</when>
+            <then>The runtime SHALL route the operation through the current host JavaScript bridge without depending on the old ExtensionRegistry.</then>
+          </case>
+        </suite>
+        <suite id="infix-compatibility" name="Infix compatibility">
+          <case id="def-to-set-to-save-operands">
+            <given>A script uses legacy infix forms def_to, set_to, or save_operands</given>
+            <when>The RuntimeInterpreter expands the infix knot</when>
+            <then>The runtime SHALL execute equivalent definition, assignment, or operand capture behavior.</then>
+          </case>
+          <case id="restricted-chain-assignment">
+            <given>A script uses target chain assignment such as target.:field = value or target.:field := value</given>
+            <when>The left side is a writable property or subscript chain expression</when>
+            <then>The RuntimeInterpreter SHALL treat the expression as object assignment compatibility syntax.</then>
+          </case>
+          <case id="data-equals-unchanged">
+            <given>A source file uses equals in map entries, knot metadata, configuration fields, or other data syntax</given>
+            <when>The parser and RuntimeInterpreter process the source</when>
+            <then>The equals token SHALL retain its data-syntax meaning and SHALL NOT be interpreted as assignment.</then>
+          </case>
+        </suite>
+        <suite id="host-aliases" name="Host aliases">
+          <case id="common-host-aliases">
+            <given>A script uses common legacy host aliases such as Writeln, append, console, clear_interval, &gt;=, or &lt;=</given>
+            <when>The RuntimeInterpreter executes the script</when>
+            <then>The runtime SHALL provide equivalent behavior or explicit host bridge mappings for those aliases.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/legacy-interpreter-removal-readiness">
+    <requirement id="legacy-interpreter-removal-readiness">
+        <statement>The project SHALL maintain a removal-readiness checklist for old interpreter code after migrated capabilities are covered by RuntimeInterpreter tests.</statement>
+        <suite id="readiness" name="Removal readiness">
+          <case id="runtime-tests-cover-migrated-capabilities">
+            <given>A legacy capability is migrated to RuntimeInterpreter</given>
+            <when>The old interpreter equivalent test or behavior is identified</when>
+            <then>The project SHALL add or update RuntimeInterpreter tests before deleting the legacy behavior coverage.</then>
+          </case>
+          <case id="delete-after-review">
+            <given>The migration test suite passes</given>
+            <when>The project prepares to remove old interpreter code</when>
+            <then>The project SHALL present remaining old interpreter logic for review before deleting it.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

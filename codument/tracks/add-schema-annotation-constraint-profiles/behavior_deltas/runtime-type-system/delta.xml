@@ -1,0 +1,15 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/schema-annotation-constraint-profiles">
+    <requirement id="schema-annotation-constraint-profiles">
+      <statement>The annotation package SHALL provide schema constraint profiles for metadata policies without changing core row subtyping.</statement>
+      <suite id="required-policy" name="Required Policy">
+        <case id="cannot-loosen-required">
+          <given>A parent annotation marks a member required</given>
+          <when>A child declaration omits that requirement</when>
+          <then>The annotation profile SHALL report a required loosening diagnostic</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>
+

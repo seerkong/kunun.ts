@@ -1,0 +1,50 @@
+(ai_workflow #fanOutReduce
+  :input = {question = "Design a cache."}
+  :output = [question drafts final]
+  :[
+    (ai_phase #Draft
+      :[
+        (var question "Design a cache.")
+        (var approaches ["simple" "scalable" "operational"])
+        (var drafts (ai_parallel #draftCandidates
+          :{
+            join = "all"
+            input = approaches
+            item = approach
+            index = draftIndex
+          }
+          :[
+            (ai_agent #draftCandidate :{
+              label = "draft-\(draftIndex)"
+              sys_prompt = "You are one candidate agent in a fan-out reduce workflow."
+              user_prompt =
+              """
+              Answer the cache design question.
+
+              Question:
+              \(question)
+
+              Approach:
+              \(approach)
+              """
+            })
+          ]))
+      ])
+    (ai_phase #Reduce
+      :[
+        (var final (ai_agent #synthesizeCacheDesign :{
+          label = "synthesizer"
+          sys_prompt = "You are the reduce agent for a fan-out reduce workflow."
+          user_prompt =
+          """
+          Synthesize the best cache design from the draft candidates.
+
+          Question:
+          \(question)
+
+          Drafts:
+          \(drafts)
+          """
+        }))
+      ])
+  ])

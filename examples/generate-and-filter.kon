@@ -1,0 +1,78 @@
+(ai_workflow #generateAndFilter
+  :input = {topic = "削减云成本的点子"}
+  :output = [ideaBatches kept]
+  :[
+    (ai_phase #Generate
+      :[
+        (var lenses ["最便宜最快见效" "反直觉的非显然角度" "10 倍雄心的团队会怎么做" "最能替用户省事"])
+        (var ideaBatches (ai_parallel #generateIdeas
+          :{
+            input = lenses
+            item = lens
+            index = i
+          }
+          :[
+            (ai_agent #brainstorm :{
+              label = "gen-\(i)"
+              sys_prompt = "你是富有创意的方案生成者。"
+              user_prompt =
+              """
+              围绕主题做头脑风暴：\(topic)
+
+              用这个视角切入：\(lens)。
+              给出若干条互不相同的点子，每条配一句简短说明。
+              """
+              output_schema = {
+                type = "object"
+                properties = {
+                  ideas = {
+                    type = "array"
+                    minItems = 2
+                    items = {
+                      type = "object"
+                      properties = {
+                        title = {type = "string"}
+                        pitch = {type = "string"}
+                      }
+                      required = ["title"]
+                    }
+                  }
+                }
+                required = ["ideas"]
+              }
+            })
+          ]))
+      ])
+    (ai_phase #Filter
+      :[
+        (var kept (ai_agent #gradeAndKeep :{
+          label = "filter"
+          sys_prompt = "你是严格的评审。先去重，再按评分标准打分，只保留高质量的。"
+          user_prompt =
+          """
+          下面是各视角生成的点子批次。请：去除重复；按「新颖、具体、高影响、一个季度内可落地」打分（0..1）；只保留 keep 且分数 ≥ 0.5 的，按分数从高到低取前 8 条。
+
+          点子批次：
+          \(ideaBatches)
+          """
+          output_schema = {
+            type = "object"
+            properties = {
+              kept = {
+                type = "array"
+                items = {
+                  type = "object"
+                  properties = {
+                    title = {type = "string"}
+                    score = {type = "number"}
+                    reason = {type = "string"}
+                  }
+                  required = ["title" "score"]
+                }
+              }
+            }
+            required = ["kept"]
+          }
+        }))
+      ])
+  ])

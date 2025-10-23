@@ -1,0 +1,15 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/rfc-baseline-boundary">
+    <requirement id="rfc-baseline-boundary">
+      <statement>The project SHALL separate enum/value core typing, annotation metadata interpretation, and schema/ontology kernel semantics into distinct implementation boundaries.</statement>
+      <suite id="boundary" name="Boundary">
+        <case id="metadata-extension-package">
+          <given>Kunun declarations carry annotation-like metadata</given>
+          <when>The type-system RFC requirements are implemented</when>
+          <then>Domain metadata such as required, description, and storage hints SHALL be interpreted outside the core type-system package</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>
+

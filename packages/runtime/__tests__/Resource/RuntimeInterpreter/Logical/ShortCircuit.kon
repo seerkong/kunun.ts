@@ -1,0 +1,5 @@
+(var touched 0)
+(var andResult (false :and (set touched 1)))
+(var orResult (true :or (set touched 2)))
+(var optionalResult ("value" :or_else (set touched 3)))
+[andResult orResult optionalResult touched]

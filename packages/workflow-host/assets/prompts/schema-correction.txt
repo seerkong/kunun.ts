@@ -1,0 +1,3 @@
+Your previous reply did not satisfy the required schema:
+{errors}
+Reply again with corrected JSON only.

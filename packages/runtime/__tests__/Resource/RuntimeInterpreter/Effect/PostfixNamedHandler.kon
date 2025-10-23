@@ -1,0 +1,11 @@
+#(effect handler #addHandler handles :[
+  add
+])
+(fn #AddHandler |resume val1 val2|
+  :[
+    (:resume (val1 val2 :+))
+  ]
+)
+
+(perform #add |1 2|)
+%(effect handle #addHandler)

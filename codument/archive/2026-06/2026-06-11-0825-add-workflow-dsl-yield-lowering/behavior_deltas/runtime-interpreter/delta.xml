@@ -1,0 +1,83 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <upsert selector="behavior://runtime-interpreter/requirements/workflow-dsl-yield-lowering">
+    <requirement id="workflow-dsl-yield-lowering">
+        <statement>runtime SHALL 提供内建的 Workflow DSL 注册入口，将 ai_workflow、ai_phase、ai_log、ai_agent、ai_parallel、ai_pipeline 六类 Kon DSL 节点 lower 为 WorkflowDispatch 指令并在 safe point yield 出 RuntimeWorkflowEffect（携带 checkpoint 与 pendingJobs），不再依赖宿主以 prefix keyword 内联执行；prompt 字符串插值 SHALL 在当前环境求值，ai_parallel 的 input/item/index 绑定与 ai_pipeline 的 stage 展开语义 SHALL 与既有 .kon 资源行为一致。</statement>
+        <suite id="dsl-lowering" name="DSL lowering 到 yield 路径">
+          <case id="agent-node-yields-effect">
+            <given>启用内建 Workflow DSL 的 runtime 与含 ai_agent 节点的 Kon 源码</given>
+            <when>执行至该节点</when>
+            <then>dispatch SHALL 以 yield_requested 停止，effect 内含 1 个 pending job 且 checkpoint 可序列化</then>
+          </case>
+          <case id="parallel-fanout-jobs">
+            <given>ai_parallel 节点带 input 集合与 item 绑定</given>
+            <when>执行至该节点</when>
+            <then>pendingJobs SHALL 按 input 元素展开，path 含 item 序号，metadata 记录 itemIndex 与绑定值</then>
+          </case>
+          <case id="pipeline-stage-jobs">
+            <given>ai_pipeline 节点带 input 集合与多个 stage</given>
+            <when>执行至首个 stage</when>
+            <then>job path SHALL 含 item 与 stage 标识，后续 stage 在前序结果注入后才生成</then>
+          </case>
+          <case id="phase-and-log-inline">
+            <given>ai_phase 与 ai_log 节点</given>
+            <when>执行</when>
+            <then>SHALL 内联记录到 runtime 侧 DSL 事件缓冲（GetWorkflowDslEvents 可读）而不 yield；ai_log 的 message 求值后即为该节点的值，ai_phase 的 body 正常展开执行</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/workflow-resume-api">
+    <requirement id="workflow-resume-api">
+        <statement>runtime SHALL 提供标准的 workflow 执行循环 API：run-until-yield 入口返回 yielded（含 effect）或 completed（含最终结果）状态；resume 入口接受 checkpoint 与按 job ID 索引的结果集合，hydrate 后注入结果并继续执行至下一 yield 或完成。同一 workflow 的多次 yield/resume SHALL 保持 job ID 稳定且环境状态正确延续。</statement>
+        <suite id="resume-loop" name="yield/resume 标准循环">
+          <case id="single-agent-roundtrip">
+            <given>yield 出单个 ai_agent job 的 effect</given>
+            <when>以该 job 的结果调用 resume</when>
+            <then>workflow SHALL 继续执行，agent 结果在后续表达式中可见，最终返回 completed</then>
+          </case>
+          <case id="parallel-rejoin">
+            <given>ai_parallel yield 出 N 个 job</given>
+            <when>注入全部 N 个结果并 resume</when>
+            <then>结果 SHALL 按 itemIndex 顺序聚合为集合供后续节点消费</then>
+          </case>
+          <case id="serialized-checkpoint-resume">
+            <given>effect 中的 checkpoint 经 JSON 序列化再反序列化</given>
+            <when>用反序列化副本 resume</when>
+            <then>行为 SHALL 与直接 resume 一致</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/checkpoint-serialization-boundary">
+    <requirement id="checkpoint-serialization-boundary">
+        <statement>captureSnapshot SHALL 支持 strict 序列化校验选项：开启时若快照含不可 JSON 序列化的值（函数、class 实例、循环引用等），SHALL 抛出指明所在位置（fiber/operand/env key）的明确错误；默认（非 strict）行为保持不变。</statement>
+        <suite id="serialization-boundary" name="序列化边界">
+          <case id="strict-detects-host-value">
+            <given>operand 栈含宿主函数值</given>
+            <when>以 strict 模式捕获快照</when>
+            <then>SHALL 抛出含位置信息的序列化错误</then>
+          </case>
+          <case id="default-unchanged">
+            <given>同样的运行时状态</given>
+            <when>以默认模式捕获快照</when>
+            <then>行为 SHALL 与本变更前一致</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/workflow-job-control-metadata">
+    <requirement id="workflow-job-control-metadata">
+        <statement>ai_agent 节点的 retry、timeout、label、output_schema 等控制属性 SHALL lower 进对应 pendingJob 的 metadata，原样传递给宿主；runtime 自身不执行 retry/timeout 语义（由宿主运行时消费）。</statement>
+        <suite id="job-metadata" name="job 控制元数据">
+          <case id="attrs-passthrough">
+            <given>ai_agent 节点声明 retry、timeout、label 与 output_schema</given>
+            <when>lower 为 pending job</when>
+            <then>job.metadata SHALL 含上述字段且值与 DSL 声明一致（schema 为求值后的数据结构）</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

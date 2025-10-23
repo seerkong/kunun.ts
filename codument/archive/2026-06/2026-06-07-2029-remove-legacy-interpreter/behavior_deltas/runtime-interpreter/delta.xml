@@ -1,0 +1,19 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <upsert selector="behavior://runtime-interpreter/requirements/no-legacy-interpreter">
+    <requirement id="no-legacy-interpreter">
+        <statement>The runtime package SHALL remove the legacy Interpreter execution pipeline and expose RuntimeInterpreter as the active interpreter surface.</statement>
+        <suite id="package-api" name="Package API">
+          <case id="legacy-exports-removed">
+            <given>The package public index is imported</given>
+            <when>A consumer inspects exported interpreter APIs</when>
+            <then>The package SHALL NOT export Interpreter, XnlState, ExtensionRegistry, or XnlOpCode from the legacy execution pipeline</then>
+          </case>
+          <case id="runtime-interpreter-remains">
+            <given>The legacy interpreter files have been removed</given>
+            <when>RuntimeInterpreter scripts and compatibility tests run</when>
+            <then>The RuntimeInterpreter SHALL continue to provide the migrated legacy runtime capabilities</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

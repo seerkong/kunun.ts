@@ -1,0 +1,316 @@
+<Track id="add-depa-actor-runtime-interpreter" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>新增基于本地路径依赖 file:/Users/kongweixian/infra-dev/depa-actor 解析到的 depa-actor@0.2.0 execution kernel primitives 的 opt-in 双栈解释器 runtime，优先移植 ExtensibleScopedRowType 的非类型系统运行时能力，并为后续类型系统迁移预留边界。</Goal>
+    <Description>新增基于本地路径依赖 file:/Users/kongweixian/infra-dev/depa-actor 解析到的 depa-actor@0.2.0 execution kernel primitives 的 opt-in 双栈解释器 runtime，优先移植 ExtensibleScopedRowType 的非类型系统运行时能力，并为后续类型系统迁移预留边界。</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-05T18:42:14Z</CreatedAt>
+    <UpdatedAt>2026-06-06T03:20:00Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_add-depa-actor-runtime-interpreter" name="add-depa-actor-runtime-interpreter" version="1">
+    <Description>新增基于本地路径依赖 file:/Users/kongweixian/infra-dev/depa-actor 解析到的 depa-actor@0.2.0 execution kernel primitives 的 opt-in 双栈解释器 runtime，优先移植 ExtensibleScopedRowType 的非类型系统运行时能力，并为后续类型系统迁移预留边界。</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="依赖确认和测试基线">
+            <Description>确认 depa-actor substrate 可用，并用测试锁定新解释器边界和旧解释器兼容性。</Description>
+            <SubNodes>
+              <Task id="T1.1" name="确认 depa-actor 本地路径依赖和导入路径" status="DONE" priority="P0">
+                <Description>检查 package dependency 使用 file:/Users/kongweixian/infra-dev/depa-actor，确保 TypeScript 能导入 depa-actor@0.2.0 execution primitives。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-depa-actor-import" checked="true">测试或构建中能导入 createInstructionStack、createOperandStack、dispatchInstructions</cdt:Criterion>
+                  <cdt:Criterion id="AC-depa-actor-file-dependency" checked="true">package.json 中 depa-actor 依赖为 file:/Users/kongweixian/infra-dev/depa-actor</cdt:Criterion>
+                  <cdt:Criterion id="AC-no-vendor-copy" checked="true">没有复制 depa-actor 源码到本项目作为替代</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T1.2" name="编写新解释器 skeleton failing tests" status="DONE" priority="P0">
+                <Description>新增 RuntimeInterpreter 测试，覆盖 opt-in 入口、block evaluation、execution history、legacy Interpreter path 不变。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-new-entry-tests" checked="true">已创建新解释器入口测试</cdt:Criterion>
+                  <cdt:Criterion id="AC-legacy-guard" checked="true">已覆盖旧 Interpreter API 仍可用</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T1.3" name="选择第一批 ExtensibleScopedRowType runtime parity cases" status="DONE" priority="P1">
+                <Description>从外部 BasicInterpreter、SimpleExpression、HostFunction、Object、ChainExpression 等测试中选择首批可迁移行为，并记录到测试或 analysis。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-parity-list" checked="true">已明确第一批 runtime parity 行为清单</cdt:Criterion>
+                  <cdt:Criterion id="AC-type-system-excluded" checked="true">清单不包含完整 type binder/type checker 迁移</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P2" name="实现 runtime substrate">
+            <Description>实现基于 depa-actor primitives 的新解释器 runtime skeleton。</Description>
+            <SubNodes>
+              <Task id="T2.1" name="实现 runtime state 和 fiber state" status="DONE" priority="P0">
+                <Description>新增 runtime state、fiber state、instruction model、execution history，并使用 depa-actor instruction/operand stack primitives。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-runtime-state" checked="true">runtime state 持有 env tree、handler registry、fiber state、history</cdt:Criterion>
+                  <cdt:Criterion id="AC-depa-stacks" checked="true">fiber instruction/operand stacks 使用 depa-actor primitives</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.2" name="实现 runtime-owned handler registry" status="DONE" priority="P0">
+                <Description>新增实例级 opcode handler 和 keyword expander registry，避免新 runtime 只依赖旧静态 ExtensionRegistry。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-runtime-registry" checked="true">runtime 可注册和解析 opcode handler</cdt:Criterion>
+                  <cdt:Criterion id="AC-keyword-registry" checked="true">runtime 可注册 prefix/infix keyword expander 或保留明确扩展点</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.3" name="实现 fiber-aware execution loop" status="DONE" priority="P0">
+                <Description>基于 depa-actor dispatchInstructions 或其封装实现 fiber-aware loop，支持 land success/fail、history、无 runnable fiber 处理。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-dispatch-loop" checked="true">dispatch loop 使用 caller-provided handlers</cdt:Criterion>
+                  <cdt:Criterion id="AC-land-termination" checked="true">支持 success/fail land 指令终止</cdt:Criterion>
+                  <cdt:Criterion id="AC-history" checked="true">记录 instruction execution history</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.4" name="实现新解释器入口" status="DONE" priority="P0">
+                <Description>新增 opt-in public entry point，支持从 source 或 parsed node/block 启动 runtime。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-entry-source" checked="true">新入口可接受 source 并调用现有 parser</cdt:Criterion>
+                  <cdt:Criterion id="AC-entry-node" checked="true">新入口可接受 parsed node/block</cdt:Criterion>
+                  <cdt:Criterion id="AC-old-api-unchanged" checked="true">旧 Interpreter API 没有被替换</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P3" name="迁移基础运行时能力">
+            <Description>移植 ExtensibleScopedRowType runtime baseline 和必要的旧解释器基础行为。</Description>
+            <SubNodes>
+              <Task id="T3.1" name="迁移 value stack 和 env handlers" status="DONE" priority="P0">
+                <Description>实现 push/pop frame/value、env lookup/define/set/dive/rise 等基础 handler。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-value-stack" checked="true">基础 operand frame/value handler 通过测试</cdt:Criterion>
+                  <cdt:Criterion id="AC-env" checked="true">基础 env lookup/define/set handler 通过测试</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.2" name="迁移 block/node execution baseline" status="DONE" priority="P0">
+                <Description>实现 Node_RunBlock、Node_RunNode、Node_RunLastVal 和基本数据节点执行。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-block" checked="true">block evaluation 通过测试</cdt:Criterion>
+                  <cdt:Criterion id="AC-basic-values" checked="true">基本值节点执行通过测试</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.3" name="迁移 host function 和 object/property/subscript baseline" status="DONE" priority="P1">
+                <Description>实现第一批 host function、object、property、subscript 行为，与外部 runtime baseline 对齐。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-host-fn" checked="true">host function baseline 通过测试</cdt:Criterion>
+                  <cdt:Criterion id="AC-object-property" checked="true">object/property/subscript baseline 通过测试</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.4" name="预留 typed runtime context extension point" status="DONE" priority="P1">
+                <Description>在 runtime state 中预留 typed runtime context/prototype resolver 扩展点，但不实现完整类型系统。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-typed-context-slot" checked="true">runtime state 暴露可选 typed context 扩展点</cdt:Criterion>
+                  <cdt:Criterion id="AC-no-type-checker" checked="true">本 track 未引入完整 type checker</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P4" name="回归验证和迁移文档">
+            <Description>确认新解释器、旧解释器和 parser 语法测试可共同通过，并记录后续迁移路线。</Description>
+            <SubNodes>
+              <Task id="T4.1" name="运行 parser、legacy interpreter、新 runtime 测试" status="DONE" priority="P0">
+                <Description>运行项目测试，确认 parser 同步后的语法、新解释器和旧解释器路径没有互相破坏。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-parser-tests" checked="true">parser syntax tests 通过或记录明确失败原因</cdt:Criterion>
+                  <cdt:Criterion id="AC-legacy-tests" checked="true">legacy interpreter tests 通过或记录明确失败原因</cdt:Criterion>
+                  <cdt:Criterion id="AC-new-runtime-tests" checked="true">new runtime interpreter tests 通过</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T4.2" name="更新 runtime migration notes" status="DONE" priority="P1">
+                <Description>在 track analysis 或项目文档中记录已迁移 runtime 能力、未迁移旧解释器特色、后续类型系统迁移入口。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-migration-notes" checked="true">已记录运行时迁移结果和后续路线</cdt:Criterion>
+                  <cdt:Criterion id="AC-type-next-step" checked="true">已标注类型系统迁移作为后续工作</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="3" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P5" name="后续解释器能力迁移 backlog">
+            <Description>记录 ExtensibleScopedRowType 中除类型系统外尚未迁移到本项目新 RuntimeInterpreter 的解释器能力，供后续 track 或后续阶段继续实现。</Description>
+            <SubNodes>
+              <Task id="T5.1" name="迁移表达式 lowering 和链式调用执行" status="DONE" priority="P0">
+                <Description>迁移 SimpleExpressionTests、ChainExpressionTests 覆盖的表达式求值能力，包括 frame top/bottom apply、嵌套表达式、Node_IterEvalChainNode、Node_RunLastVal，以及 `(1 2 :+)`、`(1 :+ 1 :+ 1)` 等链式调用。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-expression-chain-tests" checked="true">新增并通过表达式与 chain expression parity tests</cdt:Criterion>
+                  <cdt:Criterion id="AC-expression-opcodes" checked="true">RuntimeInterpreter 支持表达式 lowering 所需 node/control opcode</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T5.2" name="迁移控制流 keyword handlers" status="DONE" priority="P0">
+                <Description>迁移 IfElse、Cond、Foreach、ForLoop、Return、SetTo 等 keyword expander 与控制指令，包括 Ctrl_Jump、Ctrl_JumpIfFalse、Ctrl_IterConditionPairs、Ctrl_IterForEachLoop、Ctrl_IterForLoop、Ctrl_ReturnOperands。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-keyword-control-tests" checked="true">新增并通过 keyword 控制流 parity tests</cdt:Criterion>
+                  <cdt:Criterion id="AC-control-opcodes" checked="true">RuntimeInterpreter 注册并执行必要 control opcode handlers</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T5.3" name="迁移函数、调用帧和闭包能力" status="DONE" priority="P0">
+                <Description>迁移 KnLambdaFunction、函数定义、函数调用、参数绑定、return、multi operands、closure capture 和环境隔离语义。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-function-tests" checked="true">新增并通过函数定义/调用/闭包 parity tests</cdt:Criterion>
+                  <cdt:Criterion id="AC-call-frame-env" checked="true">RuntimeInterpreter 支持函数调用帧、参数绑定和 lexical env</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T5.4" name="迁移 effect perform handle 和 continuation 能力" status="DONE" priority="P1">
+                <Description>迁移 TryHandlePerformTests 覆盖的 perform/handle、多 handler、命名 handler、continuation 创建与恢复，包括 Ctrl_MakeContExcludeTopNInstruction 与 continuation operand restore。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-effect-tests" checked="true">新增并通过 effect perform/handle parity tests</cdt:Criterion>
+                  <cdt:Criterion id="AC-continuation-runtime" checked="true">RuntimeInterpreter 支持 continuation capture/restore 的运行时结构</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T5.5" name="迁移 fiber 调度和 async block evaluation" status="DONE" priority="P1">
+                <Description>迁移 FiberManager、FiberScheduleHandler、EvaluateBlockAsync、idle/suspended/finalize、resume token、yield to parent/fiber 与多 fiber 选择语义；继续保持解释器主循环为 instruction stack 和 operand stack 双栈。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-fiber-tests" checked="true">新增并通过 fiber scheduling / async runtime parity tests</cdt:Criterion>
+                  <cdt:Criterion id="AC-dual-stack-loop" checked="true">多 fiber 调度仍围绕每个 fiber 的 instruction stack 和 operand stack 运行</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T5.6" name="迁移对象系统运行时能力" status="DONE" priority="P0">
+                <Description>迁移 KnObject 字段/方法/property、class 定义、constructor、default field、method self binding、nested set-place、in-out table、field/property assignment 等 ObjectScriptTests/ObjectTests 覆盖能力；不包含类型投影相关断言。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-object-script-tests" checked="true">新增并通过非类型系统对象脚本 parity tests</cdt:Criterion>
+                  <cdt:Criterion id="AC-object-runtime" checked="true">RuntimeInterpreter 支持对象字段、方法、property、constructor 和 set-place</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T5.7" name="迁移属性和下标 AST 指令执行" status="DONE" priority="P0">
+                <Description>迁移 Node_RunGetProperty、Node_RunSetProperty、Node_RunGetSubscript、Node_RunSetSubscript，使 parsed property/subscript node 能 lowering 并通过 opcode 执行，而不仅是 RuntimeState helper。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-property-subscript-tests" checked="true">新增并通过 property/subscript AST execution parity tests</cdt:Criterion>
+                  <cdt:Criterion id="AC-property-subscript-opcodes" checked="true">RuntimeInterpreter 注册并执行 property/subscript node opcode handlers</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T5.8" name="迁移 array/map 构造和内建方法 registry" status="DONE" priority="P1">
+                <Description>迁移 Node_MakeArray、Node_MakeMap、BuiltinMethodRegistry，以及 Array Count/Length/Get/Push/Pop/Unshift/Shift/Top/IsEmpty 和 Map Count/Get/ContainsKey/Keys/Values/IsEmpty/Remove/Clear 等内建方法。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-array-map-tests" checked="true">新增并通过 array/map builtin method parity tests</cdt:Criterion>
+                  <cdt:Criterion id="AC-builtin-method-registry" checked="true">RuntimeInterpreter 提供 array/map builtin method registry 与 bound method 执行</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T5.9" name="迁移完整 host support" status="DONE" priority="P1">
+                <Description>在现有数学函数 baseline 基础上迁移 StringFunctions、IOFunctions、ConversionFunctions、ArrayFunctions 等 host support，并明确 IO host 注入边界。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-host-support-tests" checked="true">新增并通过 string/io/conversion/array host support parity tests</cdt:Criterion>
+                  <cdt:Criterion id="AC-host-injection-boundary" checked="true">IO 类 host function 通过 runtime registry 或 host adapter 注入，不硬编码外部环境</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T5.10" name="补齐 opcode handler 完整迁移矩阵" status="DONE" priority="P1">
+                <Description>基于 ExtensibleScopedRowType OpCode.cs 和本项目旧 KnOpCode.ts 建立 opcode/handler 迁移矩阵，标注已迁移、待迁移、类型系统相关排除项和废弃项。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-opcode-matrix" checked="true">analysis 或 docs 中存在 opcode/handler 迁移矩阵</cdt:Criterion>
+                  <cdt:Criterion id="AC-non-type-scope" checked="true">矩阵明确区分非类型系统解释器能力与未来类型系统能力</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P6" name="补齐 source lowering 和 runtime parity">
+            <Description>按 ExtensibleScopedRowType 运行时脚本能力继续补齐 parser-to-runtime lowering、env/fiber、value stack 和对象脚本 parity。</Description>
+            <SubNodes>
+              <Task id="T6.1" name="补齐 source script parser-to-runtime lowering" status="DONE" priority="P0">
+                <Description>支持从 Kon source script 直接解析并执行 ExtensibleScopedRowType 风格表达式，包括 `(1 2 :+)`、`(1 :+ 1 :+ 1)`、`(+ :|(+ :|1 1|) 1|)` 和多 top-level expression block。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-source-lowering-tests" checked="true">已按 source lowering 分类新增测试文件和 Resource 脚本</cdt:Criterion>
+                  <cdt:Criterion id="AC-kon-fallback-compatible" checked="true">RuntimeInterpreter source 入口优先 Kon，失败时 fallback Knl 以保持旧入口兼容</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T6.2" name="补齐 env 和 fiber resume token runtime" status="DONE" priority="P0">
+                <Description>扩展 global/process/local env 操作、env dive/rise/change/bind opcode，并补齐 fiber suspend/idle/resume token 队列、result push 和 before-resume instruction 注入。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-env-fiber-tests" checked="true">已按 env/fiber 分类新增测试文件</cdt:Criterion>
+                  <cdt:Criterion id="AC-resume-token" checked="true">resume token 支持 fiberId、result 和 beforeResumeOps</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T6.3" name="补齐 value stack 操作 parity" status="DONE" priority="P0">
+                <Description>新增 ValStack_Duplicate，并补充 swap top、collect top N 等更深层 value stack 操作，保持 depa-actor operand stack frame boundary 语义。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-value-stack-tests" checked="true">已按 value stack 分类新增测试文件</cdt:Criterion>
+                  <cdt:Criterion id="AC-frame-boundary" checked="true">新增栈操作测试覆盖 frame boundary 行为</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T6.4" name="扩展对象脚本 parity" status="DONE" priority="P1">
+                <Description>在当前 parser AST shape 稳定范围内支持 class、field、new、method、prop、var、set-place、nested static index chain 的轻量对象脚本执行。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-object-script-tests-expanded" checked="true">已按 object script 分类新增测试文件和 Resource 脚本</cdt:Criterion>
+                  <cdt:Criterion id="AC-class-property-runtime" checked="true">RuntimeInterpreter 可从 class script 创建 RuntimeObject 并执行字段、方法、属性和嵌套赋值</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P7" name="后续 untyped effect system parity">
+            <Description>迁移 ExtensibleScopedRowType 的 script-level untyped effect system，不包含 typed effect row、effect type checking、typed contextual effect dispatch。</Description>
+            <SubNodes>
+              <Task id="T7.1" name="补齐 script-level fn 调用和 return 前置能力" status="DONE" priority="P0">
+                <Description>补齐 untyped effect handler 依赖的脚本级函数能力：`fn #Name :|args| :[...]` 定义、`(:Name args...)`/`(args :Name)` 调用、handler 参数绑定、`(:return value)` 提前返回，以及 effect handler 中需要的 `resume` 参数传递。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-script-fn-tests" checked="true">新增并通过 BasicInterpreter/ChainExpression 中函数定义、函数调用、return 的 source-level parity cases</cdt:Criterion>
+                  <cdt:Criterion id="AC-handler-call-ready" checked="true">RuntimeInterpreter 的函数调用可用于 effect handler，并能正确绑定 `resume`、effect 参数和 lexical/local env</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T7.2" name="补齐 continuation exact restore 语义" status="DONE" priority="P0">
+                <Description>实现 ExtensibleScopedRowType 的 `Ctrl_MakeContExcludeTopNInstruction` 语义：捕获 current env、operand stack、instruction stack，并按 excludeN 从 continuation 的 instruction backup 中裁剪当前 perform/try 调度尾部指令。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-make-cont-exclude" checked="true">新增并通过 continuation capture excludeN 行为测试</cdt:Criterion>
+                  <cdt:Criterion id="AC-cont-restore-exact" checked="true">恢复 continuation 时恢复 current env、instruction stack、operand stack，并追加 resume operands</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T7.3" name="补齐 continuation callable resume 分支" status="DONE" priority="P0">
+                <Description>在函数调用/apply 逻辑中识别 RuntimeContinuation/KnContinuation：当 handler 调用 `resume(...)` 时，不按普通函数执行，而是恢复 continuation 并把 resume 参数压入 operand stack。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-resume-callable" checked="true">`resume` 作为 handler 首参时可被调用并恢复 continuation</cdt:Criterion>
+                  <cdt:Criterion id="AC-resume-short-circuit" checked="true">handler 中 `resume(...)` 之后的后续语句不会错误参与原 continuation 的返回值</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T7.4" name="补齐 active effect handler map runtime state" status="DONE" priority="P0">
+                <Description>实现 active effect handler map 和 try continuation 的 runtime 状态传播规则：`__EffectHandlerMap`、`__ContinuationAfterTry` 或等价结构必须进入 try local env，并在函数调用、handler 调用、continuation 恢复中保持可见。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-active-handler-map" checked="true">try block 内 perform 能查到当前 active effect handler map</cdt:Criterion>
+                  <cdt:Criterion id="AC-handler-map-propagation" checked="true">active effect handler map 能跨函数调用、handler 调用和 continuation restore 保持可见</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T7.5" name="迁移 try keyword lowering" status="DONE" priority="P0">
+                <Description>迁移 `try :[...] handle #effect Handler ...` 的 script-level lowering：创建 local env、建立 effect handler map、捕获 try 后续 continuation、运行 try body、退出 env，并支持 NoHandler case。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-try-no-handler" checked="true">TryHandlePerformTests.NoHandler parity case 通过</cdt:Criterion>
+                  <cdt:Criterion id="AC-try-handler-map" checked="true">try handle 列表能解析为 effectName -> handlerName/handler callable 映射</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T7.6" name="迁移 perform keyword lowering" status="DONE" priority="P0">
+                <Description>迁移 `perform #effect :|args|` 和 `perform #effect |args|` 的 script-level lowering：解析 effect name、计算参数、查 active handler、捕获 continuation、将 resume continuation 和参数传给 handler。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-perform-single" checked="true">TryHandlePerformTests.SingleHandler parity case 通过</cdt:Criterion>
+                  <cdt:Criterion id="AC-perform-multi" checked="true">TryHandlePerformTests.MultiHandler parity case 通过</cdt:Criterion>
+                  <cdt:Criterion id="AC-unhandled-effect" checked="true">未声明 handler 的 effect 有明确错误行为</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T7.7" name="迁移 named effect handler registry 和 postfix handle" status="DONE" priority="P1">
+                <Description>迁移 `#(effect handler #handler handles :[...])` 命名 handler 声明和 postfix `%(effect handle #handler)` 应用语法，支持多个 named handler compose 为 active effect handler map。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-named-handler-registry" checked="true">命名 effect handler declaration 能注册 handlerName -> effectName -> implementationName</cdt:Criterion>
+                  <cdt:Criterion id="AC-postfix-handler" checked="true">TryHandlePerformTests.PostfixEffectHandleUsesNamedHandlerDeclaration parity case 通过</cdt:Criterion>
+                  <cdt:Criterion id="AC-postfix-compose" checked="true">TryHandlePerformTests.PostfixEffectHandleComposesMultipleNamedHandlers parity case 通过</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T7.8" name="验证 untyped effect system scope 边界" status="DONE" priority="P1">
+                <Description>补齐文档和迁移矩阵，明确当前 P7 只覆盖 script-level untyped effect system，不实现 typed effect row、effect type checker、typed contextual effect dispatch；这些保留给后续类型系统 track。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-effect-scope-doc" checked="true">track analysis 或 opcode/handler migration matrix 中记录 untyped effect system 已迁/待迁范围</cdt:Criterion>
+                  <cdt:Criterion id="AC-effect-non-type-scope" checked="true">任务明确不实现 typed effect row、effect type checker、typed contextual effect dispatch</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

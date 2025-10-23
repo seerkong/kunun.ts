@@ -1,0 +1,4 @@
+(fn #AddHandler :|resume val1 val2| :[
+  (resume (val1 val2 :+))
+])
+(:AddHandler resume 1 2)

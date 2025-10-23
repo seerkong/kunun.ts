@@ -1,0 +1,41 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/depa-orm-annotation-profiles">
+    <requirement id="depa-orm-annotation-profiles">
+      <statement>The project SHALL expose depa-orm-ready typed annotation profiles for fields, relations, entities, and datasources without moving ORM semantics into core type compatibility.</statement>
+      <suite id="field-object-properties" name="Field Object Properties">
+        <case id="parse-properties-key">
+          <given>A field uses `#(orm #field :{ type = { code = object } properties = [ { name = title code = string } ] })`</given>
+          <when>The ORM field annotation profile parses the field Knot or bound row member</when>
+          <then>The profile SHALL expose normalized property descriptors</then>
+          <and>The profile SHALL remain compatible with the previous singular `property` key</and>
+        </case>
+      </suite>
+      <suite id="relation-order-identifiers" name="Relation Order Identifiers">
+        <case id="parse-data-query-identifier-order">
+          <given>A relation through constraint uses order entries with namespace, alias, order_set, entity_name, and relative_path</given>
+          <when>The ORM relation annotation profile parses the relation</when>
+          <then>The profile SHALL expose those fields on normalized order descriptors</then>
+        </case>
+      </suite>
+      <suite id="profile-validation" name="Profile Validation">
+        <case id="validate-depa-enums-and-join-shapes">
+          <given>A parsed relation descriptor has depa relation type, cardinality, cascade, endpoints, and through segments</given>
+          <when>The depa ORM relation validator runs</when>
+          <then>The validator SHALL report unsupported enum values and join-key shape discontinuities</then>
+        </case>
+      </suite>
+      <suite id="entity-datasource-profiles" name="Entity And Datasource Profiles">
+        <case id="parse-entity-profile">
+          <given>A schema has `#(orm #entity :{ type = table primary_key = [_id] db = { name = users } logical_delete = { field = whether_delete value = 1 } })`</given>
+          <when>The ORM entity annotation profile parses the schema Knot or bound metadata</when>
+          <then>The profile SHALL expose type, primary keys, db mapping, and logical delete metadata</then>
+        </case>
+        <case id="parse-datasource-profile">
+          <given>A Knot has `#(orm #datasource :{ key = main name = Main kind = mysql env_conn = DATABASE_URL })`</given>
+          <when>The ORM datasource annotation profile parses the marker or annotated Knot</when>
+          <then>The profile SHALL expose datasource key, display name, kind, and environment connection key</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

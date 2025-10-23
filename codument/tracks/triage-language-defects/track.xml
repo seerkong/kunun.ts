@@ -1,0 +1,187 @@
+<Track id="triage-language-defects" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>登记并按优先级修复：在编写语言手册时复现的 kunun 实现缺陷（parser-syntax 与 runtime-interpreter）。</Goal>
+    <Description>缺陷登记型 track。为每个已复现缺陷预置「失败测试 + 修复」TDD 任务，获批后实现。覆盖 colon 前缀逻辑运算错误、Concat 丢值、^ 后缀崩溃、连字符 head 静默截断、求值入口不一致、未知前缀静默 no-op、比较运算符不安全、死代码清理。
+
+收口说明（2026-06-21）：全部缺陷修复并通过（全量 469 pass / 0 fail，tsc 干净）。实现期间另定位并修复了导致**整机死机**的根因——`KnParserV1.ParseContainer` 的 `while (Current !== end)` 缺 `!End()` 守卫，任何**未闭合容器**到 EOF 时无界 `children.push` → OOM 杀宿主（详见 skills/finch-resource-diagnosis）。已加 `!End()`+进度护栏，未闭合时抛有界 `Unclosed container` 诊断；回归测试见 UnclosedContainerTermination.test.ts。这同时澄清/解决了 D5「&lt; 死循环」（真凶是该 OOM，非比较运算）。D8（未知前缀静默 no-op）起初 FORWARDED，后经并行调查+设计 workflow 用**位置式未绑定检测**修复（见 T2.4），覆盖顶层/嵌套参数/已执行函数体/if 分支/foreach/var 值等所有真实求值上下文（仅从未调用的 lambda 体不检查，属正确行为）。另：为 kwf 自然语言→workflow 功能同步修正了语言/kwf 文档（reference 11 章 + dynamic-workflow + cheatsheet，反映 D1/D4/D6/D8/D9/D10/D12 已修与比较=:lt/:gt 的澄清），并在文档核对中新定位并修复 D13（foreach 迭代非数组无限循环挂死 → 有界诊断，见 T2.8）。最后用基于 finch 的封顶基础设施（skills/finch-resource-diagnosis/scripts/capped-codex-workflow.sh）实测了 kwf 自然语言→workflow→执行（NlToWorkflow.test.ts：单步/分支/fan-out 三个真实 codex 生成的 workflow 均 validate + dry-run 通过），期间修复 D14（数字/非法 map 键导致 parser 崩溃 → 有界诊断，见 T1.7）。</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-15T00:00:00Z</CreatedAt>
+    <UpdatedAt>2026-06-21T00:00:00Z</UpdatedAt>
+  </Metadata>
+
+  <Ports scope="track">
+    <MaterialBundle role="input"  name="behavior-deltas" domain="behavior"  path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="behavior"        domain="codument"  path="vfs://@/codument/behaviors/"/>
+  </Ports>
+
+  <TaskSpace id="space_triage-language-defects" name="triage-language-defects" version="1">
+    <Description>按 capability 分两个 phase 登记并修复缺陷，每缺陷一组 TDD 任务。</Description>
+    <SubNodes>
+
+      <TaskGroup id="P1" name="parser-syntax 缺陷" status="DONE" order="0">
+        <Description>修复解析层缺陷：^ 后缀 EOF 崩溃、连字符 head/symbol 静默截断；并清理 converter 死代码。另含本 phase 期间定位的 ParseContainer 未闭合容器 OOM（整机死机根因）修复。</Description>
+        <SubNodes>
+          <Task id="T1.1" name="D2 — ^ 后缀在 EOF 崩溃" status="DONE" order="0" priority="P1">
+            <Description>Parse("a^") 抛 "End of stream"，a^b / (a^) 同崩。已修复 KnParserV1 的 suffix-complement 分支在末尾位置的越界：a^ 给明确诊断（"Modifier 'UpArrow' … must be followed by a value"），a^b 正常解析为 word 'a' + suffix 标识符 'b'，(a^) 给有界 "Invalid token"。测试见 KonParserSyntax.test.ts。</Description>
+            <SubNodes>
+              <Task id="T1.1.1" name="写失败测试：a^ / a^b / (a^) 不应内部崩溃" status="DONE" order="0" priority="P1"/>
+              <Task id="T1.1.2" name="修复 suffix-complement EOF 处理（解析或明确诊断）" status="DONE" order="1" priority="P1"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.1-AC1" checked="true">Parse("a^")/"a^b"/"(a^)" 不再抛 "End of stream"，而是产出节点或明确诊断</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="D3 — 连字符 head/symbol 静默截断" status="DONE" order="1" priority="P1">
+            <Description>#foo-bar 解析成 "#"，(foo-bar 1 2) 的 Core 截成 "foo"，均静默丢弃剩余部分。已改为完整解析或明确拒绝。测试见 HyphenHeadTruncation.test.ts。</Description>
+            <SubNodes>
+              <Task id="T1.2.1" name="写失败测试：#foo-bar 不应塌成 #；(foo-bar 1 2) 不应静默丢 -bar" status="DONE" order="0" priority="P1"/>
+              <Task id="T1.2.2" name="修复 lexer/parser 的 head/symbol 连字符处理（完整解析或诊断）" status="DONE" order="1" priority="P1"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.2-AC1" checked="true">#foo-bar 不再静默塌成 #；(foo-bar 1 2) 不再静默丢弃 -bar（完整解析或给诊断）</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.3" name="D7a — 清理 converter 死代码" status="DONE" order="2" priority="P2">
+            <Description>已删除 lib/Lexer.ts、lib/Token.ts、Common/Token.ts、Common/IndexStream.ts 等从不被引用的 dead code（确认无 import）。测试见 DeadCodeRemoval.test.ts。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.3-AC1" checked="true">确认无任何 import 后删除死文件，全量测试与 tsc 仍通过</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.4" name="D9/D10 — 字符串转义与插值嵌套缺陷" status="DONE" order="3" priority="P1">
+            <Description>D9：双引号串内 \(...) 插值表达式中嵌套双引号串会让内层 " 提前闭合外层串。D10：\uXXXX 不解码。已修复/给一致行为。测试见 StringEscapeInterpolationNesting.test.ts、RuntimeInterpreterStringEscapeNesting.test.ts。</Description>
+            <SubNodes>
+              <Task id="T1.4.1" name="D9 写失败测试 + 修复：插值内嵌套双引号串（解析正确或明确拒绝）" status="DONE" order="0" priority="P1"/>
+              <Task id="T1.4.2" name="D10 写失败测试 + 修复：\uXXXX 解码为对应字符（或明确不支持）" status="DONE" order="1" priority="P1"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.4-AC1" checked="true">插值表达式内的双引号串不再打乱外层串解析（解析正确或给诊断）</cdt:Criterion>
+              <cdt:Criterion id="T1.4-AC2" checked="true">\uXXXX 解码为对应字符，或明确记为不支持并给一致行为</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.5" name="D11 — 非 ASCII 标识符抛 Invalid Token" status="DONE" order="4" priority="P2">
+            <Description>lexer Identifier 正则仅 ASCII，非 ASCII 裸词在 string 外抛泛化 "Invalid Token"。已给清晰诊断/决策。测试见 NonAsciiIdentifierDiagnostic.test.ts。</Description>
+            <SubNodes>
+              <Task id="T1.5.1" name="写测试 + 决策：非 ASCII 标识符支持或明确拒绝" status="DONE" order="0" priority="P2"/>
+              <Task id="T1.5.2" name="实现：扩展 Identifier 正则或给清晰诊断" status="DONE" order="1" priority="P2"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.5-AC1" checked="true">非 ASCII 裸词产出 identifier token 或清晰诊断，不再是泛化 "Invalid Token"</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.6" name="CRASH — ParseContainer 未闭合容器 OOM（整机死机根因）" status="DONE" order="5" priority="P0">
+            <Description>跑含 `&lt;` 的 kon（如 `(:&lt; 1 2)`）→ 整机死机。根因：`KnParserV1.ParseContainer` 的 `while (Current !== end)` 缺 `!End()` 守卫，未闭合容器到 EOF 时 `Current()` 永远返回新 EOF token ≠ end，item parser 不推进 → `children.push` 无界增长 → 内存型 OOM（退出 137）杀宿主。用 Finch 封顶探针定位（skills/finch-resource-diagnosis）。已加 `!End()` 守卫 + 一轮无推进则 break 的进度护栏，未闭合时抛有界 `Unclosed container` 诊断。回归测试见 UnclosedContainerTermination.test.ts。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.6-AC1" checked="true">未闭合容器（$&lt;…/[…/{…/(:&lt; …) 等）抛有界 "Unclosed container" 等诊断并立即终止，不再无界分配/死机；合法容器与泛型仍正常解析</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.7" name="D14 — 非 word/字符串 map 键导致 parser 崩溃" status="DONE" order="6" priority="P1">
+            <Description>测 kwf 自然语言→workflow 时发现：codex 生成的 fan-out workflow 含数字 map 键（如 `{1 = v}`），触发 parser 崩溃 `null is not an object (evaluating 'this.AsPairKey(firstNode).Value')`——`AsPairKey` 对非 word/字符串字面量返回 null，`.Value` 即崩。已修：`ParseMapPair`（KnParserV1.ts）在 key 非法时抛有界诊断 `Map key must be a bare word or string literal …`（数字/表达式键被拒）；裸 word 与字符串字面量键（含嵌套 JSON-schema 形）正常。回归测试见 MapKeyDiagnostic.test.ts；cheatsheet 也补了「map / output_schema 键只用裸 word 或字符串」一条。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.7-AC1" checked="true">非 word/字符串 map 键（如数字键 {1 = v}）抛有界诊断而非崩溃；裸 word / 字符串字面量键不回归</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+        </Hooks>
+      </TaskGroup>
+
+      <TaskGroup id="P2" name="runtime-interpreter 缺陷" status="DONE" order="1">
+        <Description>修复运行期缺陷：colon 前缀逻辑运算错误、Concat 丢值、求值入口不一致、未知前缀静默 no-op（D8，位置式未绑定检测）、比较运算面澄清；清理 HostSupport 死代码。</Description>
+        <SubNodes>
+          <Task id="T2.1" name="D1 — colon 前缀逻辑运算返回错误" status="DONE" order="0" priority="P0">
+            <Description>(:and true true)→false、(:or false true)→false（应为 true）。已修复 colon 前缀分派。测试见 RuntimeInterpreterColonPrefixLogical.test.ts。</Description>
+            <SubNodes>
+              <Task id="T2.1.1" name="写失败测试：(:and true true)→true、(:or false true)→true；bare/infix 不回归" status="DONE" order="0" priority="P0"/>
+              <Task id="T2.1.2" name="修复 colon 前缀逻辑运算分派" status="DONE" order="1" priority="P0"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.1-AC1" checked="true">(:and a b)/(:or a b) 与 bare/infix 结果一致，bare/infix 不回归</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.2" name="D4 — Concat 三参丢值" status="DONE" order="1" priority="P0">
+            <Description>(Concat "a" "b" "c")→"c"（丢 a、b）。已修复为拼接全部参数（变参 host function 支持，见 RuntimeState.registerHostFunction options.variadic）。测试见 ConcatVariadicArgs.test.ts。</Description>
+            <SubNodes>
+              <Task id="T2.2.1" name="写失败测试：(Concat a b c)→abc；二参不回归" status="DONE" order="0" priority="P0"/>
+              <Task id="T2.2.2" name="修复 Concat 变参实现" status="DONE" order="1" priority="P0"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.2-AC1" checked="true">Concat 拼接全部参数，(Concat "a" "b" "c")→"abc"</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.3" name="D6 — 求值入口不一致（顶层 $ 宏）" status="DONE" order="2" priority="P1">
+            <Description>EvalBlockSourceSync 对顶层 ${}/$[]/$()/$&lt;&gt; 抛 "End of stream"，ExecSync 正常。已统一：SplitTopLevelExpressions 识别 $ 前缀属于其后的平衡括号。测试见 RuntimeInterpreterTopLevelDollarMacro.test.ts（注：有序 map 行需 key = value，畸形 `$&lt;a 1 b 2&gt;` 在两入口一致地走有界 Unclosed-container 诊断）。</Description>
+            <SubNodes>
+              <Task id="T2.3.1" name="写失败测试：${a=1 b=2} 经 block 与 node 入口结果一致" status="DONE" order="0" priority="P1"/>
+              <Task id="T2.3.2" name="修复 block 源入口对顶层 $ 宏的处理" status="DONE" order="1" priority="P1"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.3-AC1" checked="true">顶层 $ 宏经 EvalBlockSourceSync 与 ExecSync 求值结果一致，不再抛 "End of stream"</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.4" name="D8 — 未知前缀词静默 no-op" status="DONE" order="3" priority="P1">
+            <Description>(totallyUnknownWord 1 2)→2、裸 totallyUnknownWord→null，不报错（裸词被当作值 push，未绑定 lookup → undefined，被帧塌缩静默丢弃）。
+
+已修复（2026-06-21）。方案 = **基于位置的未绑定检测**（非 sentinel）：先经一个并行调查+设计 workflow 摸清链求值/消费机制，确认朴素「未绑定即抛」会误伤合法的非 env 名字（类/trait/原型/扩展）。最终：
+• 新增 `RuntimeState.hasBinding(name)`：用 LookupDeclareEnv 的 fallback + ContainsVar，**区分「从未声明」与「声明为 null/undefined」**（lookup 二者都返回 undefined，无法区分）。
+• 新增 `IsUnboundName` 谓词：name 非 host fn、非 workflow 扩展（任意 fixity）、且 hasBinding 为 false 时才算未绑定。
+• 在**两个链求值引擎**的「Word 头/值位、解析不出可调用」分支抛 `Unbound name`：指令栈 `AppendChainCurrentOps`（顶层 `(unknown …)`）与 tree-walk `EvaluateChainItem`（嵌套参数 `(:+ 1 (bogus 2 3))`、foreach 体、var 赋值值等）。
+• 裸顶层未绑定词在 `ExecBlockWithRuntimeSync` 求值后做语法检查（绑定已稳定，且不与「合法返回 null」混淆）。
+为何不误伤：`Named` 等 trait/class 名是 InstanceCall 的输入或 @implements 元数据，按语法读取/被 RunNode 调度走 Word expander（未改），从不进入上述「头位」分支；类名 env 已绑定（define）；注册扩展走 InvokeWorkflowExtension 旁路。`(x 1 2)`（x 已绑定）、`(7 1 2)`（字面量头）、`(var n null) n`（绑定为 null）均不抛。
+覆盖范围（经插桩复核确认）：顶层语句、嵌套参数、**已执行的函数体**（`fn` + `:apply` 经 RunBlock → 同一头检查）、**已选中的 if THEN/ELSE 分支**、foreach 体、var 赋值值、未注册扩展名——均抛 `Unbound name`。
+（先前误记的「lambda 体 / if 分支缺口」实为**测试写法问题**：`(f 1)` 对 var 绑定的 lambda 是普通链、根本不调用 f（其体自然不求值，符合预期）；`(if true …)` 缺 `else` 关键字、语法不对。改用正确写法后均正确抛错。唯一不检查的是**从未被调用的 lambda 体**内的未绑定名——未执行的代码不应被求值，属正确行为。另注：`(:f …)` 对 var 绑定 lambda 报 `Callable not found`，是与 D8 无关的独立调用约定问题。）
+验证：1 个 D8 回归测试文件（含函数体/if 分支/foreach/嵌套/typed-view 不回归），全量 469 pass / 0 fail，Finch 封顶全程无 runaway。</Description>
+            <SubNodes>
+              <Task id="T2.4.1" name="写失败测试：未知 head 词应抛诊断而非静默返回操作数" status="DONE" order="0" priority="P1"/>
+              <Task id="T2.4.2" name="修复未知 head 的求值路径（位置式未绑定检测，双引擎 + 裸词收尾检查）" status="DONE" order="1" priority="P1"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.4-AC1" checked="true">调用未绑定前缀词/引用未绑定裸词、以及已执行的函数体/if 分支/foreach/嵌套参数中的未绑定头，均抛清晰 `Unbound name` 诊断，不再静默 no-op；绑定为 null、绑定非可调用头、字面量头、typed-view 名字均不回归（仅「从未被调用的 lambda 体」内不检查，属正确行为）</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.5" name="D5 — 比较运算符不安全 / 缺失" status="DONE" order="4" priority="P2">
+            <Description>原登记「&lt; 死循环、&gt; 抛错、无 !=/not」。诊断澄清：
+• 「&lt; 死循环」实为 T1.6 的 ParseContainer 未闭合容器 OOM（`&lt;` 是有序 map/泛型定界符，未闭合时无界分配）——已随 T1.6 修复，未闭合 `&lt;…` 现抛有界 "Unclosed container"。
+• 比较运算在 kunun **本就用具名 host 函数 `:lt`/`:gt`**（RuntimeInterpreter 注册），实测 `(3 5 :lt)`→true、`(3 5 :gt)`→false，正常可用。`&lt;`/`&gt;` 不是比较运算符，故「&lt;/&gt; 失败模式不一致」是误解——它们是定界符，裸用（如 `(1 2 &lt;)`）给有界 "Invalid token"。
+• 终止性与一致性已达成（无死循环、有界诊断）；比较面 = `:lt`/`:gt`。`!=`/`not` 的补齐属功能增强，非缺陷，未在本 track 范围内。
+回归测试见 UnclosedContainerTermination.test.ts（终止性）。</Description>
+            <SubNodes>
+              <Task id="T2.5.1" name="写失败测试：&lt; 不死循环、&lt;/&gt; 失败模式一致" status="DONE" order="0" priority="P2"/>
+              <Task id="T2.5.2" name="修复比较运算符（终止 + 一致诊断；澄清比较面 = :lt/:gt）" status="DONE" order="1" priority="P2"/>
+            </SubNodes>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.5-AC1" checked="true">&lt;/&gt; 评估终止且失败模式一致（有界诊断，非死循环）；比较运算面明确为 :lt/:gt</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.6" name="D7b — 清理 HostSupport 死代码" status="DONE" order="5" priority="P2">
+            <Description>已删除 packages/runtime/lib/HostSupport/ 整个目录（HostFunctions/IOFunctions/MathFunctions/StringFunctions）——HostFunctions 入口被零引用，是唯一使用其余三者的代码；实际 host 函数在 RuntimeInterpreter 内联注册。确认无任何引用后删除，全量与 tsc 通过。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.6-AC1" checked="true">确认无引用后删除，全量测试与 tsc 仍通过</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.7" name="D12 — var 绑定函数字面量漏 fn 时静默绑 null" status="DONE" order="6" priority="P2">
+            <Description>会话中排查「`(:f 1)` 对 var 绑定 lambda 报 `Callable not found`」时发现：那不是 colon-apply 的 bug——正确写法 `(var f (fn |a| :[ … ]))` 下 `(:f 1)` 与 `(f 1)` 都能正常调用（返回值正确）。真正的坑是 **lambda 必须用 `fn` 关键字**；写成 `(var f |a| :[ a ])`（漏 `fn`）时，`|a|`/`:[ a ]` 会挂到**变量名 knot** 上，`(var name value)` 只剩两个链节点、value 缺失 → f 被**静默绑成 null**，随后 `(:f 1)` 才报误导性的 `Callable not found: f`。
+已修：`ExpandVar` 与 `EvaluateVar`（指令栈 + tree-walk 两路）在取名字时检测名字节点是否带 `InOutTable` 或 `Body`，若有则抛清晰诊断 `var "f" … a function literal needs the fn keyword, e.g. (var f (fn |..| :[ .. ]))`。仅命中畸形写法，不影响 `(var x 5)`、`(var x)`（无值声明）、`(var f (fn …))`。`set` 的同类畸形已有自带诊断（`set requires an assignment target`），未改。回归测试见 RuntimeInterpreterVarFunctionLiteral.test.ts。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.7-AC1" checked="true">`(var f |a| :[ … ])`（漏 fn）抛清晰「需要 fn 关键字」诊断，不再静默绑 null；`(var f (fn …))`、`(var x 5)`、`(var x)` 不回归</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.8" name="D13 — foreach 迭代非数组无限循环挂死" status="DONE" order="7" priority="P1">
+            <Description>同步 kwf NL→workflow 文档时，在 03-authoring-patterns.md 发现并实测复现的真实 runaway：`(foreach k in {a = 1} :[ k ])`（对 map / 普通对象 / 数字等非数组）在 `EvalBlockSourceSync`/`ExecSync` 下**无限循环挂死**——`IterForEachLoop` 取 `items.length` 对非数组为 `undefined`，`index >= undefined` 恒为 false → 永不终止（Finch 封顶下被 SIGKILL，宿主安全）。已修：`IterForEachLoop`（`RuntimeInterpreter.ts`）在迭代前检查 `typeof items.length !== 'number'`，非数组抛有界诊断 `foreach expects an array to iterate, got &lt;type&gt;`，不再 runaway；数组/空数组/字符串正常迭代。回归测试见 ForeachNonArrayDiagnostic.test.ts。指令栈与 kwf（ExecBlockWithRuntimeSync）两路共用此 handler，均受益。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.8-AC1" checked="true">foreach 迭代非数组（map/数字/对象）抛有界 `foreach expects an array` 诊断并立即终止，不再无限循环挂死；数组/空数组迭代不回归</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+          <Hook on="phase:after"><cdt:GapLoop max-rounds="5" on-exhausted="block"/></Hook>
+        </Hooks>
+      </TaskGroup>
+
+    </SubNodes>
+  </TaskSpace>
+
+  <Schedule />
+</Track>

@@ -1,0 +1,55 @@
+<behavior-patch capability="depa-actor-execution-kernel" version="1">
+  <upsert selector="behavior://depa-actor-execution-kernel/requirements/stack-hydration">
+    <requirement id="stack-hydration">
+        <statement>depa-actor SHALL expose generic stack hydration APIs so interpreter runtimes can restore stack snapshots without mutating private fields.</statement>
+        <suite id="stack-machine" name="StackMachine snapshot and hydration">
+          <case id="load-snapshot">
+            <given>A StackMachine has been created and later receives a previously captured StackMachineState</given>
+            <when>The runtime hydrates the stack from that state</when>
+            <then>The stack SHALL replace its items and frame bottoms through a public API and validate frame boundaries</then>
+          </case>
+          <case id="create-from-snapshot-remains">
+            <given>Existing callers create instruction and operand stacks from snapshot state</given>
+            <when>The new hydration API is added</when>
+            <then>Existing createInstructionStack(state) and createOperandStack(state) behavior SHALL remain compatible</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://depa-actor-execution-kernel/requirements/dispatcher-yield-hooks">
+    <requirement id="dispatcher-yield-hooks">
+        <statement>depa-actor SHALL provide domain-neutral dispatcher hooks or yield conventions that allow interpreter runtimes to stop at safe points and return effects to an outer runtime.</statement>
+        <suite id="dispatcher" name="Dispatcher lifecycle and yield behavior">
+          <case id="handler-yield-stop">
+            <given>An instruction handler produces an effect that requires host runtime processing</given>
+            <when>The handler asks the dispatcher to yield</when>
+            <then>The dispatcher SHALL stop cleanly, preserve collected effects, and report a stop reason distinguishable from error and stack exhaustion</then>
+          </case>
+          <case id="lifecycle-hooks">
+            <given>A runtime wants to observe instruction dispatch</given>
+            <when>dispatchInstructions runs instructions</when>
+            <then>The runtime SHALL be able to observe before-instruction, after-instruction, handler-effect, and stop events through domain-neutral hooks or equivalent APIs</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://depa-actor-execution-kernel/requirements/domain-neutral-snapshot-helpers">
+    <requirement id="domain-neutral-snapshot-helpers">
+        <statement>depa-actor SHALL keep snapshot and fiber orchestration helpers domain-neutral while allowing higher-level runtimes to attach custom metadata.</statement>
+        <suite id="snapshot" name="Snapshot helpers">
+          <case id="custom-runtime-metadata">
+            <given>A higher-level interpreter runtime serializes custom checkpoint metadata</given>
+            <when>The runtime uses depa-actor snapshot helper types</when>
+            <then>The helper SHALL allow opaque metadata without requiring depa-actor to understand Kunun, AI agent, or dynamic workflow semantics</then>
+          </case>
+          <case id="no-ai-semantics">
+            <given>depa-actor is used by actor systems, interpreters, and AI OS kernels</given>
+            <when>dynamic workflow support is added in a dependent project</when>
+            <then>depa-actor SHALL NOT introduce built-in AI agent runtime, prompt, JSON schema, or workflow-specific concepts</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

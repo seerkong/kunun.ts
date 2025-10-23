@@ -1,0 +1,21 @@
+{
+  "name": "kunun-runtime",
+  "version": "1.0.2",
+  "private": true,
+  "main": "lib/index.ts",
+  "types": "lib/index.ts",
+  "exports": {
+    ".": "./lib/index.ts",
+    "./*": "./lib/*.ts"
+  },
+  "files": [
+    "dist",
+    "lib",
+    "src"
+  ],
+  "dependencies": {
+    "depa-actor": "file:../../vendor/depa-actor-0.2.0.tgz",
+    "kunun-converter": "workspace:*",
+    "kunun-core": "workspace:*"
+  }
+}

@@ -1,0 +1,8 @@
+(class #Person
+  :[
+    (field #name)
+    (new |personName| :[ (set self.:name personName) ])
+  ])
+(var person (Person ~new "Alice"))
+(set person.:name "Bob")
+(person.:name)

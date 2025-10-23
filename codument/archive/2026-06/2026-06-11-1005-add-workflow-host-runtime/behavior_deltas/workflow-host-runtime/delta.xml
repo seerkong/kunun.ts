@@ -1,0 +1,71 @@
+<behavior-patch capability="workflow-host-runtime" version="1">
+  <upsert selector="behavior://workflow-host-runtime/requirements/durable-driver-loop">
+    <requirement id="durable-driver-loop">
+        <statement>宿主运行时 SHALL 以 run-until-yield → checkpoint 落盘 → 分派 pendingJobs → 注入结果 → resume 的循环驱动 .kon workflow 至完成；每个 yield 边界的 checkpoint SHALL 先于 job 分派持久化，使进程在任意 job 执行期间崩溃或被停止后，能从最近 checkpoint 与已完成 job 结果续跑而不重复已完成的工作。</statement>
+        <suite id="durability" name="持久执行">
+          <case id="crash-resume">
+            <given>workflow 在第二个 yield 边界后、job 完成前进程被终止</given>
+            <when>对同一 runId 执行 resume</when>
+            <then>SHALL 从落盘 checkpoint 续跑，第一个 yield 的已完成结果不重复执行</then>
+          </case>
+          <case id="pause-resume">
+            <given>运行中的 workflow 收到 pause 控制信号</given>
+            <when>稍后 resume</when>
+            <then>SHALL 在 yield 边界暂停并从相同位置继续，最终结果与不暂停一致</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workflow-host-runtime/requirements/agent-adapter-layer">
+    <requirement id="agent-adapter-layer">
+        <statement>agent 调用 SHALL 经配置驱动的适配器层执行：适配器以命令模板（含 {workspace}、{prompt} 或 {prompt_file}、可选 {model} 占位符）描述 CLI 子进程调用；新增适配器 SHALL 仅需配置而无需改代码；无原生映射的调用选项 SHALL 记录事件而非静默丢弃。</statement>
+        <suite id="adapters" name="适配器">
+          <case id="config-driven">
+            <given>配置文件声明自定义适配器命令模板</given>
+            <when>ai_agent job 指定该适配器</when>
+            <then>SHALL 以展开后的命令启动子进程并以 stdout 作为结果</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workflow-host-runtime/requirements/schema-validation-retry">
+    <requirement id="schema-validation-retry">
+        <statement>带 output_schema 的 job 结果 SHALL 经多层候选提取（fenced block、balanced span、整体）解析 JSON 并按 schema 校验；校验失败 SHALL 以包含具体错误的纠正提示重试（次数可配），全部失败抛出 schema 校验错误。</statement>
+        <suite id="schema" name="schema 校验">
+          <case id="retry-with-feedback">
+            <given>agent 首次返回不符合 schema 的 JSON</given>
+            <when>bridge 重试</when>
+            <then>重试 prompt SHALL 含具体校验错误，二次合格结果被接受</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workflow-host-runtime/requirements/file-run-store">
+    <requirement id="file-run-store">
+        <statement>每次运行 SHALL 拥有文件化 run 目录（meta.json、status.json、events.jsonl、checkpoint.json、result.json/error.json、control.json、worker.log），状态文件 SHALL 原子写入（temp+rename）；CLI 与 worker 进程 SHALL 仅经该目录通信（无 daemon/socket）。</statement>
+        <suite id="store" name="run 目录">
+          <case id="atomic-status">
+            <given>worker 正在更新 status.json</given>
+            <when>CLI 并发读取</when>
+            <then>SHALL 读到完整旧值或完整新值，不出现半写状态</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workflow-host-runtime/requirements/scheduler-and-cli">
+    <requirement id="scheduler-and-cli">
+        <statement>job 分派 SHALL 经异步信号量调度（并发上限默认 min(16, CPU-2)，可配）并受 maxAgents 总量兜底约束，预留 budget 钩子；CLI SHALL 提供 run、status、logs、result、pause、resume、stop 命令。</statement>
+        <suite id="cli" name="调度与命令">
+          <case id="concurrency-cap">
+            <given>ai_parallel 产生超过并发上限的 job</given>
+            <when>driver 分派</when>
+            <then>同时运行的子进程 SHALL 不超过上限，全部 job 最终完成</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

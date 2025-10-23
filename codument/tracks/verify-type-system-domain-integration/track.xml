@@ -1,0 +1,22 @@
+<Track id="verify-type-system-domain-integration" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>Verify enum/value, annotation package, and schema kernel integration.</Goal>
+    <Description>Recorded successful typecheck and targeted test evidence for the implemented mission scope.</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>auto</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-07-01T17:11:58Z</CreatedAt>
+    <UpdatedAt>2026-07-01T17:11:58Z</UpdatedAt>
+  </Metadata>
+  <TaskSpace id="space_verify-type-system-domain-integration" name="verify-type-system-domain-integration" version="1">
+    <SubNodes>
+      <TaskGroup id="P1" name="Integration verification" status="DONE" order="0">
+        <SubNodes>
+          <Task id="P1-T1" name="Run typecheck and targeted tests" status="DONE" order="0"/>
+        </SubNodes>
+      </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule/>
+</Track>

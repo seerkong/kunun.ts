@@ -1,0 +1,65 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <upsert selector="behavior://runtime-interpreter/requirements/legacy-test-merge">
+    <requirement id="legacy-test-merge">
+        <statement>The project SHALL migrate valuable legacy interpreter test behavior to the new RuntimeInterpreter baseline and remove duplicate old interpreter regressions.</statement>
+        <suite id="legacy-cleanup" name="Legacy interpreter regression cleanup">
+          <case id="delete-duplicates">
+            <given>Legacy interpreter assertions are already covered by RuntimeInterpreter tests</given>
+            <when>The test suite is merged into the new runtime baseline</when>
+            <then>The project SHALL delete or replace those duplicate legacy assertions</then>
+          </case>
+          <case id="keep-smoke">
+            <given>The legacy Interpreter API remains present</given>
+            <when>The old regression suite is reduced</when>
+            <then>The project SHALL keep only a minimal compatibility smoke suite for EvalSync, ExecAsync, and state-based execution</then>
+          </case>
+        </suite>
+        <suite id="runtime-migration" name="RuntimeInterpreter migration">
+          <case id="control-flow">
+            <given>Old tests cover loop and branch behavior</given>
+            <when>The behavior is still part of the current language surface</when>
+            <then>The project SHALL add RuntimeInterpreter tests using current Kon syntax</then>
+          </case>
+          <case id="logical-expressions">
+            <given>Old tests cover logical and infix macro behavior</given>
+            <when>The behavior is still part of the current language surface</when>
+            <then>The project SHALL add RuntimeInterpreter tests for short-circuit and mixed logical expression behavior</then>
+          </case>
+          <case id="runtime-session">
+            <given>A caller reuses one RuntimeInterpreter runtime instance</given>
+            <when>The caller evaluates multiple scripts sequentially</when>
+            <then>The runtime SHALL preserve expected state across evaluations</then>
+          </case>
+        </suite>
+        <suite id="js-interop" name="JavaScript interop and embedding">
+          <case id="host-object-bridge">
+            <given>A script needs to interact with a host JavaScript object</given>
+            <when>The script invokes the new RuntimeInterpreter host bridge API</when>
+            <then>The runtime SHALL provide an equivalent capability to the old js_call and js_apply business behavior</then>
+          </case>
+          <case id="script-function-as-js-callable">
+            <given>A script function is exported through the embedding API</given>
+            <when>Host JavaScript calls the exported callable</when>
+            <then>The callable SHALL bind parameters, execute through RuntimeInterpreter, and return the script result</then>
+          </case>
+        </suite>
+        <suite id="excluded-scope" name="Explicit exclusions">
+          <case id="event-queue-excluded">
+            <given>Legacy tests cover timer or event queue behavior</given>
+            <when>This track is implemented</when>
+            <then>The project SHALL NOT migrate event queue scheduling semantics in this track</then>
+          </case>
+          <case id="async-host-excluded">
+            <given>Legacy tests cover await_host_fn style async host interop</given>
+            <when>This track is implemented</when>
+            <then>The project SHALL NOT migrate async host interop semantics in this track</then>
+          </case>
+          <case id="self-update-excluded">
+            <given>Legacy tests cover self-update assignment syntax</given>
+            <when>This track is implemented</when>
+            <then>The project SHALL NOT migrate self-update operators in this track</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

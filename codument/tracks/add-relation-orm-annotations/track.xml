@@ -1,0 +1,76 @@
+<Track id="add-relation-orm-annotations" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>Add Kunun prefix-annotation support for ORM relation implementation metadata.</Goal>
+    <Description>Track relation annotations that let one relation declaration serve ontology typing and depa-orm-style ORM implementation metadata.</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>light</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-07-04T07:26:49+03:00</CreatedAt>
+    <UpdatedAt>2026-07-04T11:55:07+03:00</UpdatedAt>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="input" name="type-annotations-source" domain="repo" path="vfs://@/packages/type-annotations/"/>
+    <MaterialBundle role="input" name="type-system-source" domain="repo" path="vfs://@/packages/type-system/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_add-relation-orm-annotations" name="add-relation-orm-annotations" version="1">
+    <Description>Add prefix ORM annotations for relation declarations.</Description>
+    <SubNodes>
+      <TaskGroup id="P1" name="Annotation profile parser" status="DONE" order="0">
+        <Description>Implement a typed ORM relation annotation profile over Kunun prefix annotations.</Description>
+        <SubNodes>
+          <Task id="T1.1" name="Define normalized relation annotation descriptor" status="DONE" order="0" priority="P0">
+            <Description>Add descriptor types for cardinality, endpoints, through path segments, constraints, and write behavior.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.1-AC1" checked="true">Descriptors can represent depa-orm RelationshipDefinition and RelationPathThrough concepts.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="Parse prefix ORM relation marker" status="DONE" order="1" priority="P0">
+            <Description>Parse `#(orm #relation :{ ... })` markers from relation Knot pre modifiers.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.2-AC1" checked="true">Profile parsing accepts endpoint, through, constraint, and write items.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+        </Hooks>
+      </TaskGroup>
+      <TaskGroup id="P2" name="Type-system relation integration" status="DONE" order="1">
+        <Description>Connect relation declarations with annotation extraction while preserving core relation semantics.</Description>
+        <SubNodes>
+          <Task id="T2.1" name="Preserve relation annotation access" status="DONE" order="0" priority="P0">
+            <Description>Ensure downstream tooling can access relation prefix annotations after parsing/binding.</Description>
+          </Task>
+          <Task id="T2.2" name="Protect core type compatibility" status="DONE" order="1" priority="P0">
+            <Description>Add tests proving ORM annotations do not affect row compatibility or schema subtype checks.</Description>
+          </Task>
+          <Task id="T2.3" name="Add field business type profiles" status="DONE" order="2" priority="P0">
+            <Description>Add domain and ORM field annotation profiles so depa-orm scalar/business types stay outside the core type registry.</Description>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+        </Hooks>
+      </TaskGroup>
+      <TaskGroup id="P3" name="Migration examples and verification" status="DONE" order="2">
+        <Description>Add depa-orm migration examples and run focused verification.</Description>
+        <SubNodes>
+          <Task id="T3.1" name="Add depa-orm mapping fixtures" status="DONE" order="0" priority="P1">
+            <Description>Cover RelationshipDefinition to Kunun relation plus prefix annotation mappings, including through paths.</Description>
+          </Task>
+          <Task id="T3.2" name="Run tests and typecheck" status="DONE" order="1" priority="P0">
+            <Description>Run type-annotations tests, type-system relation tests, and workspace typecheck.</Description>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+          <Hook on="phase:after"><cdt:GapLoop max-rounds="3" on-exhausted="block" verify-round="false"/></Hook>
+        </Hooks>
+      </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule/>
+</Track>

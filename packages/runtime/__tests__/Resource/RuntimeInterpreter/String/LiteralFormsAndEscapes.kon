@@ -1,0 +1,18 @@
+(var name "Kunun")
+[
+  "hello \(name)"
+  "double quote: \""
+  "literal interpolation marker: \\(name)"
+  """
+  multiline
+  name=\(name)
+  sum=\((1 2 :+))
+  triple double=\"\"\"
+  """
+  'raw \n \(name)'
+  '''
+  raw multiline
+  \(name)
+  """
+  '''
+]

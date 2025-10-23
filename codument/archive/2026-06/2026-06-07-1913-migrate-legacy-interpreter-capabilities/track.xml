@@ -1,0 +1,110 @@
+<Track id="migrate-legacy-interpreter-capabilities" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>迁移旧解释器必要能力到 RuntimeInterpreter，并为删除旧解释器做准备。</Goal>
+    <Description>迁移旧解释器必要能力到 RuntimeInterpreter，并为删除旧解释器做准备。</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-07T09:31:56Z</CreatedAt>
+    <UpdatedAt>2026-06-07T11:13:49Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_migrate-legacy-interpreter-capabilities" name="migrate-legacy-interpreter-capabilities" version="1">
+    <Description>迁移旧解释器必要能力到 RuntimeInterpreter，并为删除旧解释器做准备。</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="旧能力基线盘点">
+            <Description>确认旧解释器待迁移能力的代码入口、测试入口和不迁移边界。</Description>
+            <SubNodes>
+              <Task id="T1.1" name="盘点 async host/timer/fiber 旧实现" status="DONE" priority="P0">
+                <Description>阅读旧 AwaitHostFunc、WaitTimeout、SetInterval、FiberScheduleHandler 和 KnOpCode，形成 RuntimeInterpreter 迁移映射。</Description>
+              </Task>
+              <Task id="T1.2" name="盘点 MakeFuncSync reusable 行为" status="DONE" priority="P0">
+                <Description>比较旧 Interpreter.MakeFuncSync reusable 参数和新 RuntimeInterpreter.MakeFuncSync 的运行时状态复用差异。</Description>
+              </Task>
+              <Task id="T1.3" name="盘点语法糖与别名" status="DONE" priority="P1">
+                <Description>确认 func/do/main/self-update/js interop/def_to/set_to/save_operands/host alias 在旧解释器中的具体语义和测试覆盖。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P2" name="底层暂停恢复与调度迁移">
+            <Description>在 RuntimeInterpreter 中补齐旧 async host、timer 和 fiber scheduler 能力。</Description>
+            <SubNodes>
+              <Task id="T2.1" name="实现 RuntimeState fiber 状态迁移原语" status="DONE" priority="P0">
+                <Description>补齐 idle、suspended、runnable、finalized、awaken、yield-to-fiber、yield-to-parent 等状态转换能力。</Description>
+              </Task>
+              <Task id="T2.2" name="实现 scheduler runtime instructions" status="DONE" priority="P0">
+                <Description>增加新 RuntimeInterpreter 中对应旧 scheduler opcodes 的指令处理，保持 instruction stack expansion 路线。</Description>
+              </Task>
+              <Task id="T2.3" name="实现 async host 兼容入口" status="DONE" priority="P0">
+                <Description>迁移 await_host_fn 语义，使 host promise 或 callback 能暂停 fiber 并在完成后恢复 continuation。</Description>
+              </Task>
+              <Task id="T2.4" name="实现 timer 兼容入口" status="DONE" priority="P0">
+                <Description>迁移 set_timeout、set_interval、clear_interval，并在测试中使用可控 scheduler 避免真实时间不稳定。</Description>
+              </Task>
+              <Task id="T2.5" name="补充 async/timer/fiber 测试" status="DONE" priority="P0">
+                <Description>新增 RuntimeInterpreter 测试和资源，覆盖暂停、恢复、yield、awaken、finalize、interval clear。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P3" name="嵌入式 API 兼容">
+            <Description>迁移旧 MakeFuncSync reusable 行为并保持默认行为兼容。</Description>
+            <SubNodes>
+              <Task id="T3.1" name="设计 MakeFuncSync reusable API" status="DONE" priority="P0">
+                <Description>在不破坏现有 RuntimeInterpreter.MakeFuncSync 调用的前提下增加 reusable 兼容选项。</Description>
+              </Task>
+              <Task id="T3.2" name="实现 reusable callable" status="DONE" priority="P0">
+                <Description>复用函数绑定和必要运行时上下文，同时隔离每次调用的 operand/instruction stack 状态。</Description>
+              </Task>
+              <Task id="T3.3" name="补充 reusable callable 测试" status="DONE" priority="P0">
+                <Description>覆盖默认 non-reusable 行为、多次调用参数隔离、闭包/环境复用行为。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P4" name="旧语法糖和别名迁移">
+            <Description>迁移用户确认保留的旧语法糖、小能力和 JS interop 兼容入口。</Description>
+            <SubNodes>
+              <Task id="T4.1" name="迁移 prefix 兼容语法" status="DONE" priority="P1">
+                <Description>实现 func、do、main、--、+=、-=、*=、/= 等 prefix 形式的 RuntimeInterpreter 展开。</Description>
+              </Task>
+              <Task id="T4.2" name="迁移 infix 兼容语法" status="DONE" priority="P1">
+                <Description>实现 def_to、set_to、save_operands 等 infix 兼容行为。</Description>
+              </Task>
+              <Task id="T4.3" name="实现受限链式赋值兼容" status="DONE" priority="P1">
+                <Description>仅在 writable knot chain 表达式层支持 target.:field = value 与 target.:field := value，不改变数据语法。</Description>
+              </Task>
+              <Task id="T4.4" name="迁移 JS interop 和 host alias" status="DONE" priority="P1">
+                <Description>将 js_call、js_apply、Writeln、append、console、clear_interval、&gt;=、&lt;= 等映射到新 host bridge 或内置函数。</Description>
+              </Task>
+              <Task id="T4.5" name="补充语法兼容测试" status="DONE" priority="P1">
+                <Description>新增 RuntimeInterpreter 脚本资源与测试，覆盖旧语法糖、链式赋值和数据语法不受影响。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P5" name="旧解释器删除准备">
+            <Description>形成旧解释器删除前的可审查清单。</Description>
+            <SubNodes>
+              <Task id="T5.1" name="标记不迁移 table 相关代码" status="DONE" priority="P2">
+                <Description>列出旧 table 对象系统相关代码和测试，作为明确不迁移、不阻塞删除的范围。</Description>
+              </Task>
+              <Task id="T5.2" name="形成旧解释器剩余逻辑 review 报告" status="DONE" priority="P1">
+                <Description>在删除旧解释器前汇总仍未迁移、明确不迁移、已经迁移的代码和测试清单，等待用户 review。</Description>
+              </Task>
+              <Task id="T5.3" name="运行全量验证" status="DONE" priority="P0">
+                <Description>运行 compile、RuntimeInterpreter 测试和项目全量测试，确认迁移没有破坏当前解释器能力。</Description>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="2" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

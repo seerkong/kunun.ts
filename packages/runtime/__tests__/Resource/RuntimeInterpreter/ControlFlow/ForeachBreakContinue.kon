@@ -1,0 +1,16 @@
+(var a [1 2 3])
+(var breakResult 0)
+(foreach x in a :[
+  (if (:== x 2) :[
+    (:break)
+  ])
+  (set breakResult x)
+])
+(var continueResult 0)
+(foreach x in a :[
+  (if (:== x 2) :[
+    (:continue)
+  ])
+  (set continueResult x)
+])
+[breakResult continueResult]

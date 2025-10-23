@@ -1,0 +1,24 @@
+<behavior-patch capability="workflow-agent-integration" version="1">
+  <upsert selector="behavior://workflow-agent-integration/requirements/scaffold-generation-kernel">
+    <requirement id="scaffold-generation-kernel">
+      <statement>The `kwf agent` scaffold step SHALL inject a compact, self-contained workflow-generation cheatsheet (the Kon DSL node set with their config keys, the input/output mechanics, the critical authoring gotchas, and at least one verified end-to-end example) as the design system prompt. It SHALL NOT inject the slimmed navigation SKILL.md, which no longer carries DSL syntax.</statement>
+      <suite id="kernel-injection" name="Generation kernel injection">
+        <case id="kernel-has-dsl-syntax">
+          <given>A user runs `kwf agent` with a requirement string</given>
+          <when>The scaffold meta-workflow builds the design system prompt</when>
+          <then>The injected document SHALL contain the Kon DSL node syntax (ai_workflow / ai_phase / ai_agent / ai_parallel / ai_pipeline / ai_log) and the authoring gotcha checklist</then>
+        </case>
+        <case id="kernel-not-navigation-doc">
+          <given>SKILL.md has been slimmed to a navigation entry without a DSL reference section</given>
+          <when>The scaffold selects what to inject</when>
+          <then>It SHALL source the cheatsheet from the dynamic-workflow manual and SHALL NOT fall back to injecting the navigation-only SKILL.md</then>
+        </case>
+        <case id="kernel-prevents-known-traps">
+          <given>The cheatsheet is injected</given>
+          <when>The agent generates a workflow</when>
+          <then>The cheatsheet SHALL explicitly cover the traps that previously broke generation: ai_agent must sit inside an ai_phase to yield, hyphenated knot names parse as subtraction (use camelCase), and triple-quoted string delimiter / indentation rules</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

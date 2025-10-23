@@ -1,0 +1,51 @@
+<Track id="remove-legacy-interpreter" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>删除旧 Interpreter/XnlState/ExtensionRegistry 执行管线，运行时入口收敛到 RuntimeInterpreter。</Goal>
+    <Description>删除旧 Interpreter/XnlState/ExtensionRegistry 执行管线，运行时入口收敛到 RuntimeInterpreter。</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-07T12:17:02Z</CreatedAt>
+    <UpdatedAt>2026-06-07T12:29:23Z</UpdatedAt>
+    <cdt:Type>refactor</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_remove-legacy-interpreter" name="remove-legacy-interpreter" version="1">
+    <Description>删除旧 Interpreter/XnlState/ExtensionRegistry 执行管线，运行时入口收敛到 RuntimeInterpreter。</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="删除旧执行管线">
+            <Description>移除旧解释器公开 API、实现和旧 smoke 测试。</Description>
+            <SubNodes>
+              <Task id="T1.1" name="删除旧解释器代码" status="DONE" priority="P0">
+                <Description>删除 Interpreter、KnState、KnOpCode、ExtensionRegistry、RunResult、Handler 和 StateManagement 旧执行管线。</Description>
+              </Task>
+              <Task id="T1.2" name="更新包导出" status="DONE" priority="P0">
+                <Description>从 lib/index.ts 移除旧解释器导出，只保留 RuntimeInterpreter、Converter、Model 等仍有效入口。</Description>
+              </Task>
+              <Task id="T1.3" name="删除旧解释器测试" status="DONE" priority="P0">
+                <Description>删除旧 Interpreter smoke 测试，并移除 RuntimeInterpreter 中旧路径可用性断言。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P2" name="验证与收敛">
+            <Description>确认删除后项目只依赖新 RuntimeInterpreter 路径。</Description>
+            <SubNodes>
+              <Task id="T2.1" name="修复编译引用" status="DONE" priority="P0">
+                <Description>根据 TypeScript 编译错误修正残留旧路径引用。</Description>
+              </Task>
+              <Task id="T2.2" name="运行测试" status="DONE" priority="P0">
+                <Description>运行 compile、RuntimeInterpreter 测试和项目全量测试。</Description>
+              </Task>
+              <Task id="T2.3" name="更新计划状态" status="DONE" priority="P1">
+                <Description>验证通过后将任务和 track 状态标记为 DONE/completed。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

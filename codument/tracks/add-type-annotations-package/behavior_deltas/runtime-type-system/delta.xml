@@ -1,0 +1,15 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/type-annotations-package">
+    <requirement id="type-annotations-package">
+      <statement>The project SHALL provide a batteries-included annotation metadata package separate from the core type-system package.</statement>
+      <suite id="annotation-extraction" name="Annotation Extraction">
+        <case id="extract-metadata-and-attrs">
+          <given>A declaration has metadata and attrs</given>
+          <when>The annotation extractor reads the node</when>
+          <then>The extractor SHALL return normalized annotation entries without changing type compatibility</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>
+

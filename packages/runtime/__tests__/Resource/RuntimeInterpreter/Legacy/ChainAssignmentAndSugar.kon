@@ -1,0 +1,8 @@
+(var obj {name = "Alice"})
+(obj.:name = "Bob")
+(var arr [1 2])
+(arr::0 := 9)
+(var count 1)
+(+= count 4)
+(-- count)
+[(obj.:name) (arr::0) count]

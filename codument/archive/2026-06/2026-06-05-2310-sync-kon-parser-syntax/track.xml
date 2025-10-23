@@ -1,0 +1,118 @@
+<Track id="sync-kon-parser-syntax" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>Sync the TypeScript Kon parser syntax with ExtensibleScopedRowType while preserving Knl, Kon, and Kjson profile differences.</Goal>
+    <Description>Sync the TypeScript Kon parser syntax with ExtensibleScopedRowType while preserving Knl, Kon, and Kjson profile differences.</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-05T13:14:54Z</CreatedAt>
+    <UpdatedAt>2026-06-05T15:10:03Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_sync-kon-parser-syntax" name="sync-kon-parser-syntax" version="1">
+    <Description>Sync the TypeScript Kon parser syntax with ExtensibleScopedRowType while preserving Knl, Kon, and Kjson profile differences.</Description>
+    <SubNodes>
+      
+        <TaskGroup id="P1" name="Parser Syntax Contract Tests" status="DONE">
+          <SubNodes>
+          <Task id="T1.1" name="Add profile separator tests" priority="P0" status="DONE">
+            <Description>Add failing tests that prove Knl and Kon reject comma separators in arrays/vectors and maps while accepting whitespace-separated entries.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-knl-whitespace" checked="true">Knl whitespace-separated vector and map inputs are covered.</cdt:Criterion>
+              <cdt:Criterion id="AC-kon-whitespace" checked="true">Kon whitespace-separated vector and map inputs are covered.</cdt:Criterion>
+              <cdt:Criterion id="AC-comma-reject" checked="true">Knl and Kon comma-separated array/map inputs are rejected.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="Port external Kon parser syntax tests" priority="P0" status="DONE">
+            <Description>Port parser and formatter syntax cases from the external Kon test suite into local tests for KnConverter.Kon.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-chain-tests" checked="true">Chain name, generic params, in/out table, conf, body, sections, slots, attrs, and call syntax are covered.</cdt:Criterion>
+              <cdt:Criterion id="AC-subscript-tests" checked="true">`.:` and `::` chain operations are covered.</cdt:Criterion>
+              <cdt:Criterion id="AC-source-qualifier-tests" checked="true">`:::` source-qualified names, including namespaced sources such as `com.example.ClassA:::b`, are covered.</cdt:Criterion>
+              <cdt:Criterion id="AC-quote-tests" checked="true">Quote, unquote, unquote splice, and unquote map forms are covered.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          </SubNodes>
+        </TaskGroup>
+        <TaskGroup id="P2" name="Lexer And Model Support" status="DONE">
+          <SubNodes>
+          <Task id="T2.1" name="Extend lexer token support" priority="P0" status="DONE">
+            <Description>Update lexer rules to support external Kon token forms needed by the parser.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-double-colon" checked="true">`::` is tokenized distinctly for container subscript parsing.</cdt:Criterion>
+              <cdt:Criterion id="AC-triple-colon" checked="true">`:::` is tokenized by longest match as a source qualifier, not as `::` plus `:`.</cdt:Criterion>
+              <cdt:Criterion id="AC-dot-colon" checked="true">`.:` is tokenized distinctly for static slot/index parsing.</cdt:Criterion>
+              <cdt:Criterion id="AC-row-spread" checked="true">`..name` row spread input can be parsed.</cdt:Criterion>
+              <cdt:Criterion id="AC-word-forms" checked="true">Required word/operator forms such as `?`, `->`, and `--` are tokenized.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.2" name="Add AST structures for Kon parity" priority="P0" status="DONE">
+            <Description>Add or extend model nodes to preserve external Kon parser structures without changing interpreter behavior.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-inout-table" checked="true">In/out table nodes preserve inputs, outputs, and table kind.</cdt:Criterion>
+              <cdt:Criterion id="AC-quote-node" checked="true">Quote nodes preserve quote kind and inner value.</cdt:Criterion>
+              <cdt:Criterion id="AC-source-qualifier-model" checked="true">Word/name nodes preserve source qualifier and member name for `source:::member` syntax.</cdt:Criterion>
+              <cdt:Criterion id="AC-chain-fields" checked="true">Chain/knot fields preserve prefixes, postfixes, generics, conf, body, attrs, sections, slots, and subscript operations.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          </SubNodes>
+        </TaskGroup>
+        <TaskGroup id="P3" name="Parser And Formatter Implementation" status="DONE">
+          <SubNodes>
+          <Task id="T3.1" name="Implement whitespace-only separators for Knl and Kon" priority="P0" status="DONE">
+            <Description>Update Knl and Kon array/map parsing so whitespace separates entries and comma separators are rejected.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-no-comma" checked="true">Comma separators fail in Knl and Kon array/map containers.</cdt:Criterion>
+              <cdt:Criterion id="AC-kjson-preserved" checked="true">Kjson JSON-like behavior remains covered and unaffected.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.2" name="Implement external Kon value and chain parser parity" priority="P0" status="DONE">
+            <Description>Implement parser support for external Kon value, map, array, chain, in/out table, quote, row spread, source-qualified word, prefix, postfix, generic, attr, conf, body, section, slot, and subscript constructs.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-parser-parity" checked="true">Ported external Kon parser tests pass locally.</cdt:Criterion>
+              <cdt:Criterion id="AC-no-interpreter-changes" checked="true">No interpreter behavior changes are required to parse and format the new forms.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.3" name="Implement formatter round-trip parity" priority="P0" status="DONE">
+            <Description>Update formatter output so Kon syntax round-trips with external Kon style while Knl and Kjson keep their profile styles.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-round-trip" checked="true">Kon parser/formatter round-trip tests pass.</cdt:Criterion>
+              <cdt:Criterion id="AC-profile-output" checked="true">Knl, Kon, and Kjson formatter outputs keep their configured container styles.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          </SubNodes>
+        </TaskGroup>
+        <TaskGroup id="P4" name="Documentation And Verification" status="DONE">
+          <SubNodes>
+          <Task id="T4.1" name="Confirm external source qualifier baseline" priority="P0" status="DONE">
+            <Description>Record the external ExtensibleScopedRowType baseline where `:::` is source qualification, `::` is container subscript, and `.:` is slot/static subscript.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-doc-code-match" checked="true">Track documents that external code and docs now agree on `:::` / `::` / `.:` roles.</cdt:Criterion>
+              <cdt:Criterion id="AC-container-subscript-doc" checked="true">Track keeps `::` as container subscript and does not reuse it for source qualification.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T4.2" name="Run verification suite" priority="P0" status="DONE">
+            <Description>Run local TypeScript checks and parser tests, recording any toolchain blockers.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-tests" checked="true">Relevant parser and formatter tests have been run.</cdt:Criterion>
+              <cdt:Criterion id="AC-compile" checked="true">TypeScript compile or an equivalent scoped check has been run, with blockers documented if present.</cdt:Criterion>
+            </cdt:Acceptance>
+            <cdt:VerificationSummary>
+              <cdt:Check command="bun test __tests__/Case/KonParserSyntax.test.ts" status="passed">10 parser/formatter syntax tests passed.</cdt:Check>
+              <cdt:Check command="npx tsc --noEmit --target es2018 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck lib/Converter/KnConverter.ts" status="passed">Scoped TypeScript source check for the converter entry passed.</cdt:Check>
+              <cdt:Check command="codument validate sync-kon-parser-syntax --strict" status="passed">Track validation passed.</cdt:Check>
+              <cdt:Check command="npm run compile" status="blocked">Project tsconfig still uses removed TypeScript option suppressImplicitAnyIndexErrors.</cdt:Check>
+              <cdt:Check command="bun test" status="blocked">Full suite still has legacy interpreter/formatter failures outside this parser-only track; the new Kon parser syntax suite passes.</cdt:Check>
+            </cdt:VerificationSummary>
+          </Task>
+          </SubNodes>
+          <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="3" on-exhausted="block"/></Hook></Hooks>
+        </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

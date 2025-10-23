@@ -1,0 +1,106 @@
+<Track id="add-workflow-dsl-yield-lowering" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>kunun-runtime 包内合龙 DSL 线与 yield 线，为 add-workflow-host-runtime 提供 API 基座</Goal>
+    <Description>kunun-runtime 包内合龙 DSL 线与 yield 线，为 add-workflow-host-runtime 提供 API 基座</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-10T20:35:44Z</CreatedAt>
+    <UpdatedAt>2026-06-11T00:25:00Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+    <cdt:Risks>
+      <cdt:Risk id="R1" name="pipeline stage 展开模型与逐段续跑冲突" level="medium">
+      <impact>中</impact>
+      <probability>中</probability>
+      <mitigation>以资源测试语义为准择一实现并回写 spec/design</mitigation>
+      </cdt:Risk>
+      <cdt:Risk id="R2" name="DSL 参数求值时机错误导致 resume 重复求值" level="medium">
+      <impact>高</impact>
+      <probability>低</probability>
+      <mitigation>lowering 强制先求值后 dispatch；序列化往返用例覆盖</mitigation>
+      </cdt:Risk>
+    </cdt:Risks>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_add-workflow-dsl-yield-lowering" name="add-workflow-dsl-yield-lowering" version="1">
+    <Description>kunun-runtime 包内合龙 DSL 线与 yield 线，为 add-workflow-host-runtime 提供 API 基座</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="内建 DSL lowering 到 yield 路径">
+            <Description>EnableWorkflowDsl 注册后，ai_* 节点执行产生 RuntimeWorkflowEffect 而非内联结果</Description>
+            <cdt:ContextFiles>
+              <cdt:File>packages/runtime/lib/RuntimeInterpreter/RuntimeState.ts</cdt:File>
+              <cdt:File>packages/runtime/lib/RuntimeInterpreter/RuntimeInterpreter.ts</cdt:File>
+              <cdt:File>packages/runtime/__tests__/Case/RuntimeInterpreterWorkflowResource.test.ts</cdt:File>
+            </cdt:ContextFiles>
+            <SubNodes>
+              <Task id="T1.1" name="编写 DSL lowering 红色测试" status="DONE" priority="P0">
+                <Description>新增 RuntimeInterpreterWorkflowDslLowering.test.ts（4 用例）：ai_agent 插值与控制元数据、ai_parallel item 绑定按元素展开、ai_pipeline 首 yield 仅 stage-0 job、ai_phase/ai_log 内联事件不 yield；先确认失败</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.1-AC1" checked="true">新测试在实现前按预期失败（红色，导出不存在）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T1.2" name="实现 WorkflowDsl 模块与 EnableWorkflowDsl" status="DONE" priority="P0">
+                <Description>新增 WorkflowDsl.ts：六个 DSL 节点经 prefix keyword expander lower 为 WorkflowDispatch（请求先求值含插值再 checkpoint）；ai_parallel/ai_pipeline 用请求捕获模式（body 内 ai_agent 产出请求对象而非 dispatch）；ai_pipeline 经 WorkflowDsl_PipelineStage 指令逐 stage yield；ai_phase/ai_log 内联入 WeakMap 事件缓冲；retry/timeout/label/outputSchema 入 job metadata；runtime index 导出</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.2-AC1" checked="true">T1.1 测试通过（4 pass）且既有全量测试无回归（263 pass / 0 fail）</cdt:Criterion>
+                  <cdt:Criterion id="T1.2-AC2" checked="true">ai_parallel/ai_pipeline 的 job path 与 metadata 符合 spec case（item:i、stageName/stageIndex/itemIndex/item）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <cdt:Gate>
+              <cdt:Criterion>DSL 节点不再需要测试桩 prefix keyword 即可执行到 yield</cdt:Criterion>
+            </cdt:Gate>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P2" name="run/resume 标准循环 API">
+            <Description>固化 RunWorkflowSync / ResumeWorkflowSync，结果注入与多轮续跑语义正确</Description>
+            <SubNodes>
+              <Task id="T2.1" name="编写 resume 循环红色测试" status="DONE" priority="P0">
+                <Description>新增 RuntimeInterpreterWorkflowResume.test.ts（6 用例）：单 agent 往返、parallel 按 itemIndex 聚合、pipeline 逐段续跑（value 绑定见前段结果）、checkpoint JSON 序列化往返后在 fresh runtime resume 等价、failed 注入无异常帧时宿主侧抛含 jobId 的错误（有异常帧时走 pendingAbruptCompletion，与既有 mock 测试同机制）、缺失结果拒绝 resume。注：Run/Resume API 骨架已随 T1.2 落地，本任务红色阶段暴露并修复了一个真实缺陷——JSON 往返后 Word 节点失去类方法导致 GetWordName 退化为 [object Object]，已在 GetWordName 增加纯数据回退（序列化边界加固）</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.1-AC1" checked="true">序列化往返用例在修复前真实失败（红色），修复后通过</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.2" name="实现 RunWorkflowSync / ResumeWorkflowSync" status="DONE" priority="P0">
+                <Description>RunWorkflowSync/ResumeWorkflowSync 实现于 WorkflowDsl.ts（设计原定 RuntimeInterpreter 静态方法，实际为模块函数从 kunun-runtime 导出，已回写 design）；job 结果按 ID 注入并校验全量，单 job 注入值、多 job 注入有序数组；RuntimeInterpreterWorkflowResource.test.ts 迁移到内建 yield/resume 循环（11 用例），prefix keyword 测试桩删除</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.2-AC1" checked="true">T2.1（6 pass）与迁移后 WorkflowResource（11 pass）通过，全量无回归（269 pass / 0 fail）</cdt:Criterion>
+                  <cdt:Criterion id="T2.2-AC2" checked="true">DeepResearch/Routing/AgentDailyDigest.kon 经 mock 宿主循环端到端跑通且原断言语义保留</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <cdt:Gate>
+              <cdt:Criterion>宿主循环（yield→注入→resume）仅依赖公共 API 即可驱动 .kon workflow 到完成</cdt:Criterion>
+            </cdt:Gate>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P3" name="序列化边界与收敛">
+            <Description>strict 序列化校验落地；全量验证；设计/规范回写</Description>
+            <SubNodes>
+              <Task id="T3.1" name="strict 序列化校验（TDD）" status="DONE" priority="P1">
+                <Description>RuntimeInterpreterCheckpointStrict.test.ts 4 用例（红色先行）：strict 检出宿主函数（含 fibers[0].operandStack.items[0] 路径定位）、循环引用、bigint/symbol；默认模式行为不变；可序列化状态 strict 通过。实现：captureSnapshot({strict}) + assertSnapshotSerializable 深度遍历</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.1-AC1" checked="true">strict 检测与默认不变用例全部通过（4 pass）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.2" name="全量验证与文档回写" status="DONE" priority="P0">
+                <Description>bun test 全量 273 pass / 0 fail、tsc --noEmit 零错误；实现期决策（lowering 机制组合、pipeline 逐 stage yield、Run/Resume 为模块函数、output 数组形态、failed 注入语义、GetWordName 序列化边界修复）回写 design.md 与 spec delta（phase-and-log-inline case 具体化）；findings 补实现日志；codument validate --strict 通过</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.2-AC1" checked="true">全量测试与类型检查通过</cdt:Criterion>
+                  <cdt:Criterion id="T3.2-AC2" checked="true">设计与 spec delta 与实际实现一致</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <cdt:Gate>
+              <cdt:Criterion>codument validate --strict 通过</cdt:Criterion>
+            </cdt:Gate>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="2" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

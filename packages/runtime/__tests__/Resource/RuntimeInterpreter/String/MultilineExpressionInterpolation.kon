@@ -1,0 +1,25 @@
+(var title "report")
+(var left 3)
+(var right 4)
+(var lines [
+  """
+  title=\(title)
+  """
+  """
+  calc=\((left right :+))
+  """
+])
+[
+  """
+  BEGIN
+  \((lines::0))
+  \((lines::1))
+  END
+  """
+  '''
+  BEGIN
+  \(lines::0)
+  \((left right :+))
+  END
+  '''
+]

@@ -1,0 +1,24 @@
+<behavior-patch capability="workflow-dsl" version="1">
+  <upsert selector="behavior://workflow-dsl/requirements/dsl-package-boundary">
+    <requirement id="dsl-package-boundary">
+        <statement>ai_* workflow DSL SHALL 独立为 kunun-workflow-dsl 包（依赖 kunun-core 与 kunun-runtime，不直接依赖 depa-actor）：包含六节点 lowering（经请求捕获与显式 job 展开声明实现 ai_agent 单 job、ai_parallel 按 item、ai_pipeline 逐 stage yield）、RunWorkflowSync/ResumeWorkflowSync 执行循环、DSL 事件缓冲与控制属性透传；kunun-runtime SHALL NOT 含任何 ai_* 语义或 DSL 导出；kunun 总包与 kunun-workflow-host SHALL 改由本包获取 DSL API，外部可用面（总包导入、宿主行为、Kon 语法）保持不变。</statement>
+        <suite id="boundary" name="包边界">
+          <case id="runtime-free-of-dsl">
+            <given>packages/runtime 源码</given>
+            <when>grep ai_ 与 WorkflowDsl 导出</when>
+            <then>SHALL 无 ai_* 语义与 DSL API 导出（通用机制除外）</then>
+          </case>
+          <case id="behavior-parity">
+            <given>既有 DSL/resume/资源/示例/二进制测试套件</given>
+            <when>迁移后全量运行</when>
+            <then>SHALL 全部通过，yield 形态、job id/path/metadata、resume 语义与拆分前一致</then>
+          </case>
+          <case id="dependency-direction">
+            <given>各包 package.json 与 import</given>
+            <when>审计</when>
+            <then>SHALL 满足 core ← converter ← runtime ← workflow-dsl ← {workflow-host, kunun}，无反向引用</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

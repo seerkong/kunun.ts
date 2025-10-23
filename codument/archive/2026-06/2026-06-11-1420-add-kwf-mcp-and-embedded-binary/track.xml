@@ -1,0 +1,91 @@
+<Track id="add-kwf-mcp-and-embedded-binary" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>参考 multica/terminal 架构：CLI 与 MCP 共享 Backend；提示词/示例/SKILL 保持独立文本文件经 bunfs 嵌入编译产物</Goal>
+    <Description>参考 multica/terminal 架构：CLI 与 MCP 共享 Backend；提示词/示例/SKILL 保持独立文本文件经 bunfs 嵌入编译产物</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-11T04:43:06Z</CreatedAt>
+    <UpdatedAt>2026-06-11T06:20:00Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_add-kwf-mcp-and-embedded-binary" name="add-kwf-mcp-and-embedded-binary" version="1">
+    <Description>参考 multica/terminal 架构：CLI 与 MCP 共享 Backend；提示词/示例/SKILL 保持独立文本文件经 bunfs 嵌入编译产物</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="资产外置与 bunfs 加载层">
+            <Description>提示词/示例/SKILL 经统一资产层加载，dev 态行为不变</Description>
+            <SubNodes>
+              <Task id="T1.1" name="资产层与提示词外置（TDD）" status="DONE" priority="P0">
+                <Description>assets/prompts/{schema-correction,schema-instruction}.txt 外置（{errors}/{schema} 占位符）；lib/assets.ts 以 with type:"file" import 统一加载（含根 examples/*.kon、skill/SKILL.md、kwf.config.example.json）；bridge 提示词改为资产模板、schema.ts describeSchema 删除；Assets.test.ts 5 用例（含 bridge 源码不再含提示词字面量的单一来源锁定）。连带：TypeScript 4.6→5.4（import attributes 需 5.3+，3 处 never-narrowing 旧代码最小修复）、tsconfig module commonjs→esnext、asset-files.d.ts 声明 *.txt/*.kon/*.md 模块与最小 Bun 全局</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.1-AC1" checked="true">bridge 纠错/科普文案来自资产文件且既有 schema 重试测试不回归</cdt:Criterion>
+                  <cdt:Criterion id="T1.1-AC2" checked="true">资产层可枚举并读取全部示例与 skill 文本（dev 态实证；编译态在 P3 验证）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T1.2" name="examples/skill CLI 子命令（TDD）" status="DONE" priority="P0">
+                <Description>kwf examples [list|show NAME|export DIR] 与 kwf skill；ExamplesCli.test.ts 4 用例</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.2-AC1" checked="true">list/show/export/skill 用例通过，导出示例经 mock 适配器 run 至 done（48/48 包内全绿）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P2" name="Backend 共享层与 MCP server">
+            <Description>CLI 与 MCP tools 共享 WorkflowBackend；kwf mcp stdio 可被客户端驱动</Description>
+            <SubNodes>
+              <Task id="T2.1" name="WorkflowBackend 抽取（TDD）" status="DONE" priority="P0">
+                <Description>lib/backend.ts：WorkflowBackend 接口与 createWorkflowBackend 工厂（runWorkflow/resumeRun/status/events/result/error/pause/stop/listRuns/examples/exportExamples/skill，detached worker 下沉）；cli.ts 改为纯参数解析+输出薄壳（__worker 走 resumeRun(wait)）；Backend.test.ts 4 用例含 CLI 源码无 executeRun/startRunInStore/new RunStore 的薄壳锁定</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.1-AC1" checked="true">CLI 全量用例通过（52/52 包内）且各 case 无直接 store/driver 业务逻辑</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.2" name="MCP server 与 tools（TDD）" status="DONE" priority="P0">
+                <Description>lib/mcp.ts：@modelcontextprotocol/sdk@1.29 + zod@3.25（zod v4 与 SDK 不兼容已锁 v3），McpServer+StdioServerTransport，11 个 kwf_ tools 全走 backend；kwf mcp stdio 子命令（动态 import，诊断仅 stderr）；Mcp.test.ts 4 用例：tool 面完整性、run+result 经 handler、examples/skill tools、子进程 stdio 握手（initialize/tools/list/tools/call + stdout 每行必须可 JSON.parse）。连带：tsconfig skipLibCheck（SDK d.ts 需 DOM fetch 类型）</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.2-AC1" checked="true">tools 单测与 stdio 握手集成测试通过，stdout 无协议外输出</cdt:Criterion>
+                  <cdt:Criterion id="T2.2-AC2" checked="true">kwf_run_workflow(wait)+kwf_run_result 与 CLI 运行结果一致（同 backend，结果断言通过）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P3" name="单可执行构建与编译态适配">
+            <Description>bun build --compile 产自包含 kwf，二进制冒烟全过</Description>
+            <SubNodes>
+              <Task id="T3.1" name="编译探针与 worker 重入分支" status="DONE" priority="P0">
+                <Description>bun build --compile 一次通过（335 模块，workspace 跨包 + 资产全嵌入，无需决策#5回退）；worker 重入编译态分支——关键发现：__dirname 在打包时被固化为构建机源码路径，编译态检测必须用运行时值 Bun.main.startsWith('/$bunfs')；根 scripts 增加 build:bin，dist-bin/ 入 gitignore</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.1-AC1" checked="true">dist-bin/kwf 构建成功（约 56MB 自包含）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.2" name="二进制冒烟测试" status="DONE" priority="P0">
+                <Description>CompiledBinary.test.ts 5 用例：构建、仓库外 examples list/export 与 skill、run --wait 至 done、detached 后台 worker 编译态重入轮询至 done、MCP initialize 握手。连带修复既有库缺陷：kunun-core TaskQueue 失败任务必产未处理 rejection（runTask 不消费 execute 的 rethrow promise），二进制测试拉长时间窗后稳定暴露，已在库内吞掉并保留日志</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.2-AC1" checked="true">compiled-smoke spec case 全过且不依赖仓库源码路径（5 pass；全量 334/334 两次复跑稳定）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P4" name="收敛与文档">
+            <Description>全量验证、SKILL/README/attractors 回写</Description>
+            <SubNodes>
+              <Task id="T4.1" name="全量验证与回写" status="DONE" priority="P0">
+                <Description>bun test 全量 334 pass / 0 fail（两次复跑）、tsc 零错误、validate --strict 通过；SKILL.md 增补单可执行说明、examples/skill/mcp 命令与 MCP server 配置示例（一致性测试保持通过）；README 与 attractors 回写；decisions 补实现期决策</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T4.1-AC1" checked="true">全量绿且文档一致</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="2" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

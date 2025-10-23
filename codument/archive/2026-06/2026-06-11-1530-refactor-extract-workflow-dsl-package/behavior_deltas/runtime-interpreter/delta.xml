@@ -1,0 +1,48 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <upsert selector="behavior://runtime-interpreter/requirements/generic-workflow-job-expansion">
+    <requirement id="generic-workflow-job-expansion">
+        <statement>runtime 的 workflow extension 机制 SHALL 完全域中立：registerWorkflowExtension 与默认 lowering SHALL NOT 内置任何基于扩展名（如 ai_ 前缀）的特例分支；pending job 的展开方式 SHALL 由注册方显式声明——options.jobExpansion 为 'single'（默认，一个 effect 一个 job）或 'perArg'（按 args 元素逐个展开，path 含 item 序号与 itemIndex metadata），或经 options.buildJobs 回调完全自定义 job 列表；自定义 lowering（registerWorkflowExtension 第二参）行为不变。</statement>
+        <suite id="generic-expansion" name="通用 job 展开">
+          <case id="no-name-magic">
+            <given>runtime 源码</given>
+            <when>审查 RuntimeState 默认 lowering</when>
+            <then>SHALL 不存在按扩展名前缀或特定名字（parallel/pipeline 等）的分支逻辑</then>
+          </case>
+          <case id="explicit-per-arg">
+            <given>以 jobExpansion='perArg' 注册的任意名扩展</given>
+            <when>WorkflowDispatch 携带 N 个 args</when>
+            <then>SHALL 产生 N 个 job，path 含 item:i 且 metadata.itemIndex=i</then>
+          </case>
+          <case id="custom-build-jobs">
+            <given>以 buildJobs 回调注册的扩展</given>
+            <when>dispatch</when>
+            <then>pendingJobs SHALL 完全由回调返回值决定（含 id/path/metadata），经 JSON 序列化往返保持稳定</then>
+          </case>
+          <case id="default-single">
+            <given>未声明展开方式的扩展</given>
+            <when>dispatch</when>
+            <then>SHALL 产生单个 job（path 以 /job:0 结尾），args 原样入 job.args</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://runtime-interpreter/requirements/generic-dispatch-until-stop">
+    <requirement id="generic-dispatch-until-stop">
+        <statement>runtime SHALL 提供通用的 DispatchUntilStop 公共 API：驱动当前指令栈直至 yield（返回 effects 与 stopReason）或指令耗尽，错误与缺失 handler 以异常抛出；上层包（如 workflow-dsl）SHALL 经此 API 驱动执行循环而无需直接依赖 depa-actor。</statement>
+        <suite id="dispatch-api" name="通用调度 API">
+          <case id="yield-and-empty">
+            <given>含 WorkflowDispatch 的指令栈</given>
+            <when>DispatchUntilStop</when>
+            <then>SHALL 返回 yield_requested 与 effect；注入结果后再次调用 SHALL 运行至栈空</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <delete selector="behavior://runtime-interpreter/requirements/workflow-dsl-yield-lowering" />
+
+  <delete selector="behavior://runtime-interpreter/requirements/workflow-resume-api" />
+
+  <delete selector="behavior://runtime-interpreter/requirements/workflow-job-control-metadata" />
+</behavior-patch>

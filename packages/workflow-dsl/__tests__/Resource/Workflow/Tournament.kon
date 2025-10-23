@@ -1,0 +1,68 @@
+(ai_workflow #tournament
+  :input = {task = "Solve the coding task."}
+  :output = [solutions roundOne winner]
+  :[
+    (ai_phase #Draft
+      :[
+        (var approaches ["simple" "scalable" "safe" "fast"])
+        (var solutions (ai_parallel #seedSolutions
+          :{
+            input = approaches
+            item = approach
+            index = seedIndex
+          }
+          :[
+            (ai_agent #seedSolution :{
+              label = "seed-\(seedIndex)"
+              sys_prompt = "You are one seed solver in a tournament workflow."
+              user_prompt =
+              """
+              Attempt the task with this approach.
+
+              Task:
+              Solve the coding task.
+
+              Approach:
+              \(approach)
+              """
+            })
+          ]))
+      ])
+    (ai_phase #Judge
+      :[
+        (var matchPairs [[0 1] [2 3]])
+        (var roundOne (ai_parallel #semifinalJudges
+          :{
+            input = matchPairs
+            item = matchPair
+            index = matchIndex
+          }
+          :[
+            (ai_agent #judgePair :{
+              label = "judge-\(matchIndex)"
+              sys_prompt = "You are a tournament judge for one semifinal pair."
+              user_prompt =
+              """
+              Judge this semifinal pair.
+
+              Match pair:
+              \(matchPair)
+
+              All solutions:
+              \(solutions)
+              """
+            })
+          ]))
+        (var winner (ai_agent #judgeFinal :{
+          label = "judge-final"
+          sys_prompt = "You are the final judge for a tournament workflow."
+          user_prompt =
+          """
+          Judge the final winner from the semifinal outputs.
+
+          Semifinal outputs:
+          \(roundOne)
+          """
+        }))
+      ])
+  ])

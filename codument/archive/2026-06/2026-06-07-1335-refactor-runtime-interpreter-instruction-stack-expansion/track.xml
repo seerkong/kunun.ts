@@ -1,0 +1,139 @@
+<Track id="refactor-runtime-interpreter-instruction-stack-expansion" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>将新 RuntimeInterpreter 从 tree-walk 混合执行重构为指令栈展开机制。</Goal>
+    <Description>将新 RuntimeInterpreter 从 tree-walk 混合执行重构为指令栈展开机制。</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-06T17:22:45Z</CreatedAt>
+    <UpdatedAt>2026-06-07T05:35:00Z</UpdatedAt>
+    <cdt:Type>refactor</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_refactor-runtime-interpreter-instruction-stack-expansion" name="refactor-runtime-interpreter-instruction-stack-expansion" version="1">
+    <Description>将新 RuntimeInterpreter 从 tree-walk 混合执行重构为指令栈展开机制。</Description>
+    <SubNodes>
+      
+        <TaskGroup id="P1" name="执行模型基线与失败测试" status="DONE">
+          <Task id="T1.1" name="盘点 RuntimeInterpreter 直接递归求值路径" priority="P0" status="DONE">
+            <Description>标记 RunNode、RunBlock、EvaluateNode、EvaluateChain、EvaluateCond、EvaluateForeach 等仍隐藏 continuation 的路径。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-direct-path-inventory" checked="true">已形成待迁移路径清单</cdt:Criterion>
+              <cdt:Criterion id="AC-risk-map" checked="true">已识别会影响 checkpoint、loop、try-catch 的高风险路径</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="新增指令栈展开执行模型测试" priority="P0" status="DONE">
+            <Description>先编写失败测试，证明 compound form 的后续执行需要存在于 instruction stack 和 control frames 中。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-node-expansion-test" checked="true">已覆盖节点执行 handler 展开指令而不是递归完成子树求值</cdt:Criterion>
+              <cdt:Criterion id="AC-loop-checkpoint-test" checked="true">已覆盖循环中 workflow safe-point checkpoint 和 resume</cdt:Criterion>
+              <cdt:Criterion id="AC-try-checkpoint-test" checked="true">已覆盖 try-catch 或 finally 中 workflow safe-point checkpoint 和 resume</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </TaskGroup>
+        <TaskGroup id="P2" name="引入 RuntimeInstruction 展开层" status="DONE">
+          <Task id="T2.1" name="实现 expander 注册与调度结构" priority="P0" status="DONE">
+            <Description>为 node、knot、prefix keyword、infix keyword 建立 RuntimeInterpreter 自有 expander 注册结构。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-expander-registry" checked="true">RuntimeInterpreter 可以按 AST 类型和 keyword 查找 expander</cdt:Criterion>
+              <cdt:Criterion id="AC-no-old-registry-dependency" checked="true">新 RuntimeInterpreter 不依赖旧 ExtensionRegistry 执行普通语义</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.2" name="将 RunNode 改为展开入口" priority="P0" status="DONE">
+            <Description>RunNode handler 只负责把节点 lowering 为 RuntimeInstruction 或 value push，不直接递归求值整个节点。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-runnode-expands" checked="true">RunNode compound path 展开后续指令</cdt:Criterion>
+              <cdt:Criterion id="AC-literal-push" checked="true">literal 和已求值 runtime value 可直接 lower 为 push value</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </TaskGroup>
+        <TaskGroup id="P3" name="迁移表达式与控制流语义" status="DONE">
+          <Task id="T3.1" name="迁移基础表达式和调用" priority="P0" status="DONE">
+            <Description>迁移 block、word lookup、vector、map、knot call、host call、lambda call 到指令展开路径。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-basic-expression-tests" checked="true">基础表达式和调用 RuntimeInterpreter 测试通过</cdt:Criterion>
+              <cdt:Criterion id="AC-frame-behavior" checked="true">operand stack frame 边界与迁移前结果一致</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.2" name="迁移分支、循环和异常语义" priority="P0" status="DONE">
+            <Description>迁移 if、condition、foreach、for、while、return、break、continue、throw、try-catch-finally 到显式指令和 control frame。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-branch-loop-tests" checked="true">分支和循环测试通过</cdt:Criterion>
+              <cdt:Criterion id="AC-try-catch-tests" checked="true">异常和 finally 测试通过</cdt:Criterion>
+              <cdt:Criterion id="AC-abrupt-completion-state" checked="true">pending return、throw、break、continue 可通过 runtime state 表达</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.3" name="迁移对象、属性、subscript、effect 和 workflow" priority="P1" status="DONE">
+            <Description>迁移对象脚本、property access、subscript、perform/effect、workflow dispatch 的 continuation 到指令展开路径。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-object-property-tests" checked="true">对象、属性和 subscript 测试通过</cdt:Criterion>
+              <cdt:Criterion id="AC-effect-workflow-tests" checked="true">effect 和 workflow checkpoint 测试通过</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </TaskGroup>
+        <TaskGroup id="P4" name="回归验证与旧解释器边界" status="DONE">
+          <Task id="T4.1" name="运行 RuntimeInterpreter 全量测试" priority="P0" status="DONE">
+            <Description>运行 RuntimeInterpreter 相关测试和项目构建，验证重构不破坏已有行为。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-runtime-tests-pass" checked="true">RuntimeInterpreter 测试通过</cdt:Criterion>
+              <cdt:Criterion id="AC-project-tests-pass" checked="true">项目可构建且相关测试通过</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T4.2" name="记录旧解释器删除前待 review 能力" priority="P1" status="DONE">
+            <Description>更新 track analysis，列出旧解释器中仍未在新 RuntimeInterpreter 中确认迁移或明确放弃的能力。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-legacy-review-list" checked="true">已记录旧解释器删除前待 review 能力</cdt:Criterion>
+              <cdt:Criterion id="AC-no-delete-legacy" checked="true">本 track 未删除旧解释器代码</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T4.3" name="修复 set place 直接求值残留" priority="P0" status="DONE">
+            <Description>Round 1 gap-loop 发现复杂赋值目标和 subscript key 仍通过 AssignPlace 直接 EvaluateNode，已改为显式指令展开。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-set-place-expands-target" checked="true">复杂赋值目标通过 RunNode、RunGetProperty 和 RunGetSubscript 显式展开</cdt:Criterion>
+              <cdt:Criterion id="AC-set-place-expands-writes" checked="true">属性和 subscript 写入通过 RunSetProperty、RunSetSubscript 消费栈上操作数</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T4.4" name="修复 try handler map 直接求值残留" priority="P0" status="DONE">
+            <Description>Round 2 gap-loop 发现 try handle 目标仍通过 ParseTryHandlerMap 直接 EvaluateNode，已改为先展开 handler 表达式再由栈值构造 handler map。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-try-handler-expands-target" checked="true">handle 后的复合 handler 表达式通过 RunNode 和 ApplyCallable 显式展开</cdt:Criterion>
+              <cdt:Criterion id="AC-try-handler-frame-stack" checked="true">exception frame 使用栈上构造的 handler map，不在主执行路径直接求值 handler AST</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T4.5" name="对齐 ExtensibleScopedRowType array map 和 expander 展开" priority="P0" status="DONE">
+            <Description>将 vector/map maker 和自定义 prefix/infix expander 协议改为 ExtensibleScopedRowType 的追加指令模型。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-esrt-array-map-maker" checked="true">vector 和 unordered map 展开为 PushFrame、逐项 RunNode、Node_MakeArray/Node_MakeMap、PopFrame</cdt:Criterion>
+              <cdt:Criterion id="AC-esrt-expander-protocol" checked="true">custom prefix/infix expander 不再预先 EvaluateFollowingKnotCores，而是接收 runtime 与 knot 自行追加指令</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T4.6" name="对齐 ExtensibleScopedRowType continuation 和 effect 展开" priority="P0" status="DONE">
+            <Description>将 return、break、continue、try、perform 的展开改为 ExtensibleScopedRowType 的 env-bound continuation 和 effect handler map 形态。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-esrt-return-break-continue" checked="true">函数调用、return、break、continue 使用 Ctrl_MakeContExcludeTopNInstruction 捕获 continuation 并绑定 env name</cdt:Criterion>
+              <cdt:Criterion id="AC-esrt-try-perform" checked="true">try/perform 使用 __EffectHandlerMap、__ContinuationAfterTry、Env_DiveLocalEnv、Ctrl_ApplyToFrameTop 指令序列</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T4.7" name="对齐 ExtensibleScopedRowType 对象成员函数展开" priority="P0" status="DONE">
+            <Description>补齐 class constructor、method、property getter/setter 的对象成员函数调用路径：按 ExtensibleScopedRowType 的 member lambda 形态先创建 definition env 下的 child env，再展开 Env_ChangeEnvById(child)、Node_RunBlock、Env_ChangeEnvById(caller)。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-esrt-member-lambda-path" checked="true">constructor、method、getter、setter 不再走普通函数 return continuation 路径，而是使用 ESRT member lambda 的 Env_ChangeEnvById 展开</cdt:Criterion>
+              <cdt:Criterion id="AC-class-defaults-accessors" checked="true">class 字段默认值、构造器参数覆盖、property getter/setter 在同一表达式后续求值中保持 caller env 正确</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T4.8" name="修复运行时追加指令默认 env 固化差异" priority="P0" status="DONE">
+            <Description>ExtensibleScopedRowType 的指令追加不默认固化创建时 env；本项目此前 addOpDirectly/addOpsInOrder 自动写入当前 envId，导致嵌套函数/对象成员调用返回后后续链节点可能在错误 env 下执行。现已移除默认 envId 固化，只在显式 Env_ChangeEnvById 或显式 op.envId 场景表达环境切换。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-no-default-env-freeze" checked="true">addOpDirectly/addOpsInOrder 默认不写入 envId，运行时后续指令以 fiber current env 执行</cdt:Criterion>
+              <cdt:Criterion id="AC-env-regression-pass" checked="true">对象成员调用、workflow、effect、loop、function 相关 RuntimeInterpreter 测试通过</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="3" on-exhausted="block"/></Hook></Hooks>
+        </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

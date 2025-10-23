@@ -1,0 +1,15 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/schema-types-and-mixins">
+    <requirement id="schema-types-and-mixins">
+      <statement>The type system SHALL support nominal schema types and composition-only schema mixins over the row core.</statement>
+      <suite id="effective-row" name="Effective Row">
+        <case id="mixin-not-parent">
+          <given>A schema type composes a mixin</given>
+          <when>The system computes subtype relationships and effective rows</when>
+          <then>The mixin SHALL contribute members without becoming a parent subtype edge</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>
+

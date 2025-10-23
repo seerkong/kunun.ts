@@ -1,0 +1,65 @@
+<Track id="add-workflow-agent-integration" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>面向 Claude Code/Codex 等宿主 agent 的最后一公里：skill 教学 + 示例 + 依赖可移植</Goal>
+    <Description>面向 Claude Code/Codex 等宿主 agent 的最后一公里：skill 教学 + 示例 + 依赖可移植</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-10T20:35:44Z</CreatedAt>
+    <UpdatedAt>2026-06-11T04:10:00Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_add-workflow-agent-integration" name="add-workflow-agent-integration" version="1">
+    <Description>面向 Claude Code/Codex 等宿主 agent 的最后一公里：skill 教学 + 示例 + 依赖可移植</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="依赖可移植性">
+            <Description>消除绝对路径 file: 依赖，fresh clone 可装可测</Description>
+            <SubNodes>
+              <Task id="T1.1" name="depa-actor 引用方式改造" status="DONE" priority="P0">
+                <Description>评估结论：npm registry 仅有旧版 0.1.2（本地 0.2.0），git 远端无法确认构建状态 → 采用 vendor 方案：npm pack 产出 vendor/depa-actor-0.2.0.tgz，kunun-runtime 依赖改为相对路径 file:../../vendor/depa-actor-0.2.0.tgz；决策回写 decisions.md。fresh-clone 模拟（rsync 排除 node_modules/.git 到 /tmp + bun install + 全量测试）通过，无绝对路径残留</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.1-AC1" checked="true">fresh-clone-install spec case 通过（301 pass，零 infra-dev 引用）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P2" name="示例 workflow 移植">
+            <Description>5+ 个 .kon 示例与端到端测试</Description>
+            <SubNodes>
+              <Task id="T2.1" name="示例移植（TDD）" status="DONE" priority="P0">
+                <Description>examples/ 下 5 个 .kon（deep-research/fan-out-reduce/adversarial-verify/loop-until-dry/routing），关键词驱动的 example-agent mock 适配器，Examples.test.ts 6 用例经 executeRun 端到端（含分支路由只跑命中专家、loop 干涸轮 break、对抗验证幸存计数）。过程中暴露并修复真实缺陷：循环中重复执行的 DSL 节点 job ID 跨 yield 重复，导致 driver 的 durable 结果缓存误注入旧轮结果——已在 lowering 层为 sourceNodeId 加入持久于 env 的派发序号（@seq），同一 checkpoint hydrate 后仍确定性一致</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.1-AC1" checked="true">全部示例经 driver + mock 适配器跑通（6 pass；全量 307 pass / 0 fail）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P3" name="SKILL 与文档收敛">
+            <Description>SKILL.md、适配器配置样例、README 集成章节</Description>
+            <SubNodes>
+              <Task id="T3.1" name="SKILL.md 与配置样例" status="DONE" priority="P0">
+                <Description>skill/SKILL.md（frontmatter + DSL 六节点参考 + CLI 八命令用法 + 最佳实践 + 内嵌 fan-out-reduce 完整示例）与 skill/kwf.config.example.json；SkillDoc.test.ts 4 用例锁定：内嵌示例与 examples/fan-out-reduce.kon 逐字一致、文档命令均在 cli.ts 实现、5 个示例文件全被引用、配置样例可被 loadConfig 加载。gap-loop round 1 修复：SKILL.md 宣称的 ai_agent 逐调用 adapter/model 覆盖此前未被 DSL lowering 提取（静默丢弃），已在 WorkflowDsl buildAgentRequest 补提取并新增 lowering + 端到端测试锁定</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.1-AC1" checked="true">skill 中示例与可执行版本一致性校验通过（4 pass）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.2" name="全量验证与回写" status="DONE" priority="P0">
+                <Description>bun test 全量 311 pass / 0 fail、tsc 零错误、codument validate --strict 通过；README 新增 Dynamic workflows 集成章节；attractors/project.md 回写 vendor 依赖与 agent 集成；decisions.md 回写 depa-actor vendor 决策；findings 补实现日志</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.2-AC1" checked="true">全量绿且文档一致</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="2" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

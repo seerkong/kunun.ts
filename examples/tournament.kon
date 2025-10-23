@@ -1,0 +1,58 @@
+(ai_workflow #tournament
+  :input = {task = "设计一个短链接服务"}
+  :output = [solutions winner]
+  :[
+    (ai_phase #Compete
+      :[
+        (var approaches [
+          "优先极简：能用的最小方案"
+          "优先规模：第一天就假设 100 倍流量"
+          "优先正确性：先处理边界与失败模式"
+          "优先上线速度：创业团队本周能做出来的"
+        ])
+        (var solutions (ai_parallel #compete
+          :{
+            input = approaches
+            item = approach
+            index = i
+          }
+          :[
+            (ai_agent #attempt :{
+              label = "compete-\(i)"
+              sys_prompt = "你是资深工程师，按指定策略解题。"
+              user_prompt =
+              """
+              用这个策略解下面的任务。
+
+              策略：\(approach)
+
+              任务：\(task)
+              """
+            })
+          ]))
+      ])
+    (ai_phase #Judge
+      :[
+        (var winner (ai_agent #judge :{
+          label = "judge"
+          sys_prompt = "你是公正的评审，从多个方案中选出对该任务最好的一个。"
+          user_prompt =
+          """
+          任务：\(task)
+
+          候选方案（按序，下标从 0 起）：
+          \(solutions)
+
+          请挑出最佳方案，给出它的下标和一句话理由。
+          """
+          output_schema = {
+            type = "object"
+            properties = {
+              winnerIndex = {type = "number"}
+              reason = {type = "string"}
+            }
+            required = ["winnerIndex" "reason"]
+          }
+        }))
+      ])
+  ])

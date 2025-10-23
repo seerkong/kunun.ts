@@ -1,0 +1,194 @@
+<Track id="add-kunun-dynamic-workflow-checkpoint-runtime" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>为 Kunun RuntimeInterpreter 添加 Dynamic Workflow safe-point checkpoint runtime，并补充 depa-actor 通用执行内核能力。</Goal>
+    <Description>为 Kunun RuntimeInterpreter 添加 Dynamic Workflow safe-point checkpoint runtime，并补充 depa-actor 通用执行内核能力。</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-06T08:23:38Z</CreatedAt>
+    <UpdatedAt>2026-06-07T00:10:00Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_add-kunun-dynamic-workflow-checkpoint-runtime" name="add-kunun-dynamic-workflow-checkpoint-runtime" version="1">
+    <Description>为 Kunun RuntimeInterpreter 添加 Dynamic Workflow safe-point checkpoint runtime，并补充 depa-actor 通用执行内核能力。</Description>
+    <SubNodes>
+      
+        <TaskGroup id="P1" name="depa-actor 通用内核补强" status="DONE">
+          <Task id="T1.1" name="为 depa-actor StackMachine 编写 hydration 测试" priority="P0" status="DONE">
+            <Description>在 depa-actor 中添加测试，验证公开 API 可以从 StackMachineState 替换 stack items 和 frame bottoms，并保持 frame validation。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-stack-load-snapshot-red" checked="true">测试在实现前能暴露缺失的公开 hydration API</cdt:Criterion>
+              <cdt:Criterion id="AC-stack-existing-create" checked="true">测试覆盖 createInstructionStack(state) 和 createOperandStack(state) 的兼容行为</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="实现 depa-actor StackMachine hydration API" priority="P0" status="DONE">
+            <Description>添加领域无关的 loadSnapshot 或 replaceState API，避免 Kunun runtime 通过私有字段恢复 stack。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-public-api" checked="true">StackMachine 暴露公开 hydration API</cdt:Criterion>
+              <cdt:Criterion id="AC-validates-frames" checked="true">恢复时校验 frame bottoms 合法性</cdt:Criterion>
+              <cdt:Criterion id="AC-existing-tests-pass" checked="true">depa-actor 原有测试通过</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.3" name="为 depa-actor dispatcher yield/hooks 编写测试" priority="P0" status="DONE">
+            <Description>验证 instruction handler 可以领域无关地请求 yield，并且 dispatcher 能报告与 error/stack empty 区分的 stop reason，同时保留 effects。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-yield-stop-red" checked="true">测试覆盖 handler_requested_yield 或等价 stop reason</cdt:Criterion>
+              <cdt:Criterion id="AC-effects-preserved" checked="true">测试覆盖 yield 时 effects 被返回</cdt:Criterion>
+              <cdt:Criterion id="AC-hooks-observable" checked="true">测试覆盖 before/after/effect/stop hook 或等价观测 API</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.4" name="实现 depa-actor dispatcher yield/hooks" priority="P0" status="DONE">
+            <Description>在 depa-actor dispatcher 中补充领域无关的 yield convention 或 lifecycle hooks，不引入 AI/workflow 概念。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-domain-neutral" checked="true">API 命名和类型不包含 AI、prompt、agent、workflow 领域语义</cdt:Criterion>
+              <cdt:Criterion id="AC-dispatch-tests-pass" checked="true">新增 dispatcher 测试通过</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.5" name="本地构建 depa-actor 并验证 Kunun 依赖可解析" priority="P1" status="DONE">
+            <Description>运行 depa-actor 测试和构建，并确认当前项目 file dependency 可使用新增 API。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-depa-tests" checked="true">depa-actor 测试通过</cdt:Criterion>
+              <cdt:Criterion id="AC-depa-build" checked="true">depa-actor build 通过</cdt:Criterion>
+              <cdt:Criterion id="AC-kunun-resolves" checked="true">Kunun 项目可解析本地 depa-actor 包</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </TaskGroup>
+      
+        <TaskGroup id="P2" name="Kunun checkpoint 数据结构与 runtime 扩展" status="DONE">
+          <Task id="T2.1" name="编写 RuntimeSnapshot 和 continuation frame 测试" priority="P0" status="DONE">
+            <Description>在 Kunun 测试中先定义 runtime snapshot/hydrate 的期望，包括 all-fiber snapshot、env/effect state、LoopFrame、ExceptionFrame、AbruptCompletion。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-all-fiber-red" checked="true">测试覆盖多 fiber checkpoint 期望</cdt:Criterion>
+              <cdt:Criterion id="AC-loop-frame-red" checked="true">测试覆盖 loop frame 恢复期望</cdt:Criterion>
+              <cdt:Criterion id="AC-exception-frame-red" checked="true">测试覆盖 try/catch/finally 恢复期望</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.2" name="实现 RuntimeSnapshot codec 与 safe-point checkpoint store" priority="P0" status="DONE">
+            <Description>扩展 RuntimeState，支持捕获和恢复完整 workflow checkpoint，并使用 depa-actor 的公开 stack hydration API。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-snapshot-codec" checked="true">RuntimeSnapshot 可序列化并 hydrate</cdt:Criterion>
+              <cdt:Criterion id="AC-no-private-stack-write" checked="true">restore 不再通过 any 写入 depa-actor stack 私有字段</cdt:Criterion>
+              <cdt:Criterion id="AC-current-tests-pass" checked="true">现有 RuntimeInterpreter 测试仍通过</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.3" name="编写 workflow extension lowering 测试" priority="P0" status="DONE">
+            <Description>测试宿主注册 prefix/infix workflow extension 后，Kunun runtime 能把调用 lower 到 checkpoint-aware effect/opcode。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-prefix-agent" checked="true">prefix ai_agent extension lower 到 Workflow_AgentDispatch effect/opcode</cdt:Criterion>
+              <cdt:Criterion id="AC-infix-extension" checked="true">infix workflow keyword 可以 lower 到 workflow effect/opcode</cdt:Criterion>
+              <cdt:Criterion id="AC-source-node-id" checked="true">lowered effect/opcode 保留 source node id 或 stable path metadata</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.4" name="实现 workflow extension API 与 checkpoint-aware opcodes" priority="P0" status="DONE">
+            <Description>在 RuntimeInterpreter 中实现 host workflow extension 注册、lowering API、workflow effect/opcode handlers。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-extension-api" checked="true">宿主可注册 workflow macro/function extension</cdt:Criterion>
+              <cdt:Criterion id="AC-yield-effect" checked="true">Workflow_AgentDispatch handler 能捕获 checkpoint、返回 effect 并 yield</cdt:Criterion>
+              <cdt:Criterion id="AC-no-builtins" checked="true">ai_agent/ai_parallel/ai_pipeline 不作为 Kunun parser 级内建语法</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </TaskGroup>
+      
+        <TaskGroup id="P3" name="模拟 AI runtime 端到端验证" status="DONE">
+          <Task id="T3.1" name="编写 mock AI runtime 与 job store 测试基建" priority="P0" status="DONE">
+            <Description>在 Kunun 测试中实现内存 mock AI runtime、job store、checkpoint store，用于模拟 ai_agent dispatch、complete、fail、resume。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-mock-dispatch" checked="true">mock runtime 可接收 Workflow_AgentDispatch effect 并创建 job</cdt:Criterion>
+              <cdt:Criterion id="AC-job-complete" checked="true">mock runtime 可完成 job 并恢复 checkpoint</cdt:Criterion>
+              <cdt:Criterion id="AC-job-fail" checked="true">mock runtime 可模拟 job 失败并触发异常路径</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.2" name="实现 ai_agent checkpoint/resume 端到端能力" priority="P0" status="DONE">
+            <Description>让 Kunun workflow 调用 ai_agent extension 后暂停，mock runtime 完成 job 后恢复并产出最终值。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-agent-e2e" checked="true">ai_agent workflow 端到端测试通过</cdt:Criterion>
+              <cdt:Criterion id="AC-result-injected" checked="true">ai_agent result 注入 continuation 后被后续 Kunun 代码消费</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.3" name="实现 ai_parallel checkpoint/resume 端到端能力" priority="P0" status="DONE">
+            <Description>验证 ai_parallel extension 能创建多个 job，部分完成后 hydrate 不重启已完成 job，最终按输入顺序返回结果。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-parallel-order" checked="true">ai_parallel 结果保持输入顺序</cdt:Criterion>
+              <cdt:Criterion id="AC-partial-resume" checked="true">partial completed jobs 在恢复后不重复 dispatch</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.4" name="实现 ai_pipeline checkpoint/resume 端到端能力" priority="P0" status="DONE">
+            <Description>验证 ai_pipeline item/stage 有稳定 checkpoint path，并能从中间 stage 恢复。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-stage-path" checked="true">ai_pipeline item/stage path 稳定</cdt:Criterion>
+              <cdt:Criterion id="AC-stage-resume" checked="true">恢复后不重跑已完成 stage</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.5" name="实现 loop 与 try-catch checkpoint 验证" priority="P0" status="DONE">
+            <Description>使用 mock AI runtime 验证 checkpoint 落在 loop 和 try/catch/finally 内部时，LoopFrame、ExceptionFrame、AbruptCompletion 能恢复正确行为。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-loop-resume" checked="true">loop 内 ai_agent checkpoint 恢复后继续正确 iteration</cdt:Criterion>
+              <cdt:Criterion id="AC-catch-resume" checked="true">ai_agent failure 恢复后进入 catch/finally 语义正确</cdt:Criterion>
+              <cdt:Criterion id="AC-no-behavior-tree" checked="true">测试确认恢复状态来自解释器 frame 而不是 behavior-tree node state</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.6" name="运行完整测试与 Codument 校验" priority="P1" status="DONE">
+            <Description>运行 depa-actor 测试、Kunun 测试、构建命令和 codument validate。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-depa-test-final" checked="true">depa-actor 测试通过</cdt:Criterion>
+              <cdt:Criterion id="AC-kunun-test-final" checked="true">Kunun npm test 通过</cdt:Criterion>
+              <cdt:Criterion id="AC-codument-validate" checked="true">codument validate add-kunun-dynamic-workflow-checkpoint-runtime --strict 通过</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="4" on-exhausted="block"/></Hook></Hooks>
+        </TaskGroup>
+        <TaskGroup id="P4" name="Round 1 gap repair" status="DONE">
+          <Task id="T4.1" name="补齐 checkpoint pending job metadata" priority="P0" status="DONE">
+            <Description>修复 round 1 发现的 gap：RuntimeSnapshot 必须保存 workflow safe point 的 pending job metadata，并在 hydrate 后恢复。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-pending-jobs-in-snapshot" checked="true">ai_agent/ai_parallel/ai_pipeline workflow effect 的 checkpoint 包含确定性的 pending job metadata</cdt:Criterion>
+              <cdt:Criterion id="AC-pending-jobs-hydrate" checked="true">hydrateSnapshot 后 RuntimeState 可读取相同 pending job metadata</cdt:Criterion>
+              <cdt:Criterion id="AC-explicit-extension-names" checked="true">测试覆盖 ai_workflow、ai_agent、ai_parallel、ai_pipeline、ai_phase、ai_log、json_schema 均可作为 host workflow extension 注册</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </TaskGroup>
+        <TaskGroup id="P5" name="多阶段 Kon workflow parity" status="DONE">
+          <Task id="T5.1" name="迁移多阶段 workflow scenarios 为 Kon workflow resources" priority="P0" status="DONE">
+            <Description>将 fan-out-reduce、generate-and-filter、loop-until-dry、routing、adversarial-verify、tournament、deep-research、agent-daily-digest 表达为 __tests__/Resource/RuntimeInterpreter/Workflow 下的 Kon 语言内 DSL 脚本资源，并逐步删除过于简单的单原语资源。资源表示必须使用 ai_workflow/ai_phase/body 结构，ai_agent 节点配置必须区分 sys_prompt 与 user_prompt；输出结构声明使用 workflow 上方的命名 JSON schema 定义，并通过 output_schema 引用；prompt 使用 Kunun 解释型字符串插值；ai_parallel/ai_pipeline input 必须声明 item/value/index 等显式绑定。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-workflow-resource-files" checked="true">Workflow resource 目录包含多阶段 Kon 脚本</cdt:Criterion>
+              <cdt:Criterion id="AC-agent-prompts-split" checked="true">ai_agent 节点使用 sys_prompt/user_prompt，不再使用单一 prompt 字段</cdt:Criterion>
+              <cdt:Criterion id="AC-output-schema-field" checked="true">ai_agent 节点使用 output_schema 引用 workflow 上方的命名 JSON schema 定义，不使用内嵌 JSON schema 字段</cdt:Criterion>
+              <cdt:Criterion id="AC-interpolated-prompts" checked="true">ai_agent prompt 使用 Kunun 字符串插值表达输入变量、字段访问和上游结果引用</cdt:Criterion>
+              <cdt:Criterion id="AC-input-bindings" checked="true">ai_parallel/ai_pipeline 节点使用 input/item/value/index 绑定表达 fan-out 和 stage 上下文</cdt:Criterion>
+              <cdt:Criterion id="AC-remove-toy-resources" checked="true">删除 AgentYield/ParallelYield/PipelineYield 等过于简单的临时资源，避免误导测试范围</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T5.2" name="实现多阶段 workflow mock AI runtime 测试基建" priority="P0" status="DONE">
+            <Description>在测试中提供 workflow macro/extension 注册与 mock AI runtime，使 Kon 脚本能通过 ai_agent、ai_parallel、ai_pipeline、ai_phase、ai_log、output_schema 生成 checkpoint-aware 结构并得到模拟结果。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-mock-runtime-composes" checked="true">mock runtime 同时使用 Kunun interpreter、host workflow keyword extension 和资源 DSL 绑定</cdt:Criterion>
+              <cdt:Criterion id="AC-events-recorded" checked="true">mock runtime 记录 ai_phase/ai_log/output_schema/job dispatch 事件，用于断言 workflow 结构</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T5.3" name="编写多阶段 workflow resources 对应测试" priority="P0" status="DONE">
+            <Description>为每个多阶段 Kon resource 编写测试，验证脚本运行结果、dispatch 拓扑、ai_phase 顺序、ai_parallel/ai_pipeline job metadata 与关键控制流。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-example-tests" checked="true">fan-out-reduce、generate-and-filter、loop-until-dry、routing、adversarial-verify、tournament、deep-research、agent-daily-digest 均有对应测试</cdt:Criterion>
+              <cdt:Criterion id="AC-full-test-pass" checked="true">npm run compile 与 npm test 通过</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </TaskGroup>
+        <TaskGroup id="P6" name="Round 3 gap repair" status="DONE">
+          <Task id="T6.1" name="补齐多阶段 workflow resource harness 事件观测" priority="P0" status="DONE">
+            <Description>修复 round 3 发现的 gap：测试基建必须显式记录 output_schema 与 job dispatch 事件，而不是只通过 agent 事件隐含覆盖。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="AC-output-schema-events" checked="true">ai_agent 节点配置 output_schema 时，测试 harness 记录 output_schema 事件</cdt:Criterion>
+              <cdt:Criterion id="AC-dispatch-events" checked="true">每个 ai_agent 调用记录可断言的 job dispatch 事件</cdt:Criterion>
+              <cdt:Criterion id="AC-resource-regression" checked="true">至少一个多阶段 Kon resource 测试同时断言 output_schema 与 dispatch 事件</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

@@ -1,0 +1,32 @@
+{
+  "name": "kunun",
+  "version": "1.0.2",
+  "description": "kunun language: parser, runtime interpreter, and type system",
+  "types": "lib/index.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./lib/index.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist",
+    "lib",
+    "src"
+  ],
+  "scripts": {
+    "dist": "rm -rf dist && bun build lib/index.ts --outfile dist/index.mjs --format esm --target node && bun build lib/index.ts --outfile dist/index.cjs --format cjs --target node"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "kunun-converter": "workspace:*",
+    "kunun-core": "workspace:*",
+    "kunun-runtime": "workspace:*",
+    "kunun-type-annotations": "workspace:*",
+    "kunun-type-system": "workspace:*",
+    "kunun-workflow-dsl": "workspace:*"
+  }
+}

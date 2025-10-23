@@ -1,0 +1,54 @@
+(class #Person
+  :[
+    (!String field #name)
+  ])
+
+(class #Address
+  :[
+    (!String field #city)
+  ])
+
+(type #T1
+  :[
+    (!String field #b)
+  ])
+
+(type #T2
+  :[
+    (!Int field #b)
+  ])
+
+(type #T3
+  @merge = [T1 T2])
+
+(fn #missingSlot |!Person person -> String|
+  :[
+    (person.:age)
+  ])
+
+(fn #badProjection |!Person person -> String|
+  :[
+    ((person ~as Address).:city)
+  ])
+
+(fn #wrongReturn |!Person person -> Int|
+  :[
+    (person.:name)
+  ])
+
+(fn #ambiguousRowMember |!T3 item -> String|
+  :[
+    (item.:b)
+  ])
+
+#(effect decl #Console)
+(type #Console :[])
+
+#(effect row :[ Console ])
+(fn #printMessage |-> Unit|
+  :[])
+
+(fn #unhandled |-> Unit|
+  :[
+    (printMessage)
+  ])

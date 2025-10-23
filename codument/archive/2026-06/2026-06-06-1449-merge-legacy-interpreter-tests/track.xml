@@ -1,0 +1,120 @@
+<Track id="merge-legacy-interpreter-tests" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>将旧 Interpreter 测试中仍有价值的行为迁移到新的 RuntimeInterpreter 基座，删除重复旧断言，保留最小 legacy smoke，并补齐 JS interop 与 embedding API 等必要运行时能力。</Goal>
+    <Description>将旧 Interpreter 测试中仍有价值的行为迁移到新的 RuntimeInterpreter 基座，删除重复旧断言，保留最小 legacy smoke，并补齐 JS interop 与 embedding API 等必要运行时能力。</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-06T04:50:50Z</CreatedAt>
+    <UpdatedAt>2026-06-06T06:49:01Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_merge-legacy-interpreter-tests" name="merge-legacy-interpreter-tests" version="1">
+    <Description>将旧 Interpreter 测试中仍有价值的行为迁移到新的 RuntimeInterpreter 基座，删除重复旧断言，保留最小 legacy smoke，并补齐 JS interop 与 embedding API 等必要运行时能力。</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="测试归并边界与旧套件收缩">
+            <Description>建立旧测试到新 runtime 的映射，先补齐或确认覆盖，再删除重复旧断言并保留最小 legacy smoke。</Description>
+            <SubNodes>
+              <Task id="T1.1" name="建立旧测试映射清单" status="DONE" priority="P0">
+                <Description>将旧 Interpreter、HostFunc、Interop、InfixMacro 测试点映射为删除、迁移、排除三类，并记录到 track analysis。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-map-old-tests" checked="true">旧测试点已映射到目标分类</cdt:Criterion>
+                  <cdt:Criterion id="AC-no-hidden-dependency" checked="true">track 内文档自包含，不依赖隐藏目录报告</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T1.2" name="保留最小 legacy Interpreter smoke suite" status="DONE" priority="P0">
+                <Description>将旧 Interpreter 回归收缩为 EvalSync、ExecAsync、PrepareState/ExecWithStateAsync 的最小兼容 smoke。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-legacy-smoke" checked="true">旧 Interpreter API 仅保留最小 smoke 覆盖</cdt:Criterion>
+                  <cdt:Criterion id="AC-duplicate-removed" checked="true">已删除或替换被新 RuntimeInterpreter 覆盖的重复旧断言</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P2" name="迁移语言行为测试">
+            <Description>用当前 Kon 语法和 RuntimeInterpreter 覆盖旧测试中仍有语言价值的控制流、函数、逻辑表达式、对象和 session 行为。</Description>
+            <SubNodes>
+              <Task id="T2.1" name="迁移 control-flow source tests" status="DONE" priority="P0">
+                <Description>新增 RuntimeInterpreter control-flow 测试，覆盖 if、cond、foreach、for、break、continue 的当前语法行为。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-control-tests" checked="true">新增并通过 RuntimeInterpreter control-flow 测试</cdt:Criterion>
+                  <cdt:Criterion id="AC-parser-shape-confirmed" checked="true">已确认当前 parser AST shape 能表达目标控制流语法</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.2" name="迁移 logical 和 infix macro 行为" status="DONE" priority="P0">
+                <Description>新增 RuntimeInterpreter logical expression 测试，覆盖 and、or、or_else、短路和混合表达式。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-logical-tests" checked="true">新增并通过 logical expression 测试</cdt:Criterion>
+                  <cdt:Criterion id="AC-short-circuit" checked="true">测试覆盖短路行为，不只覆盖最终布尔值</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.3" name="迁移函数变体和 session 复用" status="DONE" priority="P1">
+                <Description>迁移多参数、currying、variadic 中仍被支持的函数行为，并新增同一 runtime 多次 evaluation 的 session 测试。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-function-variants" checked="true">函数变体测试已迁移或明确记录不支持原因</cdt:Criterion>
+                  <cdt:Criterion id="AC-session-tests" checked="true">新增并通过 runtime session 复用测试</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.4" name="扩展对象和 host property 行为测试" status="DONE" priority="P1">
+                <Description>扩展对象脚本、默认字段、完整 class/property/method 组合，以及当前设计允许的 host property access 测试。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-object-edge-tests" checked="true">对象 edge case 测试已新增并通过</cdt:Criterion>
+                  <cdt:Criterion id="AC-host-property-boundary" checked="true">host property access 的支持边界已通过测试或文档明确</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P3" name="迁移 JS interop 和 embedding API">
+            <Description>将旧 JS imperative bridge 和 MakeFuncSync 的业务价值迁移为新的 RuntimeInterpreter host interop 与 embedding API。</Description>
+            <SubNodes>
+              <Task id="T3.1" name="设计并测试 RuntimeInterpreter host object bridge" status="DONE" priority="P0">
+                <Description>设计新 runtime 的 host object bridge/API，覆盖旧 js_call 和 js_apply 的业务价值，但不强制照搬旧语法。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-host-bridge-api" checked="true">已定义 RuntimeInterpreter host object bridge/API</cdt:Criterion>
+                  <cdt:Criterion id="AC-js-call-equivalent" checked="true">新增并通过 js_call 等价行为测试</cdt:Criterion>
+                  <cdt:Criterion id="AC-js-apply-equivalent" checked="true">新增并通过 js_apply 等价行为测试</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.2" name="设计并测试脚本函数导出为 JS callable" status="DONE" priority="P0">
+                <Description>设计新 runtime embedding API，使脚本函数可作为 JS callable 被 host 调用，并覆盖参数绑定、闭包、返回值和错误边界。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-export-callable-api" checked="true">已定义脚本函数导出为 JS callable 的 API</cdt:Criterion>
+                  <cdt:Criterion id="AC-callable-params-return" checked="true">新增并通过参数绑定和返回值测试</cdt:Criterion>
+                  <cdt:Criterion id="AC-callable-closure-error" checked="true">新增并通过闭包或错误边界测试</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P4" name="验证和收口">
+            <Description>确认新 runtime 测试、legacy smoke、parser 语法测试可共同运行，并明确排除项。</Description>
+            <SubNodes>
+              <Task id="T4.1" name="运行目标测试套件" status="DONE" priority="P0">
+                <Description>运行 RuntimeInterpreter、legacy smoke、parser syntax 相关测试，确认旧测试合并后测试目标清晰。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-runtime-tests" checked="true">RuntimeInterpreter 相关测试通过</cdt:Criterion>
+                  <cdt:Criterion id="AC-legacy-smoke-tests" checked="true">legacy Interpreter smoke tests 通过</cdt:Criterion>
+                  <cdt:Criterion id="AC-parser-tests" checked="true">parser syntax tests 通过</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T4.2" name="记录排除项和后续路线" status="DONE" priority="P1">
+                <Description>记录 event queue、async host interop、self-update syntax 不在本 track 内，并给出后续 track 建议。</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="AC-exclusions-recorded" checked="true">排除项已记录在 track analysis 或 docs 中</cdt:Criterion>
+                  <cdt:Criterion id="AC-future-tracks" checked="true">后续 track 建议已记录</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="2" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

@@ -1,0 +1,433 @@
+<Track id="add-extensible-scoped-row-type-system" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>迁移 ExtensibleScopedRowType 类型系统到当前 TypeScript 项目，并保持 RuntimeInterpreter 默认 untyped 执行。</Goal>
+    <Description>迁移 ExtensibleScopedRowType 类型系统到当前 TypeScript 项目，并保持 RuntimeInterpreter 默认 untyped 执行。</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-07T13:12:37Z</CreatedAt>
+    <UpdatedAt>2026-06-07T23:32:04Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_add-extensible-scoped-row-type-system" name="add-extensible-scoped-row-type-system" version="1">
+    <Description>迁移 ExtensibleScopedRowType 类型系统到当前 TypeScript 项目，并保持 RuntimeInterpreter 默认 untyped 执行。</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="基线审计与迁移矩阵">
+            <Description>读取 ExtensibleScopedRowType 的类型系统文档、代码和测试，形成可执行迁移范围。</Description>
+            <SubNodes>
+              <Task id="T1.1" name="审计类型系统文档" status="DONE" priority="P0">
+                <Description>梳理 ExtensibleScopedRowType 中 row type、class/trait、generic、typed effect system、source qualifier 的设计和示例。</Description>
+              </Task>
+              <Task id="T1.2" name="审计类型系统实现" status="DONE" priority="P0">
+                <Description>定位 C# 类型系统 model、binder、checker、diagnostic、test helper 的实现入口和依赖关系。</Description>
+              </Task>
+              <Task id="T1.3" name="建立测试迁移矩阵" status="DONE" priority="P0">
+                <Description>把 ExtensibleScopedRowType 中非解释器类型系统测试映射到当前项目的 TypeScript 测试分类。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P2" name="类型模型与环境">
+            <Description>新增 TypeScript 类型系统的基础模型、符号和作用域环境。</Description>
+            <SubNodes>
+              <Task id="T2.1" name="新增类型模型" status="DONE" priority="P0">
+                <Description>实现 type AST/type reference/type declaration/member signature/effect signature 等核心数据结构。</Description>
+              </Task>
+              <Task id="T2.2" name="新增类型环境" status="DONE" priority="P0">
+                <Description>实现 type symbol、type scope、source-qualified lookup、diagnostic collection 和 error reporting。</Description>
+              </Task>
+              <Task id="T2.3" name="补充基础单元测试" status="DONE" priority="P1">
+                <Description>覆盖 symbol lookup、scope shadowing、source qualifier preservation、diagnostic formatting。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P3" name="Parser AST 到类型系统 Lowering 与 Binder">
+            <Description>基于当前 parser AST 实现类型声明 lowering、binding 和基础 checking。</Description>
+            <SubNodes>
+              <Task id="T3.1" name="实现 parser-to-type lowering" status="DONE" priority="P0">
+                <Description>把当前 Kn AST 中的 row/class/trait/generic/effect 类型声明转换为类型系统中间模型。</Description>
+              </Task>
+              <Task id="T3.2" name="实现 row type binder" status="DONE" priority="P0">
+                <Description>支持 row member、row merge、source-qualified member access、ambiguous member diagnostic。</Description>
+              </Task>
+              <Task id="T3.3" name="实现 class/trait/generic binder" status="DONE" priority="P0">
+                <Description>支持 class/trait member signature、type parameter binding、generic instantiation arity/constraint 检查。</Description>
+              </Task>
+              <Task id="T3.4" name="补充 binder 测试资源" status="DONE" priority="P0">
+                <Description>在 TypeSystem 测试资源中覆盖 `T1:::b`、`com.example.ClassA:::b`、row ambiguity、generic positive/negative cases。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P4" name="Type Checker API 与 RuntimeInterpreter 可选集成">
+            <Description>暴露类型检查 API，并允许宿主在执行前显式启用类型检查。</Description>
+            <SubNodes>
+              <Task id="T4.1" name="新增 public type-check API" status="DONE" priority="P0">
+                <Description>提供 TypeCheckSource/TypeCheckNode 或等价 API，返回类型检查结果和 diagnostics。</Description>
+              </Task>
+              <Task id="T4.2" name="接入 RuntimeInterpreter opt-in hook" status="DONE" priority="P0">
+                <Description>允许 RuntimeInterpreter 调用方启用执行前类型检查；默认不启用，失败时不执行脚本体。</Description>
+              </Task>
+              <Task id="T4.3" name="默认 untyped 回归测试" status="DONE" priority="P0">
+                <Description>验证现有 RuntimeInterpreter tests 在不启用类型检查时行为不变。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P5" name="Typed Effect 与 Generic Parity">
+            <Description>迁移 ExtensibleScopedRowType 中类型系统相关的 effect/generic 行为。</Description>
+            <SubNodes>
+              <Task id="T5.1" name="实现 typed effect signatures" status="DONE" priority="P0">
+                <Description>支持 effect declaration、perform argument/result type checking 和 diagnostic。</Description>
+              </Task>
+              <Task id="T5.2" name="实现 handler coverage 检查" status="DONE" priority="P0">
+                <Description>校验 typed handler signature 与 effect perform 的覆盖关系。</Description>
+              </Task>
+              <Task id="T5.3" name="补齐 generic parity 测试" status="DONE" priority="P1">
+                <Description>补充 ExtensibleScopedRowType generic rows/classes/type params 的迁移测试。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P6" name="验证与收敛">
+            <Description>确认类型系统迁移不破坏 parser 和 RuntimeInterpreter 主线。</Description>
+            <SubNodes>
+              <Task id="T6.1" name="运行编译和测试" status="DONE" priority="P0">
+                <Description>运行 npm run compile、RuntimeInterpreter 测试、TypeSystem 测试和项目全量测试。</Description>
+              </Task>
+              <Task id="T6.2" name="运行 Codument 验证" status="DONE" priority="P0">
+                <Description>运行 codument validate add-extensible-scoped-row-type-system --strict。</Description>
+              </Task>
+              <Task id="T6.3" name="更新 track 状态" status="DONE" priority="P1">
+                <Description>根据实现和验证结果更新 track.xml 状态，必要时进入 gap-loop 修正。</Description>
+              </Task>
+              <Task id="T6.4" name="修正来源限定成员检查 gap" status="DONE" priority="P0">
+                <Description>gap-loop round 1 修正 checker 对 `T1:::b` 来源限定成员访问和未限定重复成员 ambiguity diagnostic 的实现与测试。</Description>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="10" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P7" name="Inheritance Projection Parity">
+            <Description>补齐 ExtensibleScopedRowType 中 C3/MRO、继承限定符和 projection view 的核心行为。</Description>
+            <SubNodes>
+              <Task id="T7.1" name="实现 C3 method resolution order" status="DONE" priority="P0">
+                <Description>把 ClassTypeSymbol.MethodResolutionOrder 从简单 DFS 改为 C3 linearization，并补充 diamond 和不一致排序测试。</Description>
+              </Task>
+              <Task id="T7.2" name="实现继承成员限定符规则" status="DONE" priority="P0">
+                <Description>补齐 virtual/override/final/inherit 对 row materialization 和 member resolution 的影响，覆盖 virtual required、final rejection、inherit forwarding、virtual pruning。</Description>
+              </Task>
+              <Task id="T7.3" name="补齐 trait/class projection view" status="DONE" priority="P0">
+                <Description>让 TypeProjection 对 trait implementation 合法，并在 checker/runtime bridge 中限制投影视图的成员暴露。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P8" name="Checker Effect Generic Parity">
+            <Description>补齐 checker 对多输出栈形状、effect diagnostics 和 generic 使用的静态检查闭环。</Description>
+            <SubNodes>
+              <Task id="T8.1" name="补齐 stack-shaped function checking" status="DONE" priority="P0">
+                <Description>检查 source-level function/method 多输出组合与 mismatched output stack shape。</Description>
+              </Task>
+              <Task id="T8.2" name="补齐 typed effect diagnostics" status="DONE" priority="P0">
+                <Description>补齐 unknown handler、handler no-op、closed boundary residual、多 handler full elimination 和 effect operation signature 相关诊断。</Description>
+              </Task>
+              <Task id="T8.3" name="补齐 generic checker parity" status="DONE" priority="P1">
+                <Description>补齐 generic class/function type argument arity、row spread parameter constraints 和 generic signature metadata 的 checker 侧使用。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P9" name="Typed Runtime Context">
+            <Description>迁移 KonTypedRuntimeContext 风格的显式 typed runtime bridge，保持 RuntimeInterpreter 默认 untyped。</Description>
+            <SubNodes>
+              <Task id="T9.1" name="新增 typed runtime value/object model" status="DONE" priority="P0">
+                <Description>新增 typed object/value/projected object 模型，支持 class typed field storage。</Description>
+              </Task>
+              <Task id="T9.2" name="实现 typed field read/write 与 projection" status="DONE" priority="P0">
+                <Description>实现 CreateObject、ReadField、WriteField、Project，拒绝未知字段和投影视图外字段。</Description>
+              </Task>
+              <Task id="T9.3" name="实现 prototype hydration 和 accessor lookup" status="DONE" priority="P1">
+                <Description>支持从 Kon object-like prototype hydrate declared fields，并按 class/trait projection 查找 getter/setter。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P10" name="Follow-up 验证收敛">
+            <Description>验证补齐的类型系统能力不破坏 parser、RuntimeInterpreter 和默认 untyped 行为。</Description>
+            <SubNodes>
+              <Task id="T10.1" name="运行类型系统专项测试" status="DONE" priority="P0">
+                <Description>运行 TypeSystem 和 KonParserSyntax 专项测试。</Description>
+              </Task>
+              <Task id="T10.2" name="运行全量测试与编译" status="DONE" priority="P0">
+                <Description>运行 npm run compile 和 npm test -- --require ts-node/register。</Description>
+              </Task>
+              <Task id="T10.3" name="运行 Codument 验证" status="DONE" priority="P0">
+                <Description>运行 codument validate add-extensible-scoped-row-type-system --strict。</Description>
+              </Task>
+              <Task id="T10.4" name="修正函数调用组合栈检查 gap" status="DONE" priority="P0">
+                <Description>gap-loop round 3 修正 checker 对 source-level 函数链式调用输入栈的校验，确保多输出结果被后续函数消费时按完整 stack shape 检查。</Description>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="10" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P11" name="Typed Runtime Execution Bridge Parity">
+            <Description>补齐 ESRT typed runtime context 的 method dispatch、projection invocation、parent storage 和 Kon value conversion。</Description>
+            <SubNodes>
+              <Task id="T11.1" name="实现 real parent storage" status="DONE" priority="P0">
+                <Description>KonTypedObject 创建时 materialize real base parent storage，并补充 parent field storage 测试。</Description>
+              </Task>
+              <Task id="T11.2" name="实现 Kon value conversion boundary" status="DONE" priority="P0">
+                <Description>新增 WriteKonField/ReadKonField 或等价 API，支持 primitive/object Kon value，拒绝 unsupported structured value。</Description>
+              </Task>
+              <Task id="T11.3" name="实现 typed method invocation" status="DONE" priority="P0">
+                <Description>基于 typed rows 和 prototype resolver 实现 Invoke，支持 direct/class projection/trait projection，并拒绝 projected view 外 method。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P12" name="Typed Runtime Effect Scope Dispatch">
+            <Description>补齐 ESRT runtime effect scope 驱动的 contextual dispatch。</Description>
+            <SubNodes>
+              <Task id="T12.1" name="新增 typed runtime effect scopes" status="DONE" priority="P0">
+                <Description>KonTypedRuntimeContext 提供 PushEffectScope/Pop disposable 语义，并维护 active effect row。</Description>
+              </Task>
+              <Task id="T12.2" name="实现 contextual method selection" status="DONE" priority="P0">
+                <Description>同名 method 有 EffectContext 时，Invoke 根据 active effect row 选择候选；无法唯一选择时报告 ambiguity。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P13" name="Generic And Perform Follow-up Boundary">
+            <Description>记录并尽量补齐 generic class/function 与 typed perform operation signature 的剩余闭环。</Description>
+            <SubNodes>
+              <Task id="T13.1" name="补充 generic class/function gap 任务边界" status="DONE" priority="P1">
+                <Description>在当前 track 中明确 generic class/function instantiation、type argument inference/application 的后续实现边界；可实现的部分补测试。</Description>
+              </Task>
+              <Task id="T13.2" name="补充 effect operation perform gap 任务边界" status="DONE" priority="P1">
+                <Description>在当前 track 中明确 perform operation signature checking 的 checker/runtime 后续实现边界；可实现的部分补测试。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P14" name="Full ESRT Runtime Gap 验证">
+            <Description>验证新增 typed runtime bridge 能力不破坏现有类型系统和解释器测试。</Description>
+            <SubNodes>
+              <Task id="T14.1" name="运行类型系统专项测试" status="DONE" priority="P0">
+                <Description>运行 TypeSystem 专项测试和 parser 类型语法回归。</Description>
+              </Task>
+              <Task id="T14.2" name="运行全量测试与编译" status="DONE" priority="P0">
+                <Description>运行 npm run compile 和 npm test -- --require ts-node/register。</Description>
+              </Task>
+              <Task id="T14.3" name="运行 Codument 验证" status="DONE" priority="P0">
+                <Description>运行 codument validate add-extensible-scoped-row-type-system --strict。</Description>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="10" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P15" name="Generic Application And Typed Perform Signatures">
+            <Description>把已知高优 generic 与 typed perform gap 从文档边界推进为 checker/runtime 可验证行为。</Description>
+            <SubNodes>
+              <Task id="T15.1" name="实现 generic function application" status="DONE" priority="P0">
+                <Description>支持显式 type arguments 和基于输入栈的 generic function type argument inference/application，输出栈按替换后类型检查。</Description>
+              </Task>
+              <Task id="T15.2" name="实现 typed perform operation signature checking" status="DONE" priority="P0">
+                <Description>根据 effect row 中的 op/member signature 校验 perform 参数栈、输出栈和 residual effect row，并与 RuntimeInterpreter effect identity 对齐。</Description>
+              </Task>
+              <Task id="T15.3" name="补齐 binder negative diagnostics" status="DONE" priority="P1">
+                <Description>补齐 C# 版本中已固定的 unsupported postfix field type annotation 等负例边界；当前 parser 层拒绝该语法，测试固定不会静默进入 binder。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P16" name="Typed Runtime Execution Parity">
+            <Description>参考 C# ExecutionContext 和 TypedRuntimeIntegrationTests 补齐 typed runtime 运行期能力。</Description>
+            <SubNodes>
+              <Task id="T16.1" name="实现 typed runtime effect permission enforcement" status="DONE" priority="P0">
+                <Description>Invoke effectful typed method 前校验 active effect scope 是否允许 signature effect row，未许可时拒绝调用。</Description>
+              </Task>
+              <Task id="T16.2" name="补齐 typed value boundary" status="DONE" priority="P1">
+                <Description>新增轻量 typed runtime value kind/adapters，显式保留 primitive/list/map/function/object/projected-object 边界，拒绝 unsupported Kon structured value。</Description>
+              </Task>
+              <Task id="T16.3" name="新增 script-level typed runtime entrypoint" status="DONE" priority="P0">
+                <Description>提供 EvaluateTypedBlockSync 或等价 API，让 typed declarations 与 executable statements 在同一脚本中通过 typed slot/method/property/projection 执行。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P17" name="Final Gap Verification">
+            <Description>验证新增能力与 ExtensibleScopedRowType 的 P0/P1 gap 对齐，并保持默认 untyped runtime 不受影响。</Description>
+            <SubNodes>
+              <Task id="T17.1" name="补齐 C# 对齐测试" status="DONE" priority="P0">
+                <Description>迁移/新增 generic application、typed perform signature、effect permission、typed script execution 和 negative diagnostic 专项测试。</Description>
+              </Task>
+              <Task id="T17.2" name="运行编译和测试" status="DONE" priority="P0">
+                <Description>运行 npm run compile、TypeSystem 专项测试、RuntimeInterpreter typed/untyped 回归和全量测试。</Description>
+              </Task>
+              <Task id="T17.3" name="运行 Codument 验证" status="DONE" priority="P0">
+                <Description>运行 codument validate add-extensible-scoped-row-type-system --strict。</Description>
+              </Task>
+              <Task id="T17.4" name="修正 script-level typed runtime bridge gap" status="DONE" priority="P0">
+                <Description>gap-loop round 6 修正 EvaluateTypedBlockSync 仅做静态检查后落回默认 untyped runtime 的问题，接入 typed block evaluator 覆盖 class/trait projection、typed slot/property 和 method dispatch。</Description>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="10" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P18" name="Typed Runtime Integration Deepening">
+            <Description>补齐再次对比 C# 后发现的 typed runtime integration 剩余差异。</Description>
+            <SubNodes>
+              <Task id="T18.1" name="记录 typed runtime integration gaps" status="DONE" priority="P0">
+                <Description>把完整解释器 typed bridge、field default metadata、inherit forwarding、Kon value boundary 和 class body static-check 边界写入设计与 spec。</Description>
+              </Task>
+              <Task id="T18.2" name="补齐 C# typed runtime integration 测试" status="DONE" priority="P0">
+                <Description>迁移 C# TypedRuntimeIntegrationTests 中默认字段、typed self 方法、嵌套 typed object 字段、projection property、trait inherited implementation 和 active view rejection 场景。</Description>
+              </Task>
+              <Task id="T18.3" name="实现完整解释器 typed bridge" status="DONE" priority="P0">
+                <Description>让 EvaluateTypedBlockSync 安装 KonTypedRuntimeContext 后走 RuntimeInterpreter，并在 typed object 的 new/property/method hooks 中接入 typed runtime context。</Description>
+              </Task>
+              <Task id="T18.4" name="实现 field metadata 与 inherit forwarding" status="DONE" priority="P0">
+                <Description>Binder 支持 `(field #name = value)` 默认字段；typed runtime dispatch 支持 inherit method 转发到 base prototype implementation。</Description>
+              </Task>
+              <Task id="T18.5" name="运行验证" status="DONE" priority="P0">
+                <Description>运行 npm run compile、TypeSystem 专项测试、相关 RuntimeInterpreter typed/untyped 回归、npm test 和 codument validate。</Description>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="10" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P19" name="Interpreter-backed Type Computation And Remaining Parity">
+            <Description>补齐类型计算未复用解释器能力的 P0 gap，并收敛新一轮 P0/P1 类型系统真缺口。</Description>
+            <SubNodes>
+              <Task id="T19.1" name="记录 interpreter-backed type computation gap" status="DONE" priority="P0">
+                <Description>把类型计算应通过解释器 runtime/host dispatch 的设计差异，以及 class body static checking、access modifier static boundary、subtyping parity、negative diagnostic parity 写入 design 和 spec。</Description>
+              </Task>
+              <Task id="T19.2" name="实现 interpreter-backed type computation kernel" status="DONE" priority="P0">
+                <Description>新增 RuntimeInterpreter/RuntimeState-backed type computation kernel，让 TypeSystem public API 的 row/class/generic/effect/subtyping 计算经过 interpreter host dispatch，并保留 direct core 边界避免递归。</Description>
+              </Task>
+              <Task id="T19.3" name="补齐 class body static checking" status="DONE" priority="P0">
+                <Description>让 checker 对 class constructor、method、property getter/setter body 执行最小静态检查，覆盖 self typed slot、return stack、setter input 和 missing member diagnostics。</Description>
+              </Task>
+              <Task id="T19.4" name="补齐 access modifier static constraints" status="DONE" priority="P1">
+                <Description>在 checker 的 external source-level member access 上拒绝 private/protected/internal 成员，保留 class 内 self 访问的最小可用规则。</Description>
+              </Task>
+              <Task id="T19.5" name="补齐 C# subtyping 与 negative diagnostic parity 测试" status="DONE" priority="P1">
+                <Description>迁移 closed row、row tail subtype、function effect row compatibility、field-as-getter requirement，以及 unsupported effect/base metadata 不静默注册等测试。</Description>
+              </Task>
+              <Task id="T19.6" name="运行验证" status="DONE" priority="P0">
+                <Description>运行 npm run compile、TypeSystem 专项测试、RuntimeInterpreter typed/untyped 回归、npm test 和 codument validate。</Description>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="10" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P20" name="Core Typed Runtime API Parity">
+            <Description>补齐 ExtensibleScopedRowType core typed runtime API 形态、typed value metadata、globals、projection invocation facade 和 runtime access modifier 专项边界。</Description>
+            <SubNodes>
+              <Task id="T20.1" name="记录 core typed runtime API gaps" status="DONE" priority="P0">
+                <Description>把 ClassDefinition/MethodBody、typed value type metadata、typed runtime globals、InvokeWithProjection facade、runtime access modifier parity 写入 design 和 spec。</Description>
+              </Task>
+              <Task id="T20.2" name="实现 ClassDefinition 与 MethodBody core model" status="DONE" priority="P0">
+                <Description>新增 ClassDefinition、MethodBody、MethodBuilder 等轻量模型，让 TypeSystem 保存并返回 class definition，同时保持 RequireClassSymbol 和现有 public API 兼容。</Description>
+              </Task>
+              <Task id="T20.3" name="补齐 typed runtime value metadata 与 globals" status="DONE" priority="P0">
+                <Description>让 TypedRuntimeValue 携带可选 TypeSymbol，并在 KonTypedRuntimeContext 中提供 SetGlobal/GetGlobal，内部保留 typed value metadata。</Description>
+              </Task>
+              <Task id="T20.4" name="补齐 projection invocation facade 与 runtime access 测试" status="DONE" priority="P1">
+                <Description>新增 InvokeWithProjection 等同构 facade，并补 private/protected/internal runtime access modifier 边界测试。</Description>
+              </Task>
+              <Task id="T20.5" name="运行验证" status="DONE" priority="P0">
+                <Description>运行 npm run compile、TypeSystem 专项测试、npm test 和 codument validate。</Description>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="10" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P21" name="Typed ExecutionContext Core Parity">
+            <Description>补齐 ExtensibleScopedRowType ExecutionContext/Value/ObjectValue/FunctionValue 风格的一等 typed runtime core，同时保持现有 prototype bridge 兼容。</Description>
+            <SubNodes>
+              <Task id="T21.1" name="记录 typed execution context core gaps" status="DONE" priority="P0">
+                <Description>把一等 ExecutionContext、Value 层级、Instantiate/CreateObject 拆分、ClassDefinition.Methods dispatch、Kon value boundary 写入 design 与 spec。</Description>
+              </Task>
+              <Task id="T21.2" name="实现 Value 层级与 KonTypedExecutionContext" status="DONE" priority="P0">
+                <Description>新增 Int/String/Bool/List/Map/Any/Function/Object/ProjectedObject value、RowImplementation、FieldStorage、InvocationContext，并实现 Instantiate/CreateObject/Project/ReadField/WriteField/Invoke/PushEffectScope/Globals。</Description>
+              </Task>
+              <Task id="T21.3" name="接入 KonTypedRuntimeContext core facade" status="DONE" priority="P0">
+                <Description>让 KonTypedRuntimeContext 持有 core execution context，暴露 Instantiate 和 core value bridge，同时保持原 CreateObject(prototype) 与 prototype dispatch 行为。</Description>
+              </Task>
+              <Task id="T21.4" name="补齐 typed execution context 测试" status="DONE" priority="P0">
+                <Description>覆盖 method body dispatch、class projection、trait forwarding、inherit forwarding、effect permission、field read/write、globals 和 value conversion。</Description>
+              </Task>
+              <Task id="T21.5" name="运行验证" status="DONE" priority="P0">
+                <Description>运行 npm run compile、TypeSystem 专项测试、npm test 和 codument validate。</Description>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="10" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P22" name="Final API And Projection Parity">
+            <Description>补齐最后一组 C# 类型系统 API/测试同构缺口：source-level row projection、origin-specific execution API、Kon value boundary 和 helper API。</Description>
+            <SubNodes>
+              <Task id="T22.1" name="记录 final parity gaps" status="DONE" priority="P0">
+                <Description>把 row-to-row projection checker、origin-specific ExecutionContext facade、Kon value boundary、helper API 和 invalid binding boundary 写入 design 与 spec。</Description>
+              </Task>
+              <Task id="T22.2" name="实现 source-level row projection checker parity" status="DONE" priority="P0">
+                <Description>让 `~as` projection 的后续 member lookup 使用 TypeProjection target view，覆盖 merged row 投影后成员限制。</Description>
+              </Task>
+              <Task id="T22.3" name="实现 origin-specific core API 与 helper API" status="DONE" priority="P1">
+                <Description>新增 InvokeOrigin/ReadFieldOrigin/WriteFieldOrigin facade，并补 MethodBuilder.FromLambda 与 TypeRegistry.CreateFunctionType effect row overload。</Description>
+              </Task>
+              <Task id="T22.4" name="补齐 Kon value boundary 与 invalid binding 测试" status="DONE" priority="P1">
+                <Description>固定 TS 现有 Kon model 下 primitive/object-like/unsupported array 边界，以及 invalid BindSource 不创建可执行 context。</Description>
+              </Task>
+              <Task id="T22.5" name="运行验证" status="DONE" priority="P0">
+                <Description>运行 npm run compile、TypeSystem 专项测试、npm test 和 codument validate。</Description>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="10" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P23" name="TS API And Model Shape Parity">
+            <Description>补齐再次对比 C# 后剩余的 API/model shape 差异，不新增类型语义或改变默认解释器行为。</Description>
+            <SubNodes>
+              <Task id="T23.1" name="记录 API/model shape parity gaps" status="DONE" priority="P1">
+                <Description>把 KonTypedObject node shape、Bind(nodes) facade、origin overload-compatible API、value constructor ergonomics、RowMember helper parity 写入 design 与 spec。</Description>
+              </Task>
+              <Task id="T23.2" name="实现 runtime type registry 与 value constructor ergonomics" status="DONE" priority="P1">
+                <Description>让 typed Value 构造器可在 KonTypedExecutionContext 初始化后省略 TypeSystem，同时保留显式 TypeSystem 参数。</Description>
+              </Task>
+              <Task id="T23.3" name="实现 Bind(nodes) 与 overload-compatible facades" status="DONE" priority="P1">
+                <Description>新增 KonTypedRuntimeContext.Bind(nodes)，并让 core ExecutionContext 的 Invoke/ReadField/WriteField 支持 C# origin 参数形态。</Description>
+              </Task>
+              <Task id="T23.4" name="补齐 RowMember 与 KonTypedObject shape helpers" status="DONE" priority="P2">
+                <Description>新增 RowMember.ShouldForward、EffectContextKey 和 KonTypedObject `_Type` node-like 标记。</Description>
+              </Task>
+              <Task id="T23.5" name="运行验证" status="DONE" priority="P0">
+                <Description>运行 npm run compile、TypeSystem 专项测试、npm test 和 codument validate。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P24" name="C# Public API Parity Tightening">
+            <Description>在不破坏现有 TS bridge 的前提下，让 ExtensibleScopedRowType C# public API 形态尽量同构。</Description>
+            <SubNodes>
+              <Task id="T24.1" name="记录 C# public API parity gaps" status="DONE" priority="P1">
+                <Description>把 DefineClass 返回值、Value-level typed runtime facade、EffectHandlerBinding alias 和诊断文案 parity 写入 design 与 spec。</Description>
+              </Task>
+              <Task id="T24.2" name="调整 TypeSystem DefineClass 返回 ClassDefinition" status="DONE" priority="P1">
+                <Description>让 TypeSystem.DefineClass 与 direct/kernel path 返回 ClassDefinition，同时通过 ClassDefinition 委托 getter 降低既有 TS 调用迁移成本。</Description>
+              </Task>
+              <Task id="T24.3" name="补齐 typed runtime value-level facade" status="DONE" priority="P1">
+                <Description>在 KonTypedRuntimeContext 上新增 ReadValueField/WriteValueField/WriteNodeField 等 C# value-level API，不破坏已有 JS-value ReadField/WriteField。</Description>
+              </Task>
+              <Task id="T24.4" name="补齐 EffectHandlerBinding alias 与诊断文案 parity" status="DONE" priority="P2">
+                <Description>新增 ImplementationFunctionName alias，并让 handler/no-op/closed-boundary diagnostic message 更贴近 C# public 行为。</Description>
+              </Task>
+              <Task id="T24.5" name="运行验证" status="DONE" priority="P0">
+                <Description>运行 npm run compile、TypeSystem 专项测试、npm test 和 codument validate。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+          <TaskGroup status="DONE" id="P25" name="KonTypedObject Node Model Parity">
+            <Description>把 KonTypedObject 从 Unknown node-like marker 收敛为 TS 节点体系中的专用节点类型，对齐 C# KonTypedObject 作为 KnNode 的边界。</Description>
+            <SubNodes>
+              <Task id="T25.1" name="记录 KonTypedObject node model gap" status="DONE" priority="P1">
+                <Description>把 C# KonTypedObject 继承 KnNodeBase 与 TS `_Type` 节点协议的差异写入 design 与 spec，并明确不做全局 KnNodeBase 重构。</Description>
+              </Task>
+              <Task id="T25.2" name="实现 KonTypedObject 专用节点类型" status="DONE" priority="P1">
+                <Description>新增 KnNodeType.KonTypedObject，让 KonTypedObject 暴露专用 `_Type`，并保证 KnNodeHelper/formatter 能识别该节点。</Description>
+              </Task>
+              <Task id="T25.3" name="补齐 KonTypedObject 节点测试" status="DONE" priority="P1">
+                <Description>更新 typed runtime context 测试，固定 KonTypedObject 的专用节点类型和格式化边界。</Description>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

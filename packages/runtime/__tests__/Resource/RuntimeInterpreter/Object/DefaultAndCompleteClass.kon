@@ -1,0 +1,20 @@
+(class #Person
+  :[
+    (field #firstName)
+    (field #lastName)
+    (field #age = 0)
+    (field #score = 0)
+    (new |personAge personFirstName personLastName| :[
+      (set self.:firstName personFirstName)
+      (set self.:lastName personLastName)
+      (set self.:age personAge)
+    ])
+    (method #getFullName |-> String| :[
+      ((self.:firstName) " " :Concat (self.:lastName) :Concat)
+    ])
+    (prop #fullName
+      get :[ (self ~getFullName) ]
+    )
+  ])
+(var person (Person ~new 30 "John" "Doe"))
+[(person.:fullName) (person.:age) (person.:score)]

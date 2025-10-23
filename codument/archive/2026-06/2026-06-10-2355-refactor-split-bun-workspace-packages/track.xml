@@ -1,0 +1,190 @@
+<Track id="refactor-split-bun-workspace-packages" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>拆分 kunun-core、kunun-converter、kunun-runtime、kunun-type-system 与总包 kunun（由 @symtable/kunun 改名）；用 TypeSystemBridge 依赖注入解开 RuntimeInterpreter→TypeSystem 静态依赖；工具链迁移 bun workspaces + bun test + bun build + tsc --noEmit</Goal>
+    <Description>拆分 kunun-core、kunun-converter、kunun-runtime、kunun-type-system 与总包 kunun（由 @symtable/kunun 改名）；用 TypeSystemBridge 依赖注入解开 RuntimeInterpreter→TypeSystem 静态依赖；工具链迁移 bun workspaces + bun test + bun build + tsc --noEmit</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-10T14:10:11Z</CreatedAt>
+    <UpdatedAt>2026-06-10T15:55:00Z</UpdatedAt>
+    <cdt:Type>refactor</cdt:Type>
+    <cdt:Risks>
+      <cdt:Risk id="R1" name="bridge 接口遗漏隐性使用点" level="medium">
+      <impact>中</impact>
+      <probability>中</probability>
+      <mitigation>以 65 个 TypeSystem 专项测试 + 234 全量测试为安全网，发现即扩展接口</mitigation>
+      </cdt:Risk>
+      <cdt:Risk id="R2" name="bun 与 mocha 测试语义差异" level="low">
+      <impact>低</impact>
+      <probability>中</probability>
+      <mitigation>P1 独立建立绿色基线，差异在布局不变时先行暴露</mitigation>
+      </cdt:Risk>
+      <cdt:Risk id="R3" name="depa-actor 本地 file: 依赖解析差异" level="low">
+      <impact>高</impact>
+      <probability>低</probability>
+      <mitigation>T1.1 首先验证；必要时改用 workspace 外部 link 方案</mitigation>
+      </cdt:Risk>
+    </cdt:Risks>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_refactor-split-bun-workspace-packages" name="refactor-split-bun-workspace-packages" version="1">
+    <Description>拆分 kunun-core、kunun-converter、kunun-runtime、kunun-type-system 与总包 kunun（由 @symtable/kunun 改名）；用 TypeSystemBridge 依赖注入解开 RuntimeInterpreter→TypeSystem 静态依赖；工具链迁移 bun workspaces + bun test + bun build + tsc --noEmit</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="bun 工具链绿色基线（现有布局）">
+            <Description>在不动源码布局的前提下切换到 bun，建立 234 用例绿色基线</Description>
+            <cdt:ContextFiles>
+              <cdt:File>package.json</cdt:File>
+              <cdt:File>tsconfig.json</cdt:File>
+              <cdt:File>.mocharc.yml</cdt:File>
+            </cdt:ContextFiles>
+            <SubNodes>
+              <Task id="T1.1" name="bun 安装基线与 depa-actor 解析验证" status="DONE" priority="P0">
+                <Description>删除 yarn/npm lock，bun install 生成 bun.lock；验证本地 file: 依赖 depa-actor 可解析、可被 bun 直接运行的 TS 导入</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.1-AC1" checked="true">bun install 成功且 node_modules/depa-actor 链接正确</cdt:Criterion>
+                  <cdt:Criterion id="T1.1-AC2" checked="true">bun -e 可导入 lib/index.ts 顶层导出</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T1.2" name="测试切换到 bun test" status="DONE" priority="P0">
+                <Description>bun test 跑通 __tests__/Case 全部用例；修复 mocha→bun 语义差异（timeout、done、钩子）；记录用例基线数（实测基线 252，高于创建时估计的 234）</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.2-AC1" checked="true">bun test 发现并通过全部不少于 234 个用例（实测 252）</cdt:Criterion>
+                  <cdt:Criterion id="T1.2-AC2" checked="true">无跳过或静默丢失的用例（mocha 252 passing 与 bun 252 pass 完全一致）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T1.3" name="移除旧工具链并切换 scripts" status="DONE" priority="P1">
+                <Description>移除 vite/mocha/ts-node/rimraf/chai/should/node-uuid 依赖与 .mocharc.yml、vite.config.ts、build/ 目录；scripts 改为 bun test / tsc --noEmit；tslint 保留现状</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.3-AC1" checked="true">npm run typecheck（tsc --noEmit）零错误</cdt:Criterion>
+                  <cdt:Criterion id="T1.3-AC2" checked="true">仓库不再含 vite/mocha/ts-node/rimraf 依赖与配置</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <cdt:Gate>
+              <cdt:Criterion>bun test 全量绿色，作为后续 phase 的回归基线</cdt:Criterion>
+            </cdt:Gate>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="7" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P2" name="core 与 converter 包拆分">
+            <Description>拆出无环部分的两个包，建立 workspace 跨包导入模式</Description>
+            <cdt:ContextFiles>
+              <cdt:File>lib/Model/index.ts</cdt:File>
+              <cdt:File>lib/Converter/KnConverter.ts</cdt:File>
+            </cdt:ContextFiles>
+            <SubNodes>
+              <Task id="T2.1" name="建立 workspace 根与 packages/core" status="DONE" priority="P0">
+                <Description>根 package.json 声明 workspaces；迁移 Model/Util/Algo/StateManagement/TaskQueue.ts 到 packages/core/lib，建包入口 index.ts；根 tsconfig paths 映射 kunun-*（bun 原生读取 tsconfig paths 解析跨包导入，无需 node_modules 软链）；TaskQueue 测试随包迁移；尚未迁移的根 lib 模块改用 kunun-core 导入；补充 tslib 依赖（原为已移除工具链的传递依赖）</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.1-AC1" checked="true">bun test 全量通过（252 pass / 0 fail）</cdt:Criterion>
+                  <cdt:Criterion id="T2.1-AC2" checked="true">tsc --noEmit 通过</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.2" name="拆出 packages/converter" status="DONE" priority="P0">
+                <Description>迁移 lib/Converter 到 packages/converter/lib，依赖 kunun-core（workspace:*）；Parser/Formatter/KonParserSyntax/LowCodeParser/StringLiteralSyntax 测试随包迁移到 packages/converter/__tests__/Case，资源文件 Resource/Parser、Resource/LowCode 随迁，BASE_DIR 改为 __dirname 基准</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.2-AC1" checked="true">converter 包测试在包目录内 bun test 通过（59 pass）</cdt:Criterion>
+                  <cdt:Criterion id="T2.2-AC2" checked="true">根目录 bun test 全量通过（252 pass / 0 fail）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <cdt:Gate>
+              <cdt:Criterion>core 不依赖任何子包；converter 仅依赖 core（package.json 与 import 双重核对）</cdt:Criterion>
+            </cdt:Gate>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="7" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P3" name="TypeSystemBridge 解环与 runtime/type-system 拆分">
+            <Description>消除 runtime→TypeSystem 静态依赖，拆出两个包，包依赖图无环</Description>
+            <cdt:ContextFiles>
+              <cdt:File>lib/RuntimeInterpreter/RuntimeInterpreter.ts</cdt:File>
+              <cdt:File>lib/TypeSystem/index.ts</cdt:File>
+            </cdt:ContextFiles>
+            <SubNodes>
+              <Task id="T3.1" name="编写 bridge 行为测试（红色阶段）" status="DONE" priority="P0">
+                <Description>新增 TypeSystemBridge.test.ts（4 用例）：未注册 bridge 时 untyped 脚本行为不变、typed 入口（EvaluateTypedBlockSync/TypeCheckSource）抛出含注册指引的错误、mock bridge 注册后 opt-in 检查经 bridge 分派、bridge 诊断失败抛 RuntimeTypeCheckError；先于实现编写并确认失败</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.1-AC1" checked="true">新测试在重构前按预期失败（红色，导出不存在 1 fail/1 error）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.2" name="runtime 侧定义 TypeSystemBridge 并重构接入点" status="DONE" priority="P0">
+                <Description>新增 TypeSystemBridge.ts（TypeSystemBridge/TypeCheckingResultLike/TypedRuntimeBindingLike 接口 + Register/Clear/Get/Require）；RuntimeInterpreter.ts 移除 TypeSystem import，TypeCheckSource/BindSource/IsTypedObject 改走 bridge（InstantiateTypedPrototypeDirect 走 runtime.typedRuntimeContext 无需桥，仅返回类型放宽为 any）；TypeSystem 侧新增 RuntimeTypeSystemBridge.ts 实现 registerTypeSystemBridge()，TypeSystem index 导入即自动注册</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.2-AC1" checked="true">grep 确认 RuntimeInterpreter 模块无 TypeSystem 导入</cdt:Criterion>
+                  <cdt:Criterion id="T3.2-AC2" checked="true">T3.1 新测试（4 pass）与既有全量测试通过（256 pass / 0 fail）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.3" name="拆出 packages/runtime" status="DONE" priority="P0">
+                <Description>迁移 RuntimeInterpreter/HostSupport 到 packages/runtime/lib（git mv 保留历史；HostSupport 实测无任何消费方，为遗留代码，随包保留），依赖 kunun-core、kunun-converter、depa-actor（depa-actor 声明从根移至 runtime 包）；RuntimeInterpreter* 测试与 Resource/RuntimeInterpreter 随包迁移，全部 CWD 相对资源路径改为 __dirname 基准</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.3-AC1" checked="true">runtime 包 package.json 无 type-system 依赖</cdt:Criterion>
+                  <cdt:Criterion id="T3.3-AC2" checked="true">根目录 bun test 全量通过（256 pass），runtime 包内 128 pass</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.4" name="拆出 packages/type-system 与 bridge 实现" status="DONE" priority="P0">
+                <Description>迁移 TypeSystem 到 packages/type-system/lib（untracked 内容用普通 mv）；RuntimeTypeSystemBridge 与 registerTypeSystemBridge() 随包迁移并在包 index 自动注册；TypeSystem* 测试与 Resource/TypeSystem 随包迁移；根 lib/ 与根 __tests__/ 删除；根 package.json 清理为纯 workspace 根</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.4-AC1" checked="true">根 lib/ 与根 __tests__/ 不再存在</cdt:Criterion>
+                  <cdt:Criterion id="T3.4-AC2" checked="true">根目录 bun test 全量通过（256 pass）、tsc --noEmit 通过；type-system 包内 68 pass</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <cdt:Gate>
+              <cdt:Criterion>包依赖图无环：core ← converter ← runtime ← type-system</cdt:Criterion>
+            </cdt:Gate>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="7" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P4" name="总包与构建产物">
+            <Description>总包保持原公共 API 并自动注册 bridge，dist 产物可用</Description>
+            <SubNodes>
+              <Task id="T4.1" name="创建 packages/kunun 总包" status="DONE" priority="P0">
+                <Description>packages/kunun（包名 kunun）re-export 四个子包（kunun-type-system 的 index 导入即自动注册 bridge）；PublicApi.test.ts 以 P1 捕获的 100 个基线符号逐一断言 API 面，并验证导入即 typed 可用与 untyped 不变</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T4.1-AC1" checked="true">原导出清单（100 符号基线）全部可从 kunun 总包导入</cdt:Criterion>
+                  <cdt:Criterion id="T4.1-AC2" checked="true">仅导入总包即可运行 typed 集成用例（全量 259 pass / 0 fail）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T4.2" name="bun build 产出 dist（ESM+CJS）" status="DONE" priority="P1">
+                <Description>总包 scripts.dist 用 bun build 产出 dist/index.mjs（ESM）与 dist/index.cjs（CJS），95 模块全量打包（含 depa-actor，与原 vite 行为一致）；package.json exports 配置 types/require/import 三入口；根 scripts 增加 dist；删除根目录旧 vite dist 产物</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T4.2-AC1" checked="true">dist 产物 node require（CJS）与 import（ESM）冒烟通过，untyped 与 typed 路径均正常</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <cdt:Gate>
+              <cdt:Criterion>消费方视角：更新依赖名后导入代码无需修改即可使用</cdt:Criterion>
+            </cdt:Gate>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="7" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P5" name="验证收敛与文档">
+            <Description>全仓验证、技术栈记录与开发指引更新</Description>
+            <SubNodes>
+              <Task id="T5.1" name="全量验证与依赖方向审计" status="DONE" priority="P0">
+                <Description>根目录 bun test 全量、tsc --noEmit、grep 审计跨包导入合规（无相对路径穿透、runtime 无 type-system 导入，仅注释/错误提示文本提及）；与基线用例数核对（259 = 基线 252 + bridge 4 + 总包 API 3）</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T5.1-AC1" checked="true">用例数不少于 234 且全部通过（259 pass / 0 fail）</cdt:Criterion>
+                  <cdt:Criterion id="T5.1-AC2" checked="true">依赖方向审计零违例（core∅ ← converter ← runtime(+depa-actor) ← type-system ← kunun 总包）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T5.2" name="技术栈记录与文档更新" status="DONE" priority="P1">
+                <Description>更新 codument/attractors/project.md 记录 bun workspaces 技术栈与包边界约定；更新 README（workspace 布局说明 + bun 开发指引，替换 ts-node/mocha 旧指引）；launch.json 适配在 track 完成报告中提示用户</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T5.2-AC1" checked="true">attractors 与 README 已更新</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <cdt:Gate>
+              <cdt:Criterion>codument validate --strict 通过（CLI 缺失时明确声明跳过）</cdt:Criterion>
+            </cdt:Gate>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="7" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

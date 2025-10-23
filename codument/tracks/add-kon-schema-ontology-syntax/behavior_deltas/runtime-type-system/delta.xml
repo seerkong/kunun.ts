@@ -1,0 +1,53 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/kon-schema-ontology-syntax">
+    <requirement id="kon-schema-ontology-syntax">
+      <statement>The type system SHALL expose the schema/ontology kernel through idiomatic Kon declaration syntax.</statement>
+      <suite id="declaration-binding" name="Declaration Binding">
+        <case id="bind-branded-scalar">
+          <given>A Kon source declares `(scalar #Id :{ repr = String })`</given>
+          <when>The type binder processes the source</when>
+          <then>The binder SHALL register `Id` as a branded scalar represented by `String`</then>
+        </case>
+        <case id="bind-mixin-and-schema-type">
+          <given>A Kon source declares a `mixin` and a `schema` using parent and mixins</given>
+          <when>The type binder processes the source</when>
+          <then>The binder SHALL register schema symbols whose effective rows include ancestor, mixin, and self members</then>
+        </case>
+        <case id="bind-relation">
+          <given>A Kon source declares `(relation #works_in :{ from = Server to = Department directed = true })`</given>
+          <when>The type binder processes the source</when>
+          <then>The binder SHALL register a directed relation with schema-typed endpoints</then>
+        </case>
+      </suite>
+      <suite id="alias-syntax" name="Alias Syntax">
+        <case id="same-level-alias-declarations">
+          <given>A Kon source declares `(schema #Machine :{ alias_of = Server })`, `(relation #member_of :{ alias_of = works_in })`, and `(attr #host :{ alias_of = Server.hostname })`</given>
+          <when>The type binder processes the source</when>
+          <then>The binder SHALL register schema, relation, and scoped attribute aliases from same-level declarations</then>
+        </case>
+        <case id="reject-nested-alias-declarations">
+          <given>A Kon source declares an alias inside a `schema` body</given>
+          <when>The type binder processes the source</when>
+          <then>The binder SHALL report that aliases must be same-level declarations</then>
+        </case>
+        <case id="detect-alias-cycle">
+          <given>Schema or relation aliases form a cycle</given>
+          <when>The binder registers aliases</when>
+          <then>The binder SHALL report a diagnostic instead of looping</then>
+        </case>
+      </suite>
+      <suite id="diagnostics" name="Diagnostics">
+        <case id="reject-missing-schema-target">
+          <given>A relation or alias `alias_of` target references an unknown schema type</given>
+          <when>The binder processes the declaration</when>
+          <then>The binder SHALL report a stable diagnostic code and continue processing remaining declarations</then>
+        </case>
+        <case id="keep-metadata-policy-outside-core-typing">
+          <given>Schema declarations carry attrs or metadata such as required, description, or storage hints</given>
+          <when>The binder registers schema symbols</when>
+          <then>The binder SHALL preserve metadata for annotation extraction without changing core row compatibility semantics</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

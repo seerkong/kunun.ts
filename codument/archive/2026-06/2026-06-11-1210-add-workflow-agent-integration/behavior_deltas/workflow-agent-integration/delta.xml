@@ -1,0 +1,40 @@
+<behavior-patch capability="workflow-agent-integration" version="1">
+  <upsert selector="behavior://workflow-agent-integration/requirements/portable-dependencies">
+    <requirement id="portable-dependencies">
+        <statement>仓库 SHALL 不含机器相关的绝对路径依赖；在全新 clone 的任意机器上 bun install 后，全量测试与 workflow CLI SHALL 可运行。</statement>
+        <suite id="portability" name="可移植性">
+          <case id="fresh-clone-install">
+            <given>不含本机特定路径的全新检出</given>
+            <when>bun install 并运行全量测试</when>
+            <then>SHALL 全部通过，无对 /Users 等绝对路径的解析</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workflow-agent-integration/requirements/agent-skill">
+    <requirement id="agent-skill">
+        <statement>项目 SHALL 提供 SKILL.md，使宿主 coding agent 能够：理解纯 Kon DSL 的 workflow 语法（ai_workflow/ai_phase/ai_log/ai_agent/ai_parallel/ai_pipeline、绑定、output_schema、retry/timeout）、编写新 workflow、并通过 CLI 启动运行与获取结果。</statement>
+        <suite id="skill" name="skill 教学">
+          <case id="skill-completeness">
+            <given>仅阅读 SKILL.md 的 agent</given>
+            <when>按其中示例编写并运行 workflow</when>
+            <then>示例 SHALL 与 examples/ 中可执行版本一致且可跑通</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workflow-agent-integration/requirements/example-workflows">
+    <requirement id="example-workflows">
+        <statement>examples/ SHALL 提供至少 5 个 .kon 示例 workflow（含 deep-research、fan-out-reduce、adversarial-verify、loop-until-dry、routing 模式），每个 SHALL 有 mock 适配器端到端测试保障可执行。</statement>
+        <suite id="examples" name="示例">
+          <case id="examples-executable">
+            <given>examples 目录下任一 .kon</given>
+            <when>以 mock 适配器经 CLI 运行</when>
+            <then>SHALL 正常完成并产出符合该模式的结果结构</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

@@ -1,0 +1,12 @@
+(fn #AddHandler :|resume val1 val2| :[
+  (:resume (val1 val2 :+))
+])
+(fn #MultiHandler :|resume val1 val2| :[
+  (:resume (val1 val2 :*))
+])
+(try :[
+  (perform #multi :|(perform #add :|1 2|) 2|)
+]
+  handle #add AddHandler
+  handle #multi MultiHandler
+)

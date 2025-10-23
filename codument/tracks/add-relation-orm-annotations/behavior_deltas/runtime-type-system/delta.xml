@@ -1,0 +1,65 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/relation-orm-annotations">
+    <requirement id="relation-orm-annotations">
+      <statement>The project SHALL support ORM implementation metadata for relation declarations through Kunun prefix annotations without changing core type compatibility.</statement>
+      <suite id="prefix-annotation-syntax" name="Prefix Annotation Syntax">
+        <case id="parse-orm-relation-prefix">
+          <given>A source declares `#(orm #relation :{ ... })` immediately before `(relation #B_to_A :{ from = B to = A })`</given>
+          <when>The source is parsed and annotation extraction runs</when>
+          <then>The ORM marker SHALL be associated with the relation Knot as a pre modifier annotation</then>
+        </case>
+        <case id="preserve-core-relation-semantics">
+          <given>A relation declaration has an ORM prefix annotation</given>
+          <when>The type binder processes the source</when>
+          <then>The binder SHALL still register the relation using only core relation endpoint semantics</then>
+          <and>The ORM metadata SHALL NOT affect row compatibility or schema subtype checks</and>
+        </case>
+      </suite>
+      <suite id="orm-profile" name="ORM Relation Profile">
+        <case id="parse-endpoints">
+          <given>An ORM relation annotation contains `from = { field = relation_b2 keys = [_b2] }` and `to = { field = rev__B__relation_b2 keys = [_id] }`</given>
+          <when>The ORM relation annotation profile parses the marker</when>
+          <then>The profile SHALL expose normalized endpoint descriptors with field names, join keys, visibility, and foreign-key placement</then>
+        </case>
+        <case id="parse-depa-orm-relation-fields">
+          <given>An ORM relation annotation contains relation type and endpoint display names</given>
+          <when>The ORM relation annotation profile parses the marker</when>
+          <then>The profile SHALL expose depa-orm-compatible relation type and endpoint field-name metadata</then>
+        </case>
+        <case id="parse-through-path">
+          <given>An ORM relation annotation contains `through = [ (through #Entity :{ from_keys = [...] to_keys = [...] }) ]`</given>
+          <when>The ORM relation annotation profile parses the marker</when>
+          <then>The profile SHALL preserve ordered through path segments and their constraints</then>
+        </case>
+        <case id="parse-write-behavior">
+          <given>An ORM relation annotation contains `write = { cascade_delete = delete }`</given>
+          <when>The ORM relation annotation profile parses the marker</when>
+          <then>The profile SHALL expose write behavior separately from core relation typing</then>
+        </case>
+      </suite>
+      <suite id="depa-orm-migration" name="depa-orm Migration">
+        <case id="map-relationship-definition">
+          <given>A depa-orm `RelationshipDefinition` uses origin/target entities, field keys, join keys, relationship type, visibility, and cascade delete</given>
+          <when>The definition is migrated to Kunun</when>
+          <then>The migration SHALL produce one `(relation ...)` declaration plus one prefix `#(orm #relation :{ ... })` annotation</then>
+        </case>
+        <case id="keep-through-equivalence">
+          <given>A depa-orm relation uses `RelationPathThrough[]` for many-to-many or multi-hop joins</given>
+          <when>The definition is migrated to Kunun</when>
+          <then>The migration SHALL preserve the through path order, join keys, foreign-key flags, and constraints</then>
+        </case>
+        <case id="preserve-field-definition-metadata">
+          <given>A Kunun schema field carries attrs, metadata, and prefix annotations needed by depa-orm FieldDefinition</given>
+          <when>The type binder creates row members</when>
+          <then>The row member SHALL preserve field-level metadata for downstream ORM definition generation</then>
+        </case>
+        <case id="map-business-field-types-without-core-scalars">
+          <given>A Kunun schema field declares a core type such as `!String` and has `#(domain #field :{ ... })` plus `#(orm #field :{ ... })` prefix annotations</given>
+          <when>The annotation profiles parse the field Knot or bound row member</when>
+          <then>The profiles SHALL expose business type and ORM scalar mapping descriptors</then>
+          <and>The core type registry SHALL NOT need to register those business scalar names as language built-ins</and>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

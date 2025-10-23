@@ -1,0 +1,15 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/type-system-domain-integration-verification">
+    <requirement id="type-system-domain-integration-verification">
+      <statement>The project SHALL verify enum/value, annotation metadata, and schema kernel changes against focused tests while preserving existing row behavior.</statement>
+      <suite id="verification" name="Verification">
+        <case id="typecheck-and-targeted-tests">
+          <given>The implementation is present</given>
+          <when>The project runs typecheck and targeted type-system tests</when>
+          <then>The checks SHALL pass for the implemented mission scope</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>
+

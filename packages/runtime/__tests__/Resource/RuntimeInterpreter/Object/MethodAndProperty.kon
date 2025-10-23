@@ -1,0 +1,9 @@
+(class #Greeter
+  :[
+    (field #name)
+    (new |greetName| :[ (set self.:name greetName) ])
+    (method #greet |-> String| :[ (self.:name) ])
+    (prop #label get :[ (self ~greet) ])
+  ])
+(var greeter (Greeter ~new "Alice"))
+(greeter.:label)

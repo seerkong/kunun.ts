@@ -1,0 +1,106 @@
+<Track id="add-workflow-host-runtime" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>基于 Track A 的 yield/resume API 实现完整宿主运行时，以 checkpoint 续跑（durable execution）为核心特性</Goal>
+    <Description>基于 Track A 的 yield/resume API 实现完整宿主运行时，以 checkpoint 续跑（durable execution）为核心特性</Description>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-06-10T20:35:44Z</CreatedAt>
+    <UpdatedAt>2026-06-11T02:05:00Z</UpdatedAt>
+    <cdt:Type>feature</cdt:Type>
+    <cdt:Risks>
+      <cdt:Risk id="R1" name="bun 子进程语义差异" level="medium">
+      <impact>中</impact>
+      <probability>中</probability>
+      <mitigation>runner 抽象隔离，mock 适配器为主测试面</mitigation>
+      </cdt:Risk>
+    </cdt:Risks>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="docs" domain="doc" path="vfs://@/docs/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_add-workflow-host-runtime" name="add-workflow-host-runtime" version="1">
+    <Description>基于 Track A 的 yield/resume API 实现完整宿主运行时，以 checkpoint 续跑（durable execution）为核心特性</Description>
+    <SubNodes>
+      
+          <TaskGroup status="DONE" id="P1" name="包骨架与 driver loop">
+            <Description>executeRun 用 mock 适配器端到端驱动 .kon workflow 至完成</Description>
+            <SubNodes>
+              <Task id="T1.1" name="包骨架与 RunStore（TDD）" status="DONE" priority="P0">
+                <Description>packages/workflow-host 建包；RunStore 目录布局与原子写测试先行</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.1-AC1" checked="true">原子写并发读用例通过（RunStore 6 用例：meta/status 原子写/events JSONL/checkpoint 与 job 结果/最终 result-error/列表）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T1.2" name="driver loop（TDD）" status="DONE" priority="P0">
+                <Description>run-until-yield→checkpoint 落盘→分派→注入→resume 循环；mock 适配器端到端跑通单 agent 与 parallel workflow</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T1.2-AC1" checked="true">端到端用例通过（Driver 4 用例：单 agent/parallel 聚合/args 注入/失败路径）且 run 目录产物齐全</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <cdt:Gate>
+              <cdt:Criterion>checkpoint 先于分派落盘（用例断言文件存在时序）</cdt:Criterion>
+            </cdt:Gate>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P2" name="适配器层与 schema bridge">
+            <Description>配置驱动适配器 + output_schema 校验纠错重试</Description>
+            <SubNodes>
+              <Task id="T2.1" name="适配器层（TDD）" status="DONE" priority="P0">
+                <Description>config 加载/占位符展开/子进程 runner；自定义适配器仅配置即可用；未映射选项记录事件</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.1-AC1" checked="true">配置驱动用例通过（自定义适配器仅配置即用、内置适配器合并保留、{prompt} stdin 与 {prompt_file} 临时文件展开）</cdt:Criterion>
+                  <cdt:Criterion id="T2.1-AC2" checked="true">无原生映射的调用选项（如适配器无 flags.model 时的 model）发 option_unmapped 事件而非静默丢弃（gap-loop round 1 补齐）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T2.2" name="schema bridge（TDD）" status="DONE" priority="P0">
+                <Description>三层 JSON 候选提取 + 校验 + 带错误反馈的纠正重试；retry/timeout metadata 消费</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T2.2-AC1" checked="true">retry-with-feedback 通过（纠正提示含具体校验错误、二次合格被接受）；耗尽重试抛 SchemaValidationFailed；进程级 retry metadata 消费（agent_retry 事件）</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P3" name="durable 控制：调度器、pause/resume/stop、崩溃续跑">
+            <Description>并发上限、控制信号与 crash-resume 语义</Description>
+            <SubNodes>
+              <Task id="T3.1" name="调度器（TDD）" status="DONE" priority="P0">
+                <Description>异步信号量 + maxAgents + budget 钩子；并发探针用例</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.1-AC1" checked="true">并发探针峰值≤上限且 12/12 完成；maxAgents 兜底抛 AgentLimitExceeded；budget 钩子留桩</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T3.2" name="控制信号与崩溃续跑（TDD）" status="DONE" priority="P0">
+                <Description>control.json pause/resume/stop；kill 后从 checkpoint+已完成结果续跑不重复工作</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T3.2-AC1" checked="true">pause/stop 在 yield 边界生效；中断续跑只补跑缺失 job（事件证明已完成 job 不重派）且最终结果与不中断一致</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+          </TaskGroup>
+      
+          <TaskGroup status="DONE" id="P4" name="CLI 与收敛">
+            <Description>CLI 七命令；全量验证与文档</Description>
+            <SubNodes>
+              <Task id="T4.1" name="CLI（TDD）" status="DONE" priority="P0">
+                <Description>run/status/logs/result/pause/resume/stop；--args/--wait；bin 注册</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T4.1-AC1" checked="true">CLI 集成用例通过（run --wait/status/logs/result/list/pause+resume --wait/后台 detached worker 轮询至 done）；bin kwf 注册</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+              <Task id="T4.2" name="全量验证与回写" status="DONE" priority="P0">
+                <Description>bun test 全量、tsc；attractors 技术栈补记；实现期决策回写</Description>
+                <cdt:Acceptance>
+                  <cdt:Criterion id="T4.2-AC1" checked="true">全量 300 pass / 0 fail（workflow-host 27 用例）、tsc 零错误、validate --strict 通过；attractors 与 decisions 已回写</cdt:Criterion>
+                </cdt:Acceptance>
+              </Task>
+            </SubNodes>
+            <Hooks><Hook on="phase:after"><cdt:GapLoop max-rounds="2" on-exhausted="block"/></Hook></Hooks>
+          </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule />
+</Track>

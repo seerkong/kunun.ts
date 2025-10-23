@@ -1,0 +1,88 @@
+<behavior-patch capability="parser-syntax" version="1">
+  <upsert selector="behavior://parser-syntax/requirements/three-profile-syntax">
+    <requirement id="three-profile-syntax">
+        <statement>The converter SHALL expose three syntax profiles named Knl, Kon, and Kjson with distinct map/vector/knot container styles and profile-specific separator rules.</statement>
+        <suite id="profile-containers" name="Profile container forms">
+          <case id="knl-containers">
+            <given>The Knl parser profile is selected</given>
+            <when>The parser reads map, vector, and knot values</when>
+            <then>The parser SHALL treat parentheses as maps, curly braces as vectors, and square brackets as knots.</then>
+          </case>
+          <case id="kon-containers">
+            <given>The Kon parser profile is selected</given>
+            <when>The parser reads map, vector, and knot values</when>
+            <then>The parser SHALL treat curly braces as maps, square brackets as vectors, and parentheses as knots.</then>
+          </case>
+          <case id="kjson-containers">
+            <given>The Kjson parser profile is selected</given>
+            <when>The parser reads map, vector, and knot values</when>
+            <then>The parser SHALL preserve the JSON-like curly-brace map and square-bracket vector style.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://parser-syntax/requirements/whitespace-separators">
+    <requirement id="whitespace-separators">
+        <statement>The Knl and Kon parser profiles SHALL use whitespace-only separation for array/vector and map entries and SHALL reject comma separators in these containers.</statement>
+        <suite id="separator-rules" name="Knl and Kon separator rules">
+          <case id="kon-rejects-array-comma">
+            <given>The Kon parser profile is selected</given>
+            <when>The parser reads an array containing comma-separated elements</when>
+            <then>The parser SHALL reject the input.</then>
+          </case>
+          <case id="knl-rejects-map-comma">
+            <given>The Knl parser profile is selected</given>
+            <when>The parser reads a map containing comma-separated entries</when>
+            <then>The parser SHALL reject the input.</then>
+          </case>
+          <case id="kjson-keeps-json-like-separators">
+            <given>The Kjson parser profile is selected</given>
+            <when>The parser reads JSON-like map or vector syntax</when>
+            <then>The parser SHALL keep accepting the profile's JSON-like separator behavior.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://parser-syntax/requirements/external-kon-parity">
+    <requirement id="external-kon-parity">
+        <statement>The Kon parser profile SHALL match the external Kon parser syntax for parser-level constructs, excluding interpreter behavior.</statement>
+        <suite id="kon-constructs" name="External Kon parser constructs">
+          <case id="container-subscript">
+            <given>The Kon parser profile is selected</given>
+            <when>The parser reads a chain containing the `::` token</when>
+            <then>The parser SHALL tokenize and parse `::` as a container subscript operation in line with the external parser implementation.</then>
+          </case>
+          <case id="source-qualified-name">
+            <given>The Kon parser profile is selected</given>
+            <when>The parser reads a word or chain name containing the `:::` token, such as `T1:::b` or `com.example.ClassA:::b`</when>
+            <then>The parser SHALL tokenize and parse `:::` as a source qualifier separator and preserve source and member name information for formatting.</then>
+          </case>
+          <case id="chain-metadata-and-body">
+            <given>The Kon parser profile is selected</given>
+            <when>The parser reads chain name, generic params, in/out table, conf, body, attributes, sections, and slots</when>
+            <then>The parser SHALL preserve equivalent AST information for formatting and downstream processing.</then>
+          </case>
+          <case id="quote-and-spread">
+            <given>The Kon parser profile is selected</given>
+            <when>The parser reads quasiquote, unquote, unquote-splice, unquote-map, or row-spread syntax</when>
+            <then>The parser SHALL create AST nodes that preserve the quote or spread kind and inner value.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://parser-syntax/requirements/external-doc-sync">
+    <requirement id="external-doc-sync">
+        <statement>The parser syntax baseline SHALL follow the external Kon documentation and implementation where `:::` is source qualification, `::` is container subscript, and `.:` is slot/static subscript.</statement>
+        <suite id="docs" name="External documentation correction">
+          <case id="external-baseline-recorded">
+            <given>The external project has implemented and documented `:::` source qualification</given>
+            <when>This TypeScript project synchronizes Kon parser syntax</when>
+            <then>The track SHALL use `:::` source qualification, `::` container subscript, and `.:` slot/static subscript as the synchronization baseline.</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

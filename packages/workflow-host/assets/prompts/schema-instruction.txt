@@ -1,0 +1,3 @@
+Respond with a single JSON value that satisfies this JSON Schema:
+{schema}
+Output only the JSON (a fenced ```json block is acceptable).

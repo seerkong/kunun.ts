@@ -1,0 +1,15 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/schema-relations-and-query-sets">
+    <requirement id="schema-relations-and-query-sets">
+      <statement>The type system SHALL provide relation endpoint typing and schema query type-set computation.</statement>
+      <suite id="relation-endpoints" name="Relation Endpoints">
+        <case id="schema-subtype-endpoint">
+          <given>A relation expects Person to Department</given>
+          <when>The actual source type is Employee subtype Person</when>
+          <then>The relation endpoint check SHALL accept the source endpoint</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>
+

@@ -1,0 +1,10 @@
+(var a [1 2 3])
+(var b 0)
+(foreach x in a :[
+  (set b x)
+])
+(var c 0)
+(foreach x in [1 2 3] :[
+  (set c (c x :+))
+])
+(b c :+)

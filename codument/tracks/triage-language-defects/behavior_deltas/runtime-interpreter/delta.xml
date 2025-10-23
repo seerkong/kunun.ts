@@ -1,0 +1,94 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <upsert selector="behavior://runtime-interpreter/requirements/prefix-logical-operator-correctness">
+    <requirement id="prefix-logical-operator-correctness">
+      <statement>Colon-prefixed logical operators `(:and a b)` / `(:or a b)` SHALL evaluate to the same boolean as the bare-prefix `(and a b)` / `(or a b)` and infix `(a b :and)` forms, or SHALL be rejected with a diagnostic. They SHALL NOT silently return an incorrect boolean.</statement>
+      <suite id="colon-prefix-logical" name="Colon-prefix logical evaluation">
+        <case id="colon-and-true">
+          <given>The expression `(:and true true)`</given>
+          <when>The runtime evaluates it</when>
+          <then>The result SHALL be `true` (currently returns `false`)</then>
+        </case>
+        <case id="colon-or-true">
+          <given>The expression `(:or false true)`</given>
+          <when>The runtime evaluates it</when>
+          <then>The result SHALL be `true` (currently returns `false`)</then>
+        </case>
+        <case id="bare-and-infix-stay-correct">
+          <given>The bare-prefix form `(and true false)` and infix form `(true false :and)`</given>
+          <when>The runtime evaluates them</when>
+          <then>They SHALL keep returning the already-correct `false` (regression guard)</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://runtime-interpreter/requirements/concat-variadic-correctness">
+    <requirement id="concat-variadic-correctness">
+      <statement>The host `Concat` function SHALL concatenate ALL of its arguments in order. With three or more arguments it SHALL NOT drop arguments and return only the last.</statement>
+      <suite id="concat-arity" name="Concat argument handling">
+        <case id="concat-two-args">
+          <given>The expression `(Concat "a" "b")`</given>
+          <when>The runtime evaluates it</when>
+          <then>The result SHALL be `"ab"` (already correct; regression guard)</then>
+        </case>
+        <case id="concat-three-args">
+          <given>The expression `(Concat "a" "b" "c")`</given>
+          <when>The runtime evaluates it</when>
+          <then>The result SHALL be `"abc"` (currently returns `"c"`)</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://runtime-interpreter/requirements/comparison-operator-safety">
+    <requirement id="comparison-operator-safety">
+      <statement>Numeric ordering comparisons SHALL terminate and fail consistently: a `&lt;` / `&gt;` comparison SHALL NOT enter an infinite loop, and unsupported comparison forms SHALL raise a uniform diagnostic rather than one form hanging while another throws. The supported comparison surface (and the absence of `!=` / `not`) SHALL be explicit.</statement>
+      <suite id="ordering-operators" name="Ordering operator safety">
+        <case id="less-than-terminates">
+          <given>A `&lt;` ordering comparison is evaluated</given>
+          <when>The runtime processes it</when>
+          <then>Evaluation SHALL terminate (no infinite loop) and SHALL return a boolean or a clear diagnostic</then>
+        </case>
+        <case id="consistent-failure-mode">
+          <given>`&lt;` and `&gt;` are both used as comparisons</given>
+          <when>The runtime evaluates each</when>
+          <then>Their behavior SHALL be consistent — not one hanging in an infinite loop and the other throwing</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://runtime-interpreter/requirements/source-entrypoint-consistency">
+    <requirement id="source-entrypoint-consistency">
+      <statement>Top-level `$`-macro literals (`${...}`, `$[...]`, `$(...)`, `$&lt;...&gt;`) SHALL evaluate consistently across the block source entry point (`EvalBlockSourceSync`) and the single-node entry point (`ExecSync`). The block entry point SHALL NOT throw an internal "End of stream" error for a top-level `$`-macro literal that the node entry point evaluates successfully.</statement>
+      <suite id="dollar-macro-entrypoints" name="$-macro across entry points">
+        <case id="block-vs-node-dollar-map">
+          <given>The source `${a = 1 b = 2}` as a single top-level form</given>
+          <when>It is evaluated via `EvalBlockSourceSync` and via `ExecSync(Parse(...))`</when>
+          <then>Both SHALL succeed and agree (currently the block entry throws "End of stream" while the node entry returns the map)</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://runtime-interpreter/requirements/unknown-callable-diagnostic">
+    <requirement id="unknown-callable-diagnostic">
+      <statement>Invoking an unbound prefix word as a callable SHALL raise a clear unknown-callable / unbound diagnostic. The runtime SHALL NOT silently no-op or return an arbitrary operand when the head word resolves to nothing.</statement>
+      <suite id="unknown-prefix" name="Unknown prefix callable">
+        <case id="unknown-word-head">
+          <given>The expression `(totallyUnknownWord 1 2)` where the head word is unbound</given>
+          <when>The runtime evaluates it</when>
+          <then>The runtime SHALL raise an unbound / unknown-callable diagnostic rather than silently returning `2` (current observed behavior)</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://runtime-interpreter/requirements/unicode-escape-support">
+    <requirement id="unicode-escape-support">
+      <statement>Interpreted string `\uXXXX` Unicode escapes SHALL decode to the corresponding Unicode character, or the runtime SHALL clearly document them as unsupported. The runtime SHALL NOT silently drop the backslash and yield the literal text `uXXXX`.</statement>
+      <suite id="unicode-escape" name="Unicode escape decoding">
+        <case id="u-escape-decodes">
+          <given>A double-quoted interpreted string containing a backslash-u-0041 escape (the U+0041 code point for the letter A)</given>
+          <when>The runtime evaluates it</when>
+          <then>The result SHALL be the single character "A" (currently the backslash is dropped and it returns the literal text "u0041")</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

@@ -1,0 +1,3 @@
+(class #Empty :[ (new || :[]) ])
+(var obj (Empty ~new))
+obj

@@ -1,0 +1,15 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/branded-scalars">
+    <requirement id="branded-scalars">
+      <statement>The type system SHALL support branded scalar type symbols that are nominally distinct from their representation types.</statement>
+      <suite id="nominal-scalar" name="Nominal Scalar">
+        <case id="validity-not-string">
+          <given>A branded scalar uses String as representation</given>
+          <when>The checker compares it with String</when>
+          <then>The type system SHALL NOT treat the branded scalar as compatible with String by default</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>
+

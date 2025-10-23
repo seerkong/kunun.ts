@@ -1,0 +1,72 @@
+<Track id="add-kon-schema-ontology-syntax" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>Add idiomatic Kon declaration syntax for the existing schema/ontology type-system kernel.</Goal>
+    <Description>Expose branded scalars, schema mixins, schema types, relations, and aliases through Kon source declarations that lower to TypeSystem kernel APIs.</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>light</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-07-03T19:05:00+03:00</CreatedAt>
+    <UpdatedAt>2026-07-03T22:17:34+03:00</UpdatedAt>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="input" name="type-system-source" domain="repo" path="vfs://@/packages/type-system/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_add-kon-schema-ontology-syntax" name="add-kon-schema-ontology-syntax" version="1">
+    <Description>Add Kon declaration syntax for schema/ontology kernel APIs.</Description>
+    <SubNodes>
+      <TaskGroup id="P1" name="Syntax design and binder routing" status="DONE" order="0">
+        <Description>Finalize declaration forms and add binder branches.</Description>
+        <SubNodes>
+          <Task id="T1.1" name="Add top-level declaration routing" status="DONE" order="0" priority="P0">
+            <Description>Add scalar, mixin, schema, relation, and top-level attr declaration cases to KonTypeBinder, including `:{ alias_of = ... }` alias forms.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.1-AC1" checked="true">Unsupported declaration diagnostics remain stable for truly unsupported top-level forms.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="Implement declaration lowering" status="DONE" order="1" priority="P0">
+            <Description>Lower new Kon forms to existing TypeSystem schema/ontology APIs.</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.2-AC1" checked="true">`(attr #host :{ alias_of = Server.hostname })` maps host to canonical attribute hostname in Server scope.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+        </Hooks>
+      </TaskGroup>
+      <TaskGroup id="P2" name="Diagnostics and tests" status="DONE" order="1">
+        <Description>Add source-level tests and diagnostics for malformed declarations.</Description>
+        <SubNodes>
+          <Task id="T2.1" name="Add positive Kon syntax tests" status="DONE" order="0" priority="P0">
+            <Description>Cover scalar, mixin, schema, relation, and same-level `:{ alias_of = ... }` aliases from Kon source.</Description>
+          </Task>
+          <Task id="T2.2" name="Add negative diagnostics tests" status="DONE" order="1" priority="P0">
+            <Description>Cover unknown schema targets, alias cycles, malformed alias target, and duplicate declarations.</Description>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+        </Hooks>
+      </TaskGroup>
+      <TaskGroup id="P3" name="Verification and docs handoff" status="DONE" order="2">
+        <Description>Run targeted verification and update examples if needed.</Description>
+        <SubNodes>
+          <Task id="T3.1" name="Run typecheck and targeted tests" status="DONE" order="0" priority="P0">
+            <Description>Run `bun run typecheck` and schema/ontology syntax tests.</Description>
+          </Task>
+          <Task id="T3.2" name="Record user-facing syntax examples" status="DONE" order="1" priority="P1">
+            <Description>Ensure examples show same-level `:{ alias_of = ... }` syntax and explicitly reject nested alias forms.</Description>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+          <Hook on="phase:after"><cdt:GapLoop max-rounds="3" on-exhausted="block" verify-round="false"/></Hook>
+        </Hooks>
+      </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule/>
+</Track>

@@ -1,0 +1,101 @@
+<behavior-patch capability="workspace-packaging" version="1">
+  <upsert selector="behavior://workspace-packaging/requirements/bun-workspace-layout">
+    <requirement id="bun-workspace-layout">
+        <statement>项目 SHALL 采用 bun workspaces 多包布局：根 package.json 声明 "workspaces": ["packages/*"]，源码按依赖边界拆分为 packages/core（kunun-core：Model、Util、Algo、StateManagement、TaskQueue）、packages/converter（kunun-converter：解析器与格式化器）、packages/runtime（kunun-runtime：RuntimeInterpreter 与 HostSupport）、packages/type-system（kunun-type-system：TypeSystem）、packages/kunun（kunun：总包 re-export，由 @symtable/kunun 改名）。</statement>
+        <suite id="layout" name="工作区布局">
+          <case id="workspace-install">
+            <given>仓库根目录含 workspaces 配置且 5 个子包各有 package.json</given>
+            <when>执行 bun install</when>
+            <then>所有 workspace 包 SHALL 被链接，跨包导入可解析</then>
+          </case>
+          <case id="package-content">
+            <given>拆分完成的 packages 目录</given>
+            <when>检查各包 lib 目录</when>
+            <then>每个 lib 顶层模块 SHALL 恰好归属一个子包，根 lib/ 目录不再保留源码</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workspace-packaging/requirements/package-dependency-direction">
+    <requirement id="package-dependency-direction">
+        <statement>包依赖方向 SHALL 为有向无环：core 不依赖任何子包；converter 仅依赖 core；runtime 依赖 core、converter 与 depa-actor；type-system 依赖 core、converter、runtime；总包依赖全部子包。runtime SHALL NOT 静态 import type-system。depa-actor 依赖 SHALL 仅声明在 runtime 包。</statement>
+        <suite id="dependency-acyclic" name="依赖无环">
+          <case id="no-runtime-to-typesystem-import">
+            <given>拆分后的 packages/runtime 源码</given>
+            <when>grep 检查对 kunun-type-system 或 TypeSystem 相对路径的 import</when>
+            <then>结果 SHALL 为空</then>
+          </case>
+          <case id="package-json-deps-match">
+            <given>各子包 package.json</given>
+            <when>检查 dependencies 声明</when>
+            <then>声明 SHALL 与上述依赖方向一致，且使用 workspace: 协议</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workspace-packaging/requirements/runtime-type-bridge">
+    <requirement id="runtime-type-bridge">
+        <statement>runtime 包 SHALL 定义 TypeSystemBridge 钩子接口与注册 API，覆盖原 RuntimeInterpreter 对 TypeSystem 的全部使用面：源码类型检查（CheckSource）、源码绑定（BindSource）、typed object 判定（替代 instanceof KonTypedObject）、typed prototype 实例化；TypeCheckingResult 在 runtime 侧 SHALL 以结构化接口（structural type）声明。type-system 包 SHALL 提供该接口实现及注册函数；总包被导入时 SHALL 自动完成注册。未注册 bridge 时 runtime 默认 untyped 行为 SHALL 不变，opt-in 类型检查路径 SHALL 抛出明确错误提示需要注册 type-system。</statement>
+        <suite id="bridge-behavior" name="桥接行为">
+          <case id="untyped-default-unchanged">
+            <given>仅依赖 kunun-runtime 且未注册 bridge</given>
+            <when>执行普通 untyped 脚本</when>
+            <then>行为 SHALL 与拆分前一致，所有 runtime 回归测试通过</then>
+          </case>
+          <case id="typed-path-via-bridge">
+            <given>通过总包导入（bridge 已自动注册）</given>
+            <when>执行 opt-in 类型检查与 typed runtime 集成用例</when>
+            <then>全部 TypeSystem 集成测试 SHALL 通过，结果与拆分前一致</then>
+          </case>
+          <case id="missing-bridge-diagnostic">
+            <given>未注册 bridge 的裸 runtime</given>
+            <when>调用 opt-in 类型检查入口</when>
+            <then>SHALL 抛出含注册指引的明确错误，而非未定义行为</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workspace-packaging/requirements/umbrella-api-compat">
+    <requirement id="umbrella-api-compat">
+        <statement>总包 kunun SHALL re-export 拆分前 lib/index.ts 的全部公共 API（Model、NodeHelper、KnConverter、RuntimeInterpreter、TypeSystem 等），导出符号集合与拆分前一致；包名由 @symtable/kunun 变更为 kunun（BREAKING），消费方仅需更新依赖名。</statement>
+        <suite id="api-surface" name="API 面">
+          <case id="reexport-complete">
+            <given>拆分前 lib/index.ts 的导出清单</given>
+            <when>对比总包入口的导出</when>
+            <then>每个原导出符号 SHALL 在总包中可导入且指向等价实现</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+
+  <upsert selector="behavior://workspace-packaging/requirements/bun-toolchain">
+    <requirement id="bun-toolchain">
+        <statement>工具链 SHALL 全面迁移到 bun：bun test 执行全部测试（jest 风格全局 + node assert，移除 mocha/ts-node/.mocharc.yml）、bun build 产出总包 dist（ESM + CJS）、tsc --noEmit 做全仓类型检查（根 tsconfig paths 映射 kunun-* 到 packages/*/lib）、移除 vite/rimraf 依赖与配置。测试文件 SHALL 按归属移入对应子包，用例总数与通过率 SHALL 不低于拆分前（234 个用例）。</statement>
+        <suite id="toolchain" name="工具链验证">
+          <case id="bun-test-all-pass">
+            <given>测试已按包归属迁移</given>
+            <when>在仓库根执行 bun test</when>
+            <then>SHALL 发现并通过全部不少于 234 个用例</then>
+          </case>
+          <case id="typecheck-pass">
+            <given>根 tsconfig 配置完成</given>
+            <when>执行 tsc --noEmit</when>
+            <then>SHALL 零错误通过</then>
+          </case>
+          <case id="dist-build">
+            <given>总包构建配置完成</given>
+            <when>执行根目录 dist 构建脚本</when>
+            <then>SHALL 产出可被 import（ESM）与 require（CJS）的总包产物</then>
+          </case>
+          <case id="legacy-tooling-removed">
+            <given>迁移完成后的仓库</given>
+            <when>检查依赖与配置文件</when>
+            <then>vite、mocha、ts-node、rimraf 及其配置文件 SHALL 不再存在</then>
+          </case>
+        </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

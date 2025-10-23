@@ -1,0 +1,19 @@
+<Track id="add-type-system-relations-and-query-sets" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>Add schema relation endpoint checks and query type-set APIs.</Goal>
+    <Description>Implemented RelationTypeSymbol, endpoint compatibility, and exact/polymorphic schema type-set APIs.</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>auto</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-07-01T17:11:58Z</CreatedAt>
+    <UpdatedAt>2026-07-01T17:11:58Z</UpdatedAt>
+  </Metadata>
+  <TaskSpace id="space_add-type-system-relations-and-query-sets" name="add-type-system-relations-and-query-sets" version="1">
+    <SubNodes>
+      <TaskGroup id="P1" name="Relations and query sets implementation" status="DONE" order="0"/>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule/>
+</Track>
+

@@ -1,0 +1,200 @@
+<behaviors capability="workflow-host-runtime" version="1">
+  <requirement id="durable-driver-loop">
+    <statement>宿主运行时 SHALL 以 run-until-yield → checkpoint 落盘 → 分派 pendingJobs → 注入结果 → resume 的循环驱动 .kon workflow 至完成；每个 yield 边界的 checkpoint SHALL 先于 job 分派持久化，使进程在任意 job 执行期间崩溃或被停止后，能从最近 checkpoint 与已完成 job 结果续跑而不重复已完成的工作。</statement>
+    <suite id="durability" name="持久执行">
+      <case id="crash-resume">
+        <given>workflow 在第二个 yield 边界后、job 完成前进程被终止</given>
+        <when>对同一 runId 执行 resume</when>
+        <then>SHALL 从落盘 checkpoint 续跑，第一个 yield 的已完成结果不重复执行</then>
+      </case>
+      <case id="pause-resume">
+        <given>运行中的 workflow 收到 pause 控制信号</given>
+        <when>稍后 resume</when>
+        <then>SHALL 在 yield 边界暂停并从相同位置继续，最终结果与不暂停一致</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="agent-adapter-layer">
+    <statement>agent 调用 SHALL 经配置驱动的适配器层执行：适配器以命令模板（含 {workspace}、{prompt} 或 {prompt_file}、可选 {model} 占位符）描述 CLI 子进程调用；新增适配器 SHALL 仅需配置而无需改代码；无原生映射的调用选项 SHALL 记录事件而非静默丢弃。</statement>
+    <suite id="adapters" name="适配器">
+      <case id="config-driven">
+        <given>配置文件声明自定义适配器命令模板</given>
+        <when>ai_agent job 指定该适配器</when>
+        <then>SHALL 以展开后的命令启动子进程并以 stdout 作为结果</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="schema-validation-retry">
+    <statement>带 output_schema 的 job 结果 SHALL 经多层候选提取（fenced block、balanced span、整体）解析 JSON 并按 schema 校验；校验失败 SHALL 以包含具体错误的纠正提示重试（次数可配），全部失败抛出 schema 校验错误。</statement>
+    <suite id="schema" name="schema 校验">
+      <case id="retry-with-feedback">
+        <given>agent 首次返回不符合 schema 的 JSON</given>
+        <when>bridge 重试</when>
+        <then>重试 prompt SHALL 含具体校验错误，二次合格结果被接受</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="file-run-store">
+    <statement>每次运行 SHALL 拥有文件化 run 目录（meta.json、status.json、events.jsonl、checkpoint.json、result.json/error.json、control.json、worker.log），状态文件 SHALL 原子写入（temp+rename）；CLI 与 worker 进程 SHALL 仅经该目录通信（无 daemon/socket）。</statement>
+    <suite id="store" name="run 目录">
+      <case id="atomic-status">
+        <given>worker 正在更新 status.json</given>
+        <when>CLI 并发读取</when>
+        <then>SHALL 读到完整旧值或完整新值，不出现半写状态</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="scheduler-and-cli">
+    <statement>job 分派 SHALL 经异步信号量调度（并发上限默认 min(16, CPU-2)，可配）并受 maxAgents 总量兜底约束，预留 budget 钩子；CLI SHALL 提供 run、status、logs、result、pause、resume、stop 命令。</statement>
+    <suite id="cli" name="调度与命令">
+      <case id="concurrency-cap">
+        <given>ai_parallel 产生超过并发上限的 job</given>
+        <when>driver 分派</when>
+        <then>同时运行的子进程 SHALL 不超过上限，全部 job 最终完成</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="mcp-server">
+    <statement>kwf SHALL 提供 `kwf mcp stdio` 子命令启动 stdio transport 的 MCP server；全部 workflow 操作（运行、状态、事件、结果、pause/resume/stop、列表、示例与 skill 获取）SHALL 以 `kwf_` 前缀 tools 暴露，tools 与 CLI 子命令 SHALL 共享同一 Backend 业务层（无重复实现）；stdio 模式下 stdout SHALL 仅承载 JSON-RPC，诊断信息仅写 stderr。</statement>
+    <suite id="mcp" name="MCP server">
+      <case id="handshake-and-tool-list">
+        <given>以 mcp stdio 启动的 kwf 进程</given>
+        <when>客户端发送 initialize 并请求 tools/list</when>
+        <then>SHALL 返回含全部 kwf_ tools 的列表且 stdout 无协议外输出</then>
+      </case>
+      <case id="run-via-tool">
+        <given>已连接的 MCP 客户端与 mock 适配器配置</given>
+        <when>调用 kwf_run_workflow（wait=true）后调用 kwf_run_result</when>
+        <then>workflow SHALL 完成且结果与 CLI 运行同一 workflow 一致</then>
+      </case>
+      <case id="shared-backend">
+        <given>CLI 子命令与对应 MCP tool</given>
+        <when>审查实现</when>
+        <then>二者 SHALL 调用同一 Backend 方法（代码级单一来源）</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="embedded-assets-binary">
+    <statement>提示词模板、SKILL 文档、示例 .kon、配置样例等文本资产 SHALL 在代码仓库中保持独立文本文件，经 bunfs（import ... with type:&quot;file&quot;）于编译期嵌入单可执行文件，运行时统一经资产加载层读取（开发态与编译态同一 API）；`bun build --compile` SHALL 产出自包含 kwf 二进制：能运行示例 workflow 至完成、启动 MCP server、并在无仓库检出的目录下输出内嵌示例与 skill 文本；detached worker 重入 SHALL 在编译态正确工作。</statement>
+    <suite id="binary" name="单可执行与内嵌资产">
+      <case id="assets-are-files">
+        <given>仓库源码</given>
+        <when>检查提示词与示例资产</when>
+        <then>SHALL 为独立文本文件而非源码内字符串字面量（schema 纠错提示词等）</then>
+      </case>
+      <case id="compiled-smoke">
+        <given>bun build --compile 产出的 kwf 二进制与空白工作目录</given>
+        <when>执行 examples 列表/导出、运行导出的示例（mock 适配器）、mcp stdio 握手</when>
+        <then>SHALL 全部成功且不依赖仓库源码路径</then>
+      </case>
+      <case id="dev-parity">
+        <given>未编译的 bun 源码运行方式</given>
+        <when>调用同一资产加载层</when>
+        <then>行为 SHALL 与编译态一致（同一 API，无条件分支泄漏到调用方）</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="workflow-validation">
+    <statement>kwf SHALL provide a validation capability that parses a Kon workflow, enables the workflow DSL, and executes it until the first yield boundary or completion without dispatching any agent adapter subprocess; the capability SHALL be available through both the CLI (`kwf validate`) and MCP (`kwf_validate_workflow`) using the same WorkflowBackend method.</statement>
+    <suite id="validation" name="workflow validation">
+      <case id="valid-yield-summary">
+        <given>a syntactically valid workflow whose first boundary is an ai_parallel yield</given>
+        <when>the user runs `kwf validate workflow.kon --json`</when>
+        <then>the command SHALL exit successfully and return a JSON result with ok=true, status=yielded, effect name, job count, and per-job summaries</then>
+        <then>no agent adapter subprocess SHALL be spawned</then>
+      </case>
+      <case id="invalid-diagnostic">
+        <given>a workflow source with invalid Kon syntax or invalid workflow DSL structure</given>
+        <when>the user runs `kwf validate workflow.kon --json` or calls `kwf_validate_workflow`</when>
+        <then>the result SHALL contain ok=false with at least one structured diagnostic and the CLI SHALL exit non-zero</then>
+      </case>
+      <case id="mcp-inline-source">
+        <given>an MCP client has generated a workflow source string without writing a file</given>
+        <when>it calls `kwf_validate_workflow` with source and args</when>
+        <then>the tool SHALL validate the inline source and return the same result shape as the CLI JSON mode</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="workflow-dry-run">
+    <statement>kwf SHALL provide a dry-run capability that simulates workflow execution through repeated yield/resume cycles without dispatching any agent adapter subprocess; dry-run SHALL summarize each yield, inject deterministic mock job results, and stop at completion, failure, or a configurable max-yields limit. The capability SHALL be available through both CLI (`kwf dry-run`) and MCP (`kwf_dry_run_workflow`) using the same WorkflowBackend method.</statement>
+    <suite id="dry-run" name="workflow dry-run">
+      <case id="schema-shaped-mocks">
+        <given>a workflow whose later steps read fields from agent results declared via output_schema</given>
+        <when>the user dry-runs the workflow</when>
+        <then>mock job results SHALL be generated from the schema so downstream field reads can proceed</then>
+        <then>the result SHALL include all yield summaries and the final preview result when completion is reached</then>
+      </case>
+      <case id="max-yields-limit">
+        <given>a workflow that can yield more times than the configured max-yields</given>
+        <when>dry-run reaches the limit</when>
+        <then>it SHALL stop with ok=false and a diagnostic explaining that max-yields was reached</then>
+      </case>
+      <case id="prompt-redaction">
+        <given>a workflow produces agent jobs with prompts</given>
+        <when>validate or dry-run is called without showPrompts</when>
+        <then>job summaries SHALL include only truncated prompt previews, not full prompt text</then>
+        <then>when showPrompts is true, summaries MAY include full prompt text</then>
+      </case>
+      <case id="compiled-binary-and-mcp">
+        <given>the compiled kwf binary and stdio MCP server</given>
+        <when>validate and dry-run are invoked from the binary and from MCP tools</when>
+        <then>both surfaces SHALL behave consistently with source-mode CLI execution</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="embedded-language-manual">
+    <statement>The kwf asset layer SHALL embed the full language manual — every Markdown file under skill/reference/ and skill/dynamic-workflow/ — alongside the existing SKILL.md, examples, and config example. The manual SHALL be readable through the same asset API in both dev mode and a `bun build --compile` binary, so a compiled kwf used outside the repository can still serve the manual.</statement>
+    <suite id="manual-assets" name="Embedded manual assets">
+      <case id="manual-files-embedded">
+        <given>The kwf binary is built with bun compile</given>
+        <when>A caller lists or reads a manual document by its relative path</when>
+        <then>The asset layer SHALL return the document content from the embedded bunfs, identical to the repository source</then>
+      </case>
+      <case id="manual-index-available">
+        <given>The asset layer is initialized</given>
+        <when>A caller requests the manual index</when>
+        <then>The asset layer SHALL return the list of available document paths (reference and dynamic-workflow chapters plus their READMEs)</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="docs-cli-command">
+    <statement>The kwf CLI SHALL provide a `docs` subcommand exposing the embedded manual: `docs list` prints the document index, `docs show &lt;path&gt;` prints one document, and `docs search &lt;keyword&gt;` returns matching documents with locating context.</statement>
+    <suite id="docs-subcommand" name="kwf docs subcommand">
+      <case id="docs-list">
+        <given>The manual is embedded</given>
+        <when>A caller runs `kwf docs list`</when>
+        <then>The CLI SHALL print every available manual document path and exit 0</then>
+      </case>
+      <case id="docs-show">
+        <given>A valid manual path such as dynamic-workflow/02-dsl-reference.md</given>
+        <when>A caller runs `kwf docs show &lt;path&gt;`</when>
+        <then>The CLI SHALL print that document content; an unknown path SHALL produce a clear error and a non-zero exit</then>
+      </case>
+      <case id="docs-search">
+        <given>A keyword present in the manual</given>
+        <when>A caller runs `kwf docs search &lt;keyword&gt;`</when>
+        <then>The CLI SHALL return the matching document paths with enough context (matching line or snippet) to locate the answer</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="docs-mcp-tools">
+    <statement>The kwf MCP server SHALL expose the manual through tools `kwf_list_docs`, `kwf_get_doc`, and `kwf_search_docs`, sharing the same backend as the `docs` CLI subcommand so behavior is identical. This lets a host coding agent discover the index, fetch a chapter, and search the manual without filesystem access to the repository.</statement>
+    <suite id="docs-tools" name="Manual MCP tools">
+      <case id="list-docs-tool">
+        <given>The MCP server is running</given>
+        <when>A client calls kwf_list_docs</when>
+        <then>The tool SHALL return the manual index (document paths)</then>
+      </case>
+      <case id="get-doc-tool">
+        <given>The MCP server is running</given>
+        <when>A client calls kwf_get_doc with a document path</when>
+        <then>The tool SHALL return that document content, and SHALL set isError for an unknown path</then>
+      </case>
+      <case id="search-docs-tool">
+        <given>The MCP server is running</given>
+        <when>A client calls kwf_search_docs with a keyword</when>
+        <then>The tool SHALL return matching document paths with locating context, in the same shape as the CLI search output</then>
+      </case>
+    </suite>
+  </requirement>
+</behaviors>

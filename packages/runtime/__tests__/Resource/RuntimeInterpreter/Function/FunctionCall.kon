@@ -1,0 +1,5 @@
+(fn #addTwo :|value| :[
+  (value 2 :+)
+])
+(:addTwo 3)
+(5 :addTwo)

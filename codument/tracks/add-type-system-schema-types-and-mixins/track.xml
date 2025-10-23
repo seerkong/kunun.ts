@@ -1,0 +1,19 @@
+<Track id="add-type-system-schema-types-and-mixins" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>Add schema types, mixins, effective rows, and nominal schema subtype checks.</Goal>
+    <Description>Implemented SchemaTypeSymbol, SchemaMixinSymbol, effective row construction, and inherited value-type safety.</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>auto</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-07-01T17:11:58Z</CreatedAt>
+    <UpdatedAt>2026-07-01T17:11:58Z</UpdatedAt>
+  </Metadata>
+  <TaskSpace id="space_add-type-system-schema-types-and-mixins" name="add-type-system-schema-types-and-mixins" version="1">
+    <SubNodes>
+      <TaskGroup id="P1" name="Schema type and mixin implementation" status="DONE" order="0"/>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule/>
+</Track>
+

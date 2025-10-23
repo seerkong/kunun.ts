@@ -1,4 +1,25 @@
-/node_modules/
+.idea
+.agents
+.claude
+.codex
+.eidolon
+.sparrow
+.opencode
+.serena
+.gitnexus
+.tmp
+.theater
+.handoff
+.deepseek
+.github
+codument/tracks/*/analysis/
+codument/tracks/*/reports/
+codument/archive/*/analysis/
+codument/archive/*/reports/
+
+target/
+
+node_modules/
 /dist/
 package-lock.json
 # mac
@@ -6,3 +27,9 @@ package-lock.json
 
 # IDE config
 .idea
+dist-bin/
+
+# bun CompiledBinary test artifacts
+*.bun-build
+codument/**/analysis
+codument/**/reports

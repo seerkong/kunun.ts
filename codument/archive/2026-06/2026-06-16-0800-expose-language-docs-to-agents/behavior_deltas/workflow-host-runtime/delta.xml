@@ -1,0 +1,63 @@
+<behavior-patch capability="workflow-host-runtime" version="1">
+  <upsert selector="behavior://workflow-host-runtime/requirements/embedded-language-manual">
+    <requirement id="embedded-language-manual">
+      <statement>The kwf asset layer SHALL embed the full language manual — every Markdown file under skill/reference/ and skill/dynamic-workflow/ — alongside the existing SKILL.md, examples, and config example. The manual SHALL be readable through the same asset API in both dev mode and a `bun build --compile` binary, so a compiled kwf used outside the repository can still serve the manual.</statement>
+      <suite id="manual-assets" name="Embedded manual assets">
+        <case id="manual-files-embedded">
+          <given>The kwf binary is built with bun compile</given>
+          <when>A caller lists or reads a manual document by its relative path</when>
+          <then>The asset layer SHALL return the document content from the embedded bunfs, identical to the repository source</then>
+        </case>
+        <case id="manual-index-available">
+          <given>The asset layer is initialized</given>
+          <when>A caller requests the manual index</when>
+          <then>The asset layer SHALL return the list of available document paths (reference and dynamic-workflow chapters plus their READMEs)</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://workflow-host-runtime/requirements/docs-cli-command">
+    <requirement id="docs-cli-command">
+      <statement>The kwf CLI SHALL provide a `docs` subcommand exposing the embedded manual: `docs list` prints the document index, `docs show &lt;path&gt;` prints one document, and `docs search &lt;keyword&gt;` returns matching documents with locating context.</statement>
+      <suite id="docs-subcommand" name="kwf docs subcommand">
+        <case id="docs-list">
+          <given>The manual is embedded</given>
+          <when>A caller runs `kwf docs list`</when>
+          <then>The CLI SHALL print every available manual document path and exit 0</then>
+        </case>
+        <case id="docs-show">
+          <given>A valid manual path such as dynamic-workflow/02-dsl-reference.md</given>
+          <when>A caller runs `kwf docs show &lt;path&gt;`</when>
+          <then>The CLI SHALL print that document content; an unknown path SHALL produce a clear error and a non-zero exit</then>
+        </case>
+        <case id="docs-search">
+          <given>A keyword present in the manual</given>
+          <when>A caller runs `kwf docs search &lt;keyword&gt;`</when>
+          <then>The CLI SHALL return the matching document paths with enough context (matching line or snippet) to locate the answer</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://workflow-host-runtime/requirements/docs-mcp-tools">
+    <requirement id="docs-mcp-tools">
+      <statement>The kwf MCP server SHALL expose the manual through tools `kwf_list_docs`, `kwf_get_doc`, and `kwf_search_docs`, sharing the same backend as the `docs` CLI subcommand so behavior is identical. This lets a host coding agent discover the index, fetch a chapter, and search the manual without filesystem access to the repository.</statement>
+      <suite id="docs-tools" name="Manual MCP tools">
+        <case id="list-docs-tool">
+          <given>The MCP server is running</given>
+          <when>A client calls kwf_list_docs</when>
+          <then>The tool SHALL return the manual index (document paths)</then>
+        </case>
+        <case id="get-doc-tool">
+          <given>The MCP server is running</given>
+          <when>A client calls kwf_get_doc with a document path</when>
+          <then>The tool SHALL return that document content, and SHALL set isError for an unknown path</then>
+        </case>
+        <case id="search-docs-tool">
+          <given>The MCP server is running</given>
+          <when>A client calls kwf_search_docs with a keyword</when>
+          <then>The tool SHALL return matching document paths with locating context, in the same shape as the CLI search output</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

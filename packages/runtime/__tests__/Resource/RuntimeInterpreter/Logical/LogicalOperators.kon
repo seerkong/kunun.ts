@@ -1,0 +1,8 @@
+[
+  (true false :and)
+  (false true :or)
+  (null "fallback" :or_else)
+  ("value" "fallback" :or_else)
+  ((true false :and) true :or)
+  (false (true true :and) :and)
+]

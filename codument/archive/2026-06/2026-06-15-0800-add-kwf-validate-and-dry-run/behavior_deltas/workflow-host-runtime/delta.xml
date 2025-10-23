@@ -1,0 +1,54 @@
+<behavior-patch capability="workflow-host-runtime" version="1">
+  <upsert selector="behavior://workflow-host-runtime/requirements/workflow-validation">
+    <requirement id="workflow-validation">
+      <statement>kwf SHALL provide a validation capability that parses a Kon workflow, enables the workflow DSL, and executes it until the first yield boundary or completion without dispatching any agent adapter subprocess; the capability SHALL be available through both the CLI (`kwf validate`) and MCP (`kwf_validate_workflow`) using the same WorkflowBackend method.</statement>
+      <suite id="validation" name="workflow validation">
+        <case id="valid-yield-summary">
+          <given>a syntactically valid workflow whose first boundary is an ai_parallel yield</given>
+          <when>the user runs `kwf validate workflow.kon --json`</when>
+          <then>the command SHALL exit successfully and return a JSON result with ok=true, status=yielded, effect name, job count, and per-job summaries</then>
+          <then>no agent adapter subprocess SHALL be spawned</then>
+        </case>
+        <case id="invalid-diagnostic">
+          <given>a workflow source with invalid Kon syntax or invalid workflow DSL structure</given>
+          <when>the user runs `kwf validate workflow.kon --json` or calls `kwf_validate_workflow`</when>
+          <then>the result SHALL contain ok=false with at least one structured diagnostic and the CLI SHALL exit non-zero</then>
+        </case>
+        <case id="mcp-inline-source">
+          <given>an MCP client has generated a workflow source string without writing a file</given>
+          <when>it calls `kwf_validate_workflow` with source and args</when>
+          <then>the tool SHALL validate the inline source and return the same result shape as the CLI JSON mode</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://workflow-host-runtime/requirements/workflow-dry-run">
+    <requirement id="workflow-dry-run">
+      <statement>kwf SHALL provide a dry-run capability that simulates workflow execution through repeated yield/resume cycles without dispatching any agent adapter subprocess; dry-run SHALL summarize each yield, inject deterministic mock job results, and stop at completion, failure, or a configurable max-yields limit. The capability SHALL be available through both CLI (`kwf dry-run`) and MCP (`kwf_dry_run_workflow`) using the same WorkflowBackend method.</statement>
+      <suite id="dry-run" name="workflow dry-run">
+        <case id="schema-shaped-mocks">
+          <given>a workflow whose later steps read fields from agent results declared via output_schema</given>
+          <when>the user dry-runs the workflow</when>
+          <then>mock job results SHALL be generated from the schema so downstream field reads can proceed</then>
+          <then>the result SHALL include all yield summaries and the final preview result when completion is reached</then>
+        </case>
+        <case id="max-yields-limit">
+          <given>a workflow that can yield more times than the configured max-yields</given>
+          <when>dry-run reaches the limit</when>
+          <then>it SHALL stop with ok=false and a diagnostic explaining that max-yields was reached</then>
+        </case>
+        <case id="prompt-redaction">
+          <given>a workflow produces agent jobs with prompts</given>
+          <when>validate or dry-run is called without showPrompts</when>
+          <then>job summaries SHALL include only truncated prompt previews, not full prompt text</then>
+          <then>when showPrompts is true, summaries MAY include full prompt text</then>
+        </case>
+        <case id="compiled-binary-and-mcp">
+          <given>the compiled kwf binary and stdio MCP server</given>
+          <when>validate and dry-run are invoked from the binary and from MCP tools</when>
+          <then>both surfaces SHALL behave consistently with source-mode CLI execution</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

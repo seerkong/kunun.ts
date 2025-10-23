@@ -1,0 +1,518 @@
+<behaviors capability="runtime-interpreter" version="1">
+  <requirement id="depa-actor-substrate">
+    <statement>The project SHALL provide a new optional interpreter runtime that uses depa-actor@0.2.0 execution kernel primitives from the local file dependency file:/Users/kongweixian/infra-dev/depa-actor as its generic execution substrate.</statement>
+    <suite id="substrate" name="Substrate Integration">
+      <case id="uses-linked-depa-actor">
+        <given>depa-actor is configured as a local file dependency pointing to /Users/kongweixian/infra-dev/depa-actor</given>
+        <when>The new interpreter runtime is built</when>
+        <then>The runtime SHALL import depa-actor primitives for instruction stack, operand stack, and generic dispatch while resolving the package version from depa-actor's own package.json.</then>
+      </case>
+      <case id="does-not-reimplement-generic-kernel">
+        <given>depa-actor exposes stack/frame and dispatch primitives</given>
+        <when>The runtime needs those mechanics</when>
+        <then>The runtime SHALL reuse the depa-actor primitives instead of duplicating generic stack or dispatcher implementations.</then>
+      </case>
+      <case id="legacy-path-unchanged">
+        <given>A caller uses the existing Interpreter API</given>
+        <when>The new runtime interpreter is added</when>
+        <then>The existing interpreter path SHALL remain available and behaviorally unchanged unless a caller opts into the new runtime.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="extensible-runtime-port">
+    <statement>The new interpreter runtime SHALL prioritize porting runtime capabilities from ExtensibleScopedRowType Kon.Interpreter before attempting type-system migration.</statement>
+    <suite id="runtime-capabilities" name="Runtime Capabilities">
+      <case id="runtime-owned-registry">
+        <given>The runtime is created</given>
+        <when>Default handlers and keyword expanders are registered</when>
+        <then>The runtime SHALL own its handler registry rather than relying only on a static global registry.</then>
+      </case>
+      <case id="dual-stack-fiber-state">
+        <given>A fiber is created in the new runtime</given>
+        <when>The fiber executes instructions</when>
+        <then>The fiber SHALL have an instruction stack, operand stack, current environment id, and execution history compatible with the dual-stack VM model.</then>
+      </case>
+      <case id="block-entry-point">
+        <given>A caller evaluates a parsed block or source string</given>
+        <when>The new interpreter starts execution</when>
+        <then>The runtime SHALL push a land-success instruction and a block/node execution instruction and then dispatch until success, fail, or no runnable fiber remains.</then>
+      </case>
+      <case id="basic-runtime-features-first">
+        <given>The ExtensibleScopedRowType runtime has object, property/subscript, host function, environment, and fiber capabilities</given>
+        <when>This project ports the runtime</when>
+        <then>The first implementation SHALL cover a focused baseline of those runtime capabilities before adding typed runtime behavior.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="parser-runtime-boundary">
+    <statement>The new interpreter runtime SHALL consume the current parser output without changing parser syntax as part of this track.</statement>
+    <suite id="parser-boundary" name="Parser Boundary">
+      <case id="uses-existing-kon-parser">
+        <given>The Kon parser profile has been synchronized in the previous parser track</given>
+        <when>The new interpreter evaluates Kon source</when>
+        <then>The runtime SHALL use the existing parser/converter output as input rather than redefining parser syntax.</then>
+      </case>
+      <case id="parser-regression-guard">
+        <given>Parser changes previously exposed interpreter test concerns</given>
+        <when>The new runtime is implemented</when>
+        <then>The test suite SHALL include runtime tests that distinguish parser failures from interpreter execution failures.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="future-type-system-ready">
+    <statement>The new runtime SHALL expose extension points needed for future ExtensibleScopedRowType type-system migration without implementing the type checker in this track.</statement>
+    <suite id="type-system-readiness" name="Type System Readiness">
+      <case id="typed-context-placeholder">
+        <given>The future type system needs runtime context and prototype resolution</given>
+        <when>The runtime state is designed</when>
+        <then>The runtime SHALL reserve a typed runtime context extension point without requiring type checking for ordinary evaluation.</then>
+      </case>
+      <case id="non-goal-type-checker">
+        <given>This track implements the new runtime interpreter</given>
+        <when>Type annotations or source-qualified type syntax appear</when>
+        <then>The runtime SHALL preserve structures needed by future type-system work but SHALL NOT implement full type binding or checking in this track.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="legacy-test-merge">
+    <statement>The project SHALL migrate valuable legacy interpreter test behavior to the new RuntimeInterpreter baseline and remove duplicate old interpreter regressions.</statement>
+    <suite id="legacy-cleanup" name="Legacy interpreter regression cleanup">
+      <case id="delete-duplicates">
+        <given>Legacy interpreter assertions are already covered by RuntimeInterpreter tests</given>
+        <when>The test suite is merged into the new runtime baseline</when>
+        <then>The project SHALL delete or replace those duplicate legacy assertions</then>
+      </case>
+      <case id="keep-smoke">
+        <given>The legacy Interpreter API remains present</given>
+        <when>The old regression suite is reduced</when>
+        <then>The project SHALL keep only a minimal compatibility smoke suite for EvalSync, ExecAsync, and state-based execution</then>
+      </case>
+    </suite>
+    <suite id="runtime-migration" name="RuntimeInterpreter migration">
+      <case id="control-flow">
+        <given>Old tests cover loop and branch behavior</given>
+        <when>The behavior is still part of the current language surface</when>
+        <then>The project SHALL add RuntimeInterpreter tests using current Kon syntax</then>
+      </case>
+      <case id="logical-expressions">
+        <given>Old tests cover logical and infix macro behavior</given>
+        <when>The behavior is still part of the current language surface</when>
+        <then>The project SHALL add RuntimeInterpreter tests for short-circuit and mixed logical expression behavior</then>
+      </case>
+      <case id="runtime-session">
+        <given>A caller reuses one RuntimeInterpreter runtime instance</given>
+        <when>The caller evaluates multiple scripts sequentially</when>
+        <then>The runtime SHALL preserve expected state across evaluations</then>
+      </case>
+    </suite>
+    <suite id="js-interop" name="JavaScript interop and embedding">
+      <case id="host-object-bridge">
+        <given>A script needs to interact with a host JavaScript object</given>
+        <when>The script invokes the new RuntimeInterpreter host bridge API</when>
+        <then>The runtime SHALL provide an equivalent capability to the old js_call and js_apply business behavior</then>
+      </case>
+      <case id="script-function-as-js-callable">
+        <given>A script function is exported through the embedding API</given>
+        <when>Host JavaScript calls the exported callable</when>
+        <then>The callable SHALL bind parameters, execute through RuntimeInterpreter, and return the script result</then>
+      </case>
+    </suite>
+    <suite id="excluded-scope" name="Explicit exclusions" />
+  </requirement>
+  <requirement id="string-interpolation-runtime">
+    <statement>The RuntimeInterpreter SHALL evaluate interpreted string interpolations by executing embedded parser expressions in the current runtime environment and concatenating their string values into the literal result.</statement>
+    <suite id="interpolation-evaluation" name="Interpolation evaluation">
+      <case id="kon-name-interpolation">
+        <given>A Kon source string defines a visible variable named name</given>
+        <when>RuntimeInterpreter evaluates an interpreted string containing a Kon profile interpolation for that name</when>
+        <then>The result SHALL include the current value of name converted to text.</then>
+      </case>
+      <case id="kon-expression-interpolation">
+        <given>A Kon interpreted multiline string contains an embedded Kon expression</given>
+        <when>RuntimeInterpreter evaluates the string</when>
+        <then>The embedded expression SHALL be evaluated in the current runtime and its result SHALL be inserted into the output string.</then>
+      </case>
+      <case id="knl-expression-interpolation">
+        <given>A Knl interpreted multiline string contains an embedded Knl expression using square-bracket interpolation syntax</given>
+        <when>RuntimeInterpreter evaluates parser output for that string</when>
+        <then>The embedded expression SHALL be evaluated with Knl parser semantics and inserted into the output string.</then>
+      </case>
+      <case id="raw-runtime-preservation">
+        <given>A raw single-line or raw multiline string contains escape-like or interpolation-like text</given>
+        <when>RuntimeInterpreter evaluates the raw string node</when>
+        <then>The runtime SHALL return the literal text without escape expansion and without expression evaluation.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="string-escape-runtime">
+    <statement>The RuntimeInterpreter SHALL preserve interpreted string escape semantics for delimiter characters, backslash, newline, tab, and carriage return.</statement>
+    <suite id="escape-evaluation" name="Escape evaluation">
+      <case id="double-quote-output">
+        <given>An interpreted string source escapes double quote characters</given>
+        <when>RuntimeInterpreter evaluates the string</when>
+        <then>The result SHALL contain literal double quote characters.</then>
+      </case>
+      <case id="literal-interpolation-marker-output">
+        <given>An interpreted string source escapes the backslash before profile-specific interpolation syntax</given>
+        <when>RuntimeInterpreter evaluates the string</when>
+        <then>The result SHALL contain the interpolation marker text literally rather than evaluating it.</then>
+      </case>
+      <case id="standard-control-escapes">
+        <given>An interpreted string source contains newline, tab, or carriage-return escapes</given>
+        <when>RuntimeInterpreter evaluates the string</when>
+        <then>The result SHALL contain the corresponding control characters.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="dynamic-workflow-checkpoint-runtime">
+    <statement>The RuntimeInterpreter SHALL support opt-in Kunun dynamic workflow execution through host-registered macro or function extensions that lower to checkpoint-aware effects at safe yield boundaries.</statement>
+    <suite id="extension-lowering" name="Workflow extension lowering">
+      <case id="host-registers-workflow-extensions">
+        <given>A Bun coding agent host creates a RuntimeInterpreter runtime</given>
+        <when>The host registers workflow extensions named ai_workflow, ai_agent, ai_parallel, ai_pipeline, ai_phase, ai_log, and json_schema</when>
+        <then>The runtime SHALL expose those capabilities as host-provided macro or function extensions rather than Kunun language built-ins</then>
+      </case>
+      <case id="macro-lowers-to-effect">
+        <given>A workflow extension is invoked from Kunun source</given>
+        <when>The extension is expanded or lowered</when>
+        <then>The runtime SHALL produce checkpoint-aware instruction or effect records instead of an ordinary host function call</then>
+      </case>
+      <case id="infix-extension-supported">
+        <given>The host registers an infix workflow keyword</given>
+        <when>The parser produces an infix knot for that keyword</when>
+        <then>The runtime SHALL allow the infix keyword expander to lower the node to checkpoint-aware workflow instructions</then>
+      </case>
+    </suite>
+    <suite id="checkpoint-state" name="Safe-point checkpoint state">
+      <case id="ai-agent-yields-continuation">
+        <given>A workflow script invokes an ai_agent extension</given>
+        <when>The runtime reaches the ai_agent dispatch boundary</when>
+        <then>The runtime SHALL capture a checkpoint containing instruction stack, operand stack, current fiber, environment state, effect handlers, and pending job metadata before yielding to the host runtime</then>
+      </case>
+      <case id="resume-ai-agent-result">
+        <given>A captured checkpoint waits for an ai_agent job result</given>
+        <when>The host runtime resumes with a completed result</when>
+        <then>The runtime SHALL hydrate the checkpoint, inject the result into the continuation, and continue execution from the saved instruction position</then>
+      </case>
+      <case id="all-fiber-snapshot">
+        <given>The runtime has multiple fibers</given>
+        <when>A workflow checkpoint is captured</when>
+        <then>The checkpoint SHALL include all relevant fiber records and identify the current fiber</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="dynamic-workflow-control-frames">
+    <statement>The RuntimeInterpreter SHALL serialize control-flow frames needed to resume loops and exception handling from dynamic workflow safe points.</statement>
+    <suite id="loop-frame" name="LoopFrame checkpoint behavior">
+      <case id="foreach-loop-resume">
+        <given>A workflow checkpoint is captured inside a foreach or pipeline-like iteration</given>
+        <when>The runtime hydrates the checkpoint</when>
+        <then>The runtime SHALL restore the iteration cursor, iteration count, loop-local environment, break target, and continue target</then>
+      </case>
+      <case id="while-loop-resume">
+        <given>A workflow checkpoint is captured inside a while or for loop</given>
+        <when>The runtime resumes</when>
+        <then>The next condition, body, break, and continue behavior SHALL match execution without checkpointing</then>
+      </case>
+    </suite>
+    <suite id="exception-frame" name="ExceptionFrame checkpoint behavior">
+      <case id="try-body-resume">
+        <given>A checkpoint is captured inside a try body before an ai_agent job completes</given>
+        <when>The resumed ai_agent result causes ordinary continuation</when>
+        <then>The runtime SHALL continue inside the try body and keep the catch/finally frame active until the try completes</then>
+      </case>
+      <case id="ai-agent-failure-enters-catch">
+        <given>A checkpoint is captured inside a try body before an ai_agent job completes</given>
+        <when>The resumed ai_agent job fails according to host policy</when>
+        <then>The runtime SHALL restore the exception frame and enter the matching catch or finally path</then>
+      </case>
+      <case id="abrupt-completion-preserved">
+        <given>A return, throw, break, or continue is pending while a finally block executes</given>
+        <when>The runtime captures and hydrates a checkpoint</when>
+        <then>The runtime SHALL preserve the pending abrupt completion state</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="mock-ai-runtime-verification">
+    <statement>The test suite SHALL include a mock AI runtime that verifies Kunun workflow extensions, checkpoint capture, host job dispatch, and resume behavior work together end to end.</statement>
+    <suite id="mock-runtime" name="Mock AI runtime integration">
+      <case id="ai-agent-end-to-end">
+        <given>A Kunun workflow invokes a mock ai_agent extension</given>
+        <when>The mock AI runtime completes the job and resumes the checkpoint</when>
+        <then>The workflow SHALL receive the mock result and complete with the expected final value</then>
+      </case>
+      <case id="ai-parallel-partial-resume">
+        <given>A Kunun workflow starts multiple mock ai_agent jobs through an ai_parallel extension</given>
+        <when>Only part of the jobs are completed before checkpoint hydration</when>
+        <then>The runtime SHALL preserve completed job results, continue waiting for pending jobs, and return input-order stable results after all jobs complete</then>
+      </case>
+      <case id="ai-pipeline-stage-resume">
+        <given>A Kunun workflow executes ai_pipeline stages over multiple items</given>
+        <when>A checkpoint is captured during an item stage</when>
+        <then>The runtime SHALL resume the correct item and stage without restarting completed stages</then>
+      </case>
+      <case id="no-behavior-tree-state">
+        <given>A workflow is resumed from checkpoint</given>
+        <when>The test inspects the restored runtime state</when>
+        <then>The continuation SHALL be represented by interpreter stacks and frames rather than behavior-tree node-owned state</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="instruction-stack-expansion-runtime">
+    <statement>The RuntimeInterpreter SHALL execute language semantics through explicit instruction-stack expansion rather than tree-walk recursive evaluation for compound AST nodes.</statement>
+    <suite id="execution-model" name="Instruction stack execution model">
+      <case id="node-run-expands">
+        <given>A RuntimeInterpreter fiber receives a parsed AST node through the public execution API</given>
+        <when>The runtime handles the node execution instruction</when>
+        <then>The handler SHALL expand the node into one or more RuntimeInstruction records on the current fiber instruction stack instead of recursively evaluating the whole node in the handler call.</then>
+      </case>
+      <case id="compound-forms-use-opcodes">
+        <given>A script uses block, function call, branch, loop, try-catch, object, property, subscript, workflow, or effect syntax</given>
+        <when>The runtime executes the script</when>
+        <then>The runtime SHALL represent the remaining work for the compound form as explicit instructions and operand-stack frames.</then>
+      </case>
+      <case id="literals-may-push-values">
+        <given>A node is already a literal value or an evaluated runtime value</given>
+        <when>The runtime expands the node</when>
+        <then>The runtime MAY lower it directly to a value-push instruction without introducing extra evaluator recursion.</then>
+      </case>
+    </suite>
+    <suite id="continuation-state" name="Continuation state">
+      <case id="no-hidden-js-recursion">
+        <given>A workflow safe-point is reached inside nested calls, loops, or try-catch blocks</given>
+        <when>The runtime captures a checkpoint</when>
+        <then>The checkpoint SHALL contain enough instruction stack, operand stack, environment, fiber, and control-frame state to resume without relying on the original JavaScript call stack.</then>
+      </case>
+      <case id="loop-resume-from-stack">
+        <given>A checkpoint is captured in the middle of a loop body</given>
+        <when>The runtime hydrates and resumes the checkpoint</when>
+        <then>The next iteration, break, continue, and loop-local binding behavior SHALL be driven by restored instructions and frames.</then>
+      </case>
+      <case id="try-resume-from-stack">
+        <given>A checkpoint is captured inside a try body or finally body</given>
+        <when>The runtime hydrates and resumes the checkpoint</when>
+        <then>The active catch, finally, and pending abrupt-completion behavior SHALL be represented by restored instructions and frames.</then>
+      </case>
+    </suite>
+    <suite id="compatibility" name="Compatibility boundary">
+      <case id="public-api-preserved">
+        <given>A caller uses existing RuntimeInterpreter public entry points</given>
+        <when>The execution model is refactored</when>
+        <then>The public entry points SHALL remain available and return the same results for existing RuntimeInterpreter tests.</then>
+      </case>
+      <case id="parser-unchanged">
+        <given>The parser has already been synchronized with current Kon syntax</given>
+        <when>This runtime refactor is implemented</when>
+        <then>The parser syntax and parser output contracts SHALL NOT be changed as part of this track.</then>
+      </case>
+      <case id="legacy-interpreter-not-required">
+        <given>The old Interpreter implementation remains in the project</given>
+        <when>The RuntimeInterpreter is refactored</when>
+        <then>The new RuntimeInterpreter SHALL NOT depend on old Interpreter runtime state or old ExtensionRegistry globals for ordinary execution.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="legacy-capability-retirement">
+    <statement>The RuntimeInterpreter SHALL migrate confirmed valuable legacy interpreter capabilities before the old interpreter implementation is removed.</statement>
+    <suite id="scope" name="Migration scope">
+      <case id="migrate-async-host-timer-fiber">
+        <given>The old interpreter exposes async host, timer, and fiber orchestration semantics</given>
+        <when>The project prepares to retire the old interpreter</when>
+        <then>The RuntimeInterpreter SHALL provide equivalent low-level pause/resume and scheduling capabilities independent of workflow checkpoint-only semantics.</then>
+      </case>
+      <case id="exclude-old-table">
+        <given>The old interpreter exposes a table object system</given>
+        <when>Legacy interpreter capabilities are migrated</when>
+        <then>The project SHALL NOT migrate the old table object system as part of this capability-retirement work.</then>
+      </case>
+      <case id="exclude-type-system">
+        <given>ExtensibleScopedRowType has a type system that is not yet migrated</given>
+        <when>Legacy interpreter capabilities are migrated</when>
+        <then>The project SHALL NOT implement or synchronize the type system as part of this track.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="legacy-async-fiber-runtime">
+    <statement>The RuntimeInterpreter SHALL provide legacy-compatible async host, timer, and fiber scheduling primitives using its instruction-stack and fiber-state model.</statement>
+    <suite id="async-host" name="Async host interop">
+      <case id="await-host-fn-suspends">
+        <given>A script invokes a legacy-compatible async host operation</given>
+        <when>The host operation has not completed</when>
+        <then>The RuntimeInterpreter SHALL suspend the waiting fiber without blocking unrelated runnable fibers.</then>
+      </case>
+      <case id="await-host-fn-resumes">
+        <given>A suspended fiber waits for an async host result</given>
+        <when>The host operation resolves or rejects</when>
+        <then>The RuntimeInterpreter SHALL resume the saved continuation with either the result value or the matching failure path.</then>
+      </case>
+    </suite>
+    <suite id="timer" name="Timer scheduling">
+      <case id="set-timeout">
+        <given>A script schedules a timeout operation</given>
+        <when>The timer is triggered by the host scheduler or mock scheduler</when>
+        <then>The RuntimeInterpreter SHALL awaken the target fiber and continue from the saved instruction position.</then>
+      </case>
+      <case id="set-interval-clear">
+        <given>A script schedules an interval operation</given>
+        <when>The interval fires multiple times and is later cleared</when>
+        <then>The RuntimeInterpreter SHALL run each scheduled callback until the interval handle is cleared and SHALL NOT run callbacks after clearing.</then>
+      </case>
+    </suite>
+    <suite id="scheduler-opcodes" name="Scheduler opcodes">
+      <case id="fiber-state-transitions">
+        <given>A runtime instruction requests current fiber idle, suspended, or finalized state</given>
+        <when>The instruction is dispatched</when>
+        <then>The RuntimeInterpreter SHALL update fiber state deterministically and select the next runnable fiber according to runtime scheduling rules.</then>
+      </case>
+      <case id="yield-to-fiber">
+        <given>A runtime instruction yields from one fiber to another fiber</given>
+        <when>The target fiber is runnable or explicitly awakened</when>
+        <then>The RuntimeInterpreter SHALL switch execution to the target fiber and preserve the yielding fiber continuation.</then>
+      </case>
+      <case id="awaken-multiple-fibers">
+        <given>Multiple suspended fibers are eligible to resume</given>
+        <when>The runtime awakens those fibers</when>
+        <then>The RuntimeInterpreter SHALL transition each target fiber to a runnable state without losing their saved stacks or environments.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="legacy-embedding-reusable-callable">
+    <statement>The RuntimeInterpreter SHALL provide a legacy-compatible reusable embedding callable mode for MakeFuncSync.</statement>
+    <suite id="make-func-sync" name="MakeFuncSync reusable behavior">
+      <case id="non-reusable-default">
+        <given>A host creates a callable with RuntimeInterpreter.MakeFuncSync without reusable mode</given>
+        <when>The host calls the callable repeatedly</when>
+        <then>The callable SHALL preserve existing RuntimeInterpreter default behavior.</then>
+      </case>
+      <case id="reusable-mode">
+        <given>A host creates a callable with reusable mode enabled</given>
+        <when>The host calls the callable repeatedly with different arguments</when>
+        <then>The callable SHALL reuse the intended runtime/function binding while isolating per-call operand and instruction stack state.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="legacy-syntax-compatibility">
+    <statement>The RuntimeInterpreter SHALL migrate confirmed valuable legacy syntax sugar and compatibility aliases without changing current data syntax.</statement>
+    <suite id="prefix-compatibility" name="Prefix compatibility">
+      <case id="func-do-main">
+        <given>A script uses legacy prefix forms such as func, do, or main</given>
+        <when>The RuntimeInterpreter expands the script</when>
+        <then>The runtime SHALL map those forms to current function or block execution semantics.</then>
+      </case>
+      <case id="self-update-operators">
+        <given>A script uses legacy self-update operators such as --, +=, -=, *=, or /=</given>
+        <when>The RuntimeInterpreter expands the script</when>
+        <then>The runtime SHALL execute the equivalent read-modify-write behavior through instruction-stack expansion.</then>
+      </case>
+      <case id="js-interop-aliases">
+        <given>A script uses legacy JS interop aliases such as js_call or js_apply</given>
+        <when>The RuntimeInterpreter executes the script</when>
+        <then>The runtime SHALL route the operation through the current host JavaScript bridge without depending on the old ExtensionRegistry.</then>
+      </case>
+    </suite>
+    <suite id="infix-compatibility" name="Infix compatibility">
+      <case id="def-to-set-to-save-operands">
+        <given>A script uses legacy infix forms def_to, set_to, or save_operands</given>
+        <when>The RuntimeInterpreter expands the infix knot</when>
+        <then>The runtime SHALL execute equivalent definition, assignment, or operand capture behavior.</then>
+      </case>
+      <case id="restricted-chain-assignment">
+        <given>A script uses target chain assignment such as target.:field = value or target.:field := value</given>
+        <when>The left side is a writable property or subscript chain expression</when>
+        <then>The RuntimeInterpreter SHALL treat the expression as object assignment compatibility syntax.</then>
+      </case>
+      <case id="data-equals-unchanged">
+        <given>A source file uses equals in map entries, knot metadata, configuration fields, or other data syntax</given>
+        <when>The parser and RuntimeInterpreter process the source</when>
+        <then>The equals token SHALL retain its data-syntax meaning and SHALL NOT be interpreted as assignment.</then>
+      </case>
+    </suite>
+    <suite id="host-aliases" name="Host aliases">
+      <case id="common-host-aliases">
+        <given>A script uses common legacy host aliases such as Writeln, append, console, clear_interval, &amp;amp;amp;amp;gt;=, or &amp;amp;amp;amp;lt;=</given>
+        <when>The RuntimeInterpreter executes the script</when>
+        <then>The runtime SHALL provide equivalent behavior or explicit host bridge mappings for those aliases.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="legacy-interpreter-removal-readiness">
+    <statement>The project SHALL maintain a removal-readiness checklist for old interpreter code after migrated capabilities are covered by RuntimeInterpreter tests.</statement>
+    <suite id="readiness" name="Removal readiness">
+      <case id="runtime-tests-cover-migrated-capabilities">
+        <given>A legacy capability is migrated to RuntimeInterpreter</given>
+        <when>The old interpreter equivalent test or behavior is identified</when>
+        <then>The project SHALL add or update RuntimeInterpreter tests before deleting the legacy behavior coverage.</then>
+      </case>
+      <case id="delete-after-review">
+        <given>The migration test suite passes</given>
+        <when>The project prepares to remove old interpreter code</when>
+        <then>The project SHALL present remaining old interpreter logic for review before deleting it.</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="no-legacy-interpreter">
+    <statement>The runtime package SHALL remove the legacy Interpreter execution pipeline and expose RuntimeInterpreter as the active interpreter surface.</statement>
+    <suite id="package-api" name="Package API">
+      <case id="legacy-exports-removed">
+        <given>The package public index is imported</given>
+        <when>A consumer inspects exported interpreter APIs</when>
+        <then>The package SHALL NOT export Interpreter, XnlState, ExtensionRegistry, or XnlOpCode from the legacy execution pipeline</then>
+      </case>
+      <case id="runtime-interpreter-remains">
+        <given>The legacy interpreter files have been removed</given>
+        <when>RuntimeInterpreter scripts and compatibility tests run</when>
+        <then>The RuntimeInterpreter SHALL continue to provide the migrated legacy runtime capabilities</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="checkpoint-serialization-boundary">
+    <statement>captureSnapshot SHALL 支持 strict 序列化校验选项：开启时若快照含不可 JSON 序列化的值（函数、class 实例、循环引用等），SHALL 抛出指明所在位置（fiber/operand/env key）的明确错误；默认（非 strict）行为保持不变。</statement>
+    <suite id="serialization-boundary" name="序列化边界">
+      <case id="strict-detects-host-value">
+        <given>operand 栈含宿主函数值</given>
+        <when>以 strict 模式捕获快照</when>
+        <then>SHALL 抛出含位置信息的序列化错误</then>
+      </case>
+      <case id="default-unchanged">
+        <given>同样的运行时状态</given>
+        <when>以默认模式捕获快照</when>
+        <then>行为 SHALL 与本变更前一致</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="generic-workflow-job-expansion">
+    <statement>runtime 的 workflow extension 机制 SHALL 完全域中立：registerWorkflowExtension 与默认 lowering SHALL NOT 内置任何基于扩展名（如 ai_ 前缀）的特例分支；pending job 的展开方式 SHALL 由注册方显式声明——options.jobExpansion 为 'single'（默认，一个 effect 一个 job）或 'perArg'（按 args 元素逐个展开，path 含 item 序号与 itemIndex metadata），或经 options.buildJobs 回调完全自定义 job 列表；自定义 lowering（registerWorkflowExtension 第二参）行为不变。</statement>
+    <suite id="generic-expansion" name="通用 job 展开">
+      <case id="no-name-magic">
+        <given>runtime 源码</given>
+        <when>审查 RuntimeState 默认 lowering</when>
+        <then>SHALL 不存在按扩展名前缀或特定名字（parallel/pipeline 等）的分支逻辑</then>
+      </case>
+      <case id="explicit-per-arg">
+        <given>以 jobExpansion='perArg' 注册的任意名扩展</given>
+        <when>WorkflowDispatch 携带 N 个 args</when>
+        <then>SHALL 产生 N 个 job，path 含 item:i 且 metadata.itemIndex=i</then>
+      </case>
+      <case id="custom-build-jobs">
+        <given>以 buildJobs 回调注册的扩展</given>
+        <when>dispatch</when>
+        <then>pendingJobs SHALL 完全由回调返回值决定（含 id/path/metadata），经 JSON 序列化往返保持稳定</then>
+      </case>
+      <case id="default-single">
+        <given>未声明展开方式的扩展</given>
+        <when>dispatch</when>
+        <then>SHALL 产生单个 job（path 以 /job:0 结尾），args 原样入 job.args</then>
+      </case>
+    </suite>
+  </requirement>
+  <requirement id="generic-dispatch-until-stop">
+    <statement>runtime SHALL 提供通用的 DispatchUntilStop 公共 API：驱动当前指令栈直至 yield（返回 effects 与 stopReason）或指令耗尽，错误与缺失 handler 以异常抛出；上层包（如 workflow-dsl）SHALL 经此 API 驱动执行循环而无需直接依赖 depa-actor。</statement>
+    <suite id="dispatch-api" name="通用调度 API">
+      <case id="yield-and-empty">
+        <given>含 WorkflowDispatch 的指令栈</given>
+        <when>DispatchUntilStop</when>
+        <then>SHALL 返回 yield_requested 与 effect；注入结果后再次调用 SHALL 运行至栈空</then>
+      </case>
+    </suite>
+  </requirement>
+</behaviors>

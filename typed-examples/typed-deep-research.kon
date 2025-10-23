@@ -1,0 +1,440 @@
+(var TYPED_DEEP_RESEARCH_DESIGN_NOTE
+  "This file is a typed-first design sketch. It mirrors deep-research.kon, but it is written to show how the Extensible Scoped Row Type system can make workflow data, agent contracts, source-qualified fields, and effect boundaries explicit.")
+
+(type #Seq <T>
+  :[
+    (method #length |-> Int|)
+    (method #at |!Int index -> T|)
+  ])
+
+(type #ResearchQuestion
+  :[
+    (!String field #text)
+    ..never
+  ])
+
+(type #SearchQuery
+  :[
+    (!String field #query)
+    (!String field #purpose)
+    ..never
+  ])
+
+(type #ResearchAngleSearch
+  :[
+    (!String field #question)
+    (!Seq<SearchQuery> field #searchQueries)
+    ..never
+  ])
+
+(type #ResearchAngleScope
+  :[
+    (!String field #question)
+    (!String field #rationale)
+    (!String field #risk)
+    ..never
+  ])
+
+(type #ResearchAngle
+  @merge = [ResearchAngleSearch ResearchAngleScope])
+
+(type #ResearchPlan
+  :[
+    (!Seq<ResearchAngle> field #angles)
+    (!String field #strategy)
+    ..never
+  ])
+
+(type #SourceRef
+  :[
+    (!String field #title)
+    (!String field #url)
+    (!String field #summary)
+    ..never
+  ])
+
+(type #SearchResultBatch
+  :[
+    (!ResearchAngle field #angle)
+    (!Seq<SourceRef> field #sources)
+    ..never
+  ])
+
+(type #Citation
+  :[
+    (!String field #url)
+    (!String field #quote)
+    ..never
+  ])
+
+(type #ExtractedClaim
+  :[
+    (!String field #title)
+    (!String field #detail)
+    (!Seq<Citation> field #citations)
+    ..never
+  ])
+
+(type #ExtractedClaimBatch
+  :[
+    (!ResearchAngle field #angle)
+    (!SearchResultBatch field #sourceBatch)
+    (!Seq<ExtractedClaim> field #claims)
+    ..never
+  ])
+
+(type #SkepticReview
+  :[
+    (!Bool field #refuted)
+    (!String field #reason)
+    (!Seq<String> field #weakClaims)
+    ..never
+  ])
+
+(type #CitationReview
+  :[
+    (!Bool field #unsupported)
+    (!String field #reason)
+    (!Seq<String> field #missingCitations)
+    ..never
+  ])
+
+(type #ClaimReviewState
+  :[
+    (!ExtractedClaimBatch field #claimBatch)
+    (!SkepticReview field #skepticReview)
+    (!CitationReview field #citationReview)
+    ..never
+  ])
+
+(type #VotedClaimBatch
+  :[
+    (!ExtractedClaimBatch field #claimBatch)
+    (!Seq<ExtractedClaim> field #acceptedClaims)
+    (!Seq<ExtractedClaim> field #rejectedClaims)
+    (!String field #decisionRationale)
+    ..never
+  ])
+
+(type #MarkdownReport
+  :[
+    (!String field #markdown)
+    (!Seq<Citation> field #citations)
+    ..never
+  ])
+
+(type #DeepResearchOutput
+  :[
+    (!ResearchQuestion field #question)
+    (!ResearchPlan field #plan)
+    (!Seq<SearchResultBatch> field #searchResults)
+    (!Seq<ExtractedClaimBatch> field #extracted)
+    (!Seq<VotedClaimBatch> field #votedClaims)
+    (!MarkdownReport field #report)
+    ..never
+  ])
+
+(type #AgentRequest <TInput TOutput>
+  :[
+    (!String field #label)
+    (!String field #sys_prompt)
+    (!String field #user_prompt)
+    (!TInput field #input)
+    ..never
+  ])
+
+(type #AgentResult <TOutput>
+  :[
+    (!String field #label)
+    (!TOutput field #value)
+    ..never
+  ])
+
+#(effect decl #WorkflowAgent)
+(type #WorkflowAgent
+  :[
+    (op #plan |!AgentRequest<ResearchQuestion ResearchPlan> request -> AgentResult<ResearchPlan>|)
+    (op #search |!AgentRequest<ResearchAngle SearchResultBatch> request -> AgentResult<SearchResultBatch>|)
+    (op #extract |!AgentRequest<SearchResultBatch ExtractedClaimBatch> request -> AgentResult<ExtractedClaimBatch>|)
+    (op #reviewSkeptic |!AgentRequest<ExtractedClaimBatch SkepticReview> request -> AgentResult<SkepticReview>|)
+    (op #reviewCitation |!AgentRequest<ClaimReviewState CitationReview> request -> AgentResult<CitationReview>|)
+    (op #vote |!AgentRequest<ClaimReviewState VotedClaimBatch> request -> AgentResult<VotedClaimBatch>|)
+    (op #report |!AgentRequest<Seq<VotedClaimBatch> MarkdownReport> request -> AgentResult<MarkdownReport>|)
+  ])
+
+#(effect decl #WorkflowCheckpoint)
+(type #WorkflowCheckpoint
+  :[
+    (op #save |!String label -> Unit|)
+  ])
+
+(fn #angleSearchQuestion |!ResearchAngle angle -> String|
+  :[
+    (angle.:ResearchAngleSearch:::question)
+  ])
+
+(fn #angleScopeQuestion |!ResearchAngle angle -> String|
+  :[
+    (angle.:ResearchAngleScope:::question)
+  ])
+
+(fn #angleSearchQueries |!ResearchAngle angle -> Seq<SearchQuery>|
+  :[
+    (angle.:searchQueries)
+  ])
+
+(fn #searchBatchAngle |!SearchResultBatch batch -> ResearchAngle|
+  :[
+    (batch.:angle)
+  ])
+
+(fn #claimBatchClaims |!ExtractedClaimBatch batch -> Seq<ExtractedClaim>|
+  :[
+    (batch.:claims)
+  ])
+
+#(effect row :[ WorkflowAgent WorkflowCheckpoint ])
+(fn #typedDeepResearch |!ResearchQuestion question -> DeepResearchOutput|
+  :[
+    (ai_workflow #typedDeepResearch
+      :input_type = ResearchQuestion
+      :output_type = DeepResearchOutput
+      :effects = [WorkflowAgent WorkflowCheckpoint]
+      :input = question
+      :output = [question plan searchResults extracted votedClaims report]
+      :[
+        (ai_phase #Plan
+          :input_type = ResearchQuestion
+          :output_type = ResearchPlan
+          :effects = [WorkflowAgent WorkflowCheckpoint]
+          :[
+            (var plan (ai_agent #planResearch
+              :input_type = ResearchQuestion
+              :output_type = ResearchPlan
+              :effect = WorkflowAgent.plan
+              :{
+                label = "planner"
+                input = question
+                sys_prompt = "You are a research planner. Return typed ResearchPlan data."
+                user_prompt =
+                """
+                Plan research angles for the question.
+
+                Question:
+                \((question.:text))
+
+                Each angle must carry both ResearchAngleSearch.question and ResearchAngleScope.question. The search question is used for retrieval. The scope question records why this angle belongs to the overall investigation.
+                """
+              }))
+            (perform #WorkflowCheckpoint.save |"plan-created"|)
+          ])
+
+        (ai_phase #Search
+          :input_type = ResearchPlan
+          :output_type = Seq<SearchResultBatch>
+          :effects = [WorkflowAgent WorkflowCheckpoint]
+          :[
+            (var searchResults (ai_parallel #searchAngles
+              :input_type = Seq<ResearchAngle>
+              :item_type = ResearchAngle
+              :output_type = Seq<SearchResultBatch>
+              :{
+                input = (plan.:angles)
+                item = angle
+                index = angleIndex
+              }
+              :[
+                (ai_agent #searchAngle
+                  :input_type = ResearchAngle
+                  :output_type = SearchResultBatch
+                  :effect = WorkflowAgent.search
+                  :{
+                    label = "search-\(angleIndex)"
+                    input = angle
+                    sys_prompt = "You are a source search worker. Return a typed SearchResultBatch."
+                    user_prompt =
+                    """
+                    Use WebSearch to find high-quality sources for this research angle.
+
+                    Main question:
+                    \((question.:text))
+
+                    Retrieval question:
+                    \((angle angleSearchQuestion))
+
+                    Scope question:
+                    \((angle angleScopeQuestion))
+
+                    Suggested searches:
+                    \((angle angleSearchQueries))
+                    """
+                  })
+              ]))
+            (perform #WorkflowCheckpoint.save |"search-completed"|)
+          ])
+
+        (ai_phase #Extract
+          :input_type = Seq<SearchResultBatch>
+          :output_type = Seq<ExtractedClaimBatch>
+          :effects = [WorkflowAgent WorkflowCheckpoint]
+          :[
+            (var extracted (ai_parallel #extractClaims
+              :input_type = Seq<SearchResultBatch>
+              :item_type = SearchResultBatch
+              :output_type = Seq<ExtractedClaimBatch>
+              :{
+                input = searchResults
+                item = sourceBatch
+                index = batchIndex
+              }
+              :[
+                (ai_agent #extractBatch
+                  :input_type = SearchResultBatch
+                  :output_type = ExtractedClaimBatch
+                  :effect = WorkflowAgent.extract
+                  :{
+                    label = "extract-\(batchIndex)"
+                    input = sourceBatch
+                    sys_prompt = "You extract concrete claims and preserve citation evidence."
+                    user_prompt =
+                    """
+                    Extract concrete, checkable claims from this typed source batch.
+
+                    Main question:
+                    \((question.:text))
+
+                    Angle:
+                    \(((sourceBatch searchBatchAngle) angleSearchQuestion))
+
+                    Source batch:
+                    \(sourceBatch)
+                    """
+                  })
+              ]))
+            (perform #WorkflowCheckpoint.save |"claims-extracted"|)
+          ])
+
+        (ai_phase #Vote
+          :input_type = Seq<ExtractedClaimBatch>
+          :output_type = Seq<VotedClaimBatch>
+          :effects = [WorkflowAgent WorkflowCheckpoint]
+          :[
+            (var votedClaims (ai_pipeline #claimReview
+              :input_type = Seq<ExtractedClaimBatch>
+              :item_type = ExtractedClaimBatch
+              :value_type = ClaimReviewState
+              :output_type = Seq<VotedClaimBatch>
+              :{
+                input = extracted
+                item = claimBatch
+                value = review
+                index = claimBatchIndex
+              }
+              :[
+                (stage #SkepticA
+                  :input_type = ExtractedClaimBatch
+                  :output_type = SkepticReview
+                  :[
+                    (ai_agent #skepticA
+                      :input_type = ExtractedClaimBatch
+                      :output_type = SkepticReview
+                      :effect = WorkflowAgent.reviewSkeptic
+                      :{
+                        label = "skeptic-a-\(claimBatchIndex)"
+                        input = claimBatch
+                        sys_prompt = "You are a skeptical research claim reviewer."
+                        user_prompt =
+                        """
+                        Review this extracted claim batch skeptically.
+
+                        Batch index:
+                        \(claimBatchIndex)
+
+                        Claims:
+                        \((claimBatch claimBatchClaims))
+                        """
+                      })
+                  ])
+                (stage #SkepticB
+                  :input_type = ClaimReviewState
+                  :output_type = CitationReview
+                  :[
+                    (ai_agent #skepticB
+                      :input_type = ClaimReviewState
+                      :output_type = CitationReview
+                      :effect = WorkflowAgent.reviewCitation
+                      :{
+                        label = "citation-review-\(claimBatchIndex)"
+                        input = review
+                        sys_prompt = "You are a citation quality reviewer."
+                        user_prompt =
+                        """
+                        Review this claim batch for citation quality.
+
+                        Original claims:
+                        \((claimBatch claimBatchClaims))
+
+                        Previous skeptical review:
+                        \((review.:skepticReview))
+                        """
+                      })
+                  ])
+                (stage #Vote
+                  :input_type = ClaimReviewState
+                  :output_type = VotedClaimBatch
+                  :[
+                    (ai_agent #voteClaims
+                      :input_type = ClaimReviewState
+                      :output_type = VotedClaimBatch
+                      :effect = WorkflowAgent.vote
+                      :{
+                        label = "vote-\(claimBatchIndex)"
+                        input = review
+                        sys_prompt = "You reconcile research claim reviews."
+                        user_prompt =
+                        """
+                        Accept claims that survive skeptical review and citation review.
+
+                        Claim batch:
+                        \((review.:claimBatch))
+
+                        Skeptical review:
+                        \((review.:skepticReview))
+
+                        Citation review:
+                        \((review.:citationReview))
+                        """
+                      })
+                  ])
+              ]))
+            (perform #WorkflowCheckpoint.save |"claims-voted"|)
+          ])
+
+        (ai_phase #Report
+          :input_type = Seq<VotedClaimBatch>
+          :output_type = MarkdownReport
+          :effects = [WorkflowAgent WorkflowCheckpoint]
+          :[
+            (var report (ai_agent #writeReport
+              :input_type = Seq<VotedClaimBatch>
+              :output_type = MarkdownReport
+              :effect = WorkflowAgent.report
+              :{
+                label = "reporter"
+                input = votedClaims
+                sys_prompt = "You write concise cited research reports."
+                user_prompt =
+                """
+                Write a cited Markdown report from accepted typed claims.
+
+                Question:
+                \((question.:text))
+
+                Accepted claims:
+                \(votedClaims)
+                """
+              }))
+            (perform #WorkflowCheckpoint.save |"report-written"|)
+          ])
+      ])
+  ])

@@ -1,0 +1,13 @@
+(var name "Kunun")
+[
+  "hello \(name)"
+  """
+  sum = \((1 2 :+))
+  """
+  'raw \(name)'
+  '''
+  raw multiline
+  \(name)
+  '''
+  "\\(name)"
+]

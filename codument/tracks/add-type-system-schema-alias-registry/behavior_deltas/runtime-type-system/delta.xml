@@ -1,0 +1,15 @@
+<behavior-patch capability="runtime-type-system" version="1">
+  <upsert selector="behavior://runtime-type-system/requirements/schema-alias-registry">
+    <requirement id="schema-alias-registry">
+      <statement>The type system SHALL provide schema alias canonicalization for type, relation, and scoped attribute names.</statement>
+      <suite id="alias-resolution" name="Alias Resolution">
+        <case id="cycle-diagnostic">
+          <given>Aliases form a cycle</given>
+          <when>The registry resolves an alias</when>
+          <then>The registry SHALL report an alias cycle instead of looping</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>
+

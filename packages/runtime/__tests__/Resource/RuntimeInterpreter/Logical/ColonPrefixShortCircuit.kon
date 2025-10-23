@@ -1,0 +1,5 @@
+(var touched 0)
+(var andShort (:and false (set touched 1)))
+(var orShort (:or true (set touched 2)))
+(var andRun (:and true (set touched 3)))
+[andShort orShort andRun touched]
