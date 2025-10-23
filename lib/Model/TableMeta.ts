@@ -1,12 +1,12 @@
 
 import { Env } from "../StateManagement/Env";
 import { FieldStorageMeta } from "./FieldStorageMeta";
-import { KnNodeType } from "./KnType"
+import { KnNodeType } from "./KnNodeType"
 import { KnMethodFunc } from "./KnMethodFunc";
 import { KnPropertyFunc } from "./KnPropertyFunc"
 import { IPropertyMeta } from "./IPropertyMeta";
 export class TableMeta {
-  public _Type = KnNodeType.KnTableMetadata;
+  public _Type = KnNodeType.TableMetadata;
   public Kind: any;
   public FieldMap: Map<string, FieldStorageMeta>;
   public PropertyMap: Map<string, IPropertyMeta>;

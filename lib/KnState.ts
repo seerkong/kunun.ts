@@ -1,5 +1,5 @@
 import { Fiber } from "./StateManagement/Fiber";
-import { KnOpCode } from "./KnOpCode";
+import { XnlOpCode } from "./KnOpCode";
 import { Env } from "./StateManagement/Env";
 import { EnvTree } from "./StateManagement/EnvTree";
 import { FiberMgr } from "./StateManagement/FiberMgr";
@@ -16,7 +16,7 @@ export class InstructionExecLog {
   }
 };
 
-export class KnState {
+export default class XnlState {
   public EnvTree = new EnvTree();
   public FiberMgr = new FiberMgr();
   public ExecHistory: InstructionExecLog[] = [];
@@ -34,8 +34,8 @@ export class KnState {
     this.ResetFiberMgr();
   }
 
-  public Copy() : KnState {
-    let r = new KnState();
+  public Copy() : XnlState {
+    let r = new XnlState();
     r.EnvTree = this.EnvTree;
     r.FiberMgr = this.FiberMgr.Copy();
     r.ExecHistory = [];
@@ -152,7 +152,7 @@ export class KnState {
     this._opBatchStack.push([]);
   }
 
-  public AddOp(opCode: KnOpCode, memo: any = null) {
+  public AddOp(opCode: XnlOpCode, memo: any = null) {
     let top = this._opBatchStack[this._opBatchStack.length - 1];
     top.push(new Instruction(opCode, this.getCurEnvIdx(), memo));
   }
@@ -172,7 +172,7 @@ export class KnState {
     }
   }
 
-  public AddOpDirectly(opCode: KnOpCode, memo: any = null) {
+  public AddOpDirectly(opCode: XnlOpCode, memo: any = null) {
     this.FiberMgr.GetCurrentFiber().InstructionStack.PushValue(new Instruction(opCode, this.getCurEnvIdx(), memo));
   }
 }

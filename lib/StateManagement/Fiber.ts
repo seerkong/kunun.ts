@@ -1,4 +1,4 @@
-import { KnOpCode } from "../KnOpCode";
+import { XnlOpCode } from "../KnOpCode";
 import { CfgNodeCursor } from "./CfgNodeCursor";
 import { Instruction, InstructionStack } from "./InstructionStack";
 import { OperandStack } from "./OperandStack";
@@ -95,7 +95,7 @@ export class Fiber {
     this._opBatchStack.push([]);
   }
 
-  public AddOp(opCode: KnOpCode, memo: any = null) {
+  public AddOp(opCode: XnlOpCode, memo: any = null) {
     let top = this._opBatchStack[this._opBatchStack.length - 1];
     top.push(new Instruction(opCode, this.CurrentEnvId, memo));
   }
@@ -115,7 +115,7 @@ export class Fiber {
     }
   }
 
-  public AddOpDirectly(opCode: KnOpCode, memo: any = null) {
+  public AddOpDirectly(opCode: XnlOpCode, memo: any = null) {
     this.InstructionStack.PushValue(new Instruction(opCode, this.CurrentEnvId, memo));
   }
 }

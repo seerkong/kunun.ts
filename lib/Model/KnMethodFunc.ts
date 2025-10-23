@@ -1,12 +1,12 @@
 
 import { Env } from "../StateManagement/Env";
-import { KnNodeType } from "./KnType"
-import { NodeHelper } from "../Util/NodeHelper";
-import { KnCompositeFunctionBase } from "./KnFunctionBase";
+import { KnNodeType } from "./KnNodeType"
+import { KnNodeHelper } from "../Util/KnNodeHelper";
+import { KnCompositeFunctionBase } from "./KnCompositeFunctionBase";
 import { KnWord } from "./KnWord";
 
 export class KnMethodFunc extends KnCompositeFunctionBase {
-  public _Type = KnNodeType.KnMethodFunc;
+  public _Type = KnNodeType.MethodFunc;
   public InstanceType: any;
 
   public Name: string;

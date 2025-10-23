@@ -1,27 +1,27 @@
-import { TableHandler } from "./TableHandler";
-import { KnNodeType } from "../../Model/KnType";
+
+import { KnNodeType } from "../../Model/KnNodeType";
 import { KnSymbol } from "../../Model/KnSymbol";
-import { NodeHelper } from "../../Util/NodeHelper";
-import { KnOpCode } from "../../KnOpCode";
+import { KnNodeHelper } from "../../Util/KnNodeHelper";
+import { XnlOpCode } from "../../KnOpCode";
 import { Instruction } from "../../StateManagement/InstructionStack";
-import { KnState } from "../../KnState";
+import XnlState from "../../KnState";
 import { KnKnot } from "../../Model/KnKnot";
 import { Fiber, FiberState } from "../../StateManagement/Fiber";
 import { ResumeFiberToken } from "../../StateManagement/FiberMgr";
 
 export class WaitTimeoutHandler {
-  public static ExpandWaitTimeout(knState: KnState, nodeToRun: any) {
+  public static ExpandWaitTimeout(knState: XnlState, nodeToRun: any) {
     let waitTimeoutNode = nodeToRun as KnKnot;
-    let triggerHandler = waitTimeoutNode.Next.Core;
-    let timeoutInMilis = waitTimeoutNode.Next.Next.Core;
+    let triggerHandler = waitTimeoutNode.Next?.Core;
+    let timeoutInMilis = waitTimeoutNode.Next?.Next?.Core;
 
     let currentFiber = knState.GetCurrentFiber();
 
     let initSubFiberOps = [
-      new Instruction(KnOpCode.Ctrl_CurrentFiberToSuspended, currentFiber.CurrentEnvId),
-      new Instruction(KnOpCode.Node_RunNode, currentFiber.CurrentEnvId, triggerHandler),
-      new Instruction(KnOpCode.Ctrl_ApplyToFrameTop, currentFiber.CurrentEnvId, null),
-      new Instruction(KnOpCode.YieldToFiberAndChangeCurrentFiberState, currentFiber.CurrentEnvId, {
+      new Instruction(XnlOpCode.Ctrl_CurrentFiberToSuspended, currentFiber.CurrentEnvId),
+      new Instruction(XnlOpCode.Node_RunNode, currentFiber.CurrentEnvId, triggerHandler),
+      new Instruction(XnlOpCode.Ctrl_ApplyToFrameTop, currentFiber.CurrentEnvId, null),
+      new Instruction(XnlOpCode.YieldToFiberAndChangeCurrentFiberState, currentFiber.CurrentEnvId, {
         YieldToFiberId: currentFiber.Id,
         ChangeCurrentFiberToState: FiberState.Dead
       }),
@@ -31,12 +31,12 @@ export class WaitTimeoutHandler {
     knState.FiberMgr.AddToSuspendedFibersLast(subFiber);
 
     knState.OpBatchStart();
-    knState.AddOp(KnOpCode.ValStack_PushFrame);
-    knState.AddOp(KnOpCode.YieldToFiberAndChangeCurrentFiberState, {
+    knState.AddOp(XnlOpCode.ValStack_PushFrame);
+    knState.AddOp(XnlOpCode.YieldToFiberAndChangeCurrentFiberState, {
       YieldToFiberId: subFiber.Id,
       ChangeCurrentFiberToState: FiberState.Suspended
     });
-    knState.AddOp(KnOpCode.ValStack_PopFrameAndPushTopVal);
+    knState.AddOp(XnlOpCode.ValStack_PopFrameAndPushTopVal);
     knState.OpBatchCommit();
 
     setTimeout(

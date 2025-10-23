@@ -1,4 +1,4 @@
-import { KnOpCode } from "../KnOpCode";
+import { XnlOpCode } from "../KnOpCode";
 import { Fiber, FiberState } from "./Fiber";
 import { Instruction } from "./InstructionStack";
 
@@ -382,7 +382,7 @@ export class FiberMgr {
       let idleFiberCount = this.IdleFibers.length;
       let suspendedFiberCount = this.SuspendedFibers.length;
       if (currentFiber.IsRootFiber()) {
-        if (currentFiber.InstructionStack.PeekTop().OpCode != KnOpCode.OpStack_LandSuccess
+        if (currentFiber.InstructionStack.PeekTop().OpCode != XnlOpCode.OpStack_LandSuccess
           || (runnableFiberCountExcludeRootFiber == 0
             && idleFiberCount == 0
             && suspendedFiberCount == 0)
@@ -426,7 +426,7 @@ export class FiberMgr {
     this.GetCurrentFiber().OpBatchStart();
   }
 
-  public AddOp(opCode: KnOpCode, memo: any = null) {
+  public AddOp(opCode: XnlOpCode, memo: any = null) {
     this.GetCurrentFiber().AddOp(opCode, memo);
   }
 
@@ -434,7 +434,7 @@ export class FiberMgr {
     this.GetCurrentFiber().OpBatchCommit();
   }
 
-  public AddOpDirectly(opCode: KnOpCode, memo: any = null) {
+  public AddOpDirectly(opCode: XnlOpCode, memo: any = null) {
     this.GetCurrentFiber().AddOpDirectly(opCode, memo);
   }
 }

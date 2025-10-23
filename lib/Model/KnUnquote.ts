@@ -1,10 +1,10 @@
-import { KnNodeType } from "./KnType";
+import { KnNodeType } from "./KnNodeType";
 
-export class KnUnquote {
-  public _Type = KnNodeType.KnUnquoteReplace;
-  public Value: any;
+// export class KnUnquote {
+//   public _Type = XnNodeType.KnUnquoteReplace;
+//   public Value: any;
 
-  public constructor(inner: string) {
-    this.Value = inner;
-  }
-}
+//   public constructor(inner: string) {
+//     this.Value = inner;
+//   }
+// }

@@ -1,66 +1,100 @@
-import { TokenType } from "./Token";
+import { TokenType } from "./Lexer/Lexer";
 
 
-export class SyntaxConfig {
-  public static EnableCommaSeperator = false;
+export interface SyntaxConfig {
+  FormatRawStringAsString: boolean;
 
-  public static VectorStartToken = TokenType.BeginCurlyBracket;
-  public static VectorEndToken = TokenType.EndCurlyBracket;
-  public static VectorStartStr = '{';
-  public static VectorEndStr = '}';
+  PrefixToken: TokenType;
+  PrefixStr: string;
 
-  public static MapStartToken = TokenType.BeginParenthese;
-  public static MapEndToken = TokenType.EndParenthese;
-  public static MapPairSeperatorToken = TokenType.Equal;
-  public static MapStartStr = '(';
-  public static MapEndStr = ')';
-  public static MapPairSeperatorStr = '=';
+  TypeToken: TokenType;
+  TypeStr: string;
 
-  public static PrefixTypeToken = TokenType.Colon;
-  public static PrefixTypeStr = ':';
-  public static PrefixToken = TokenType.ExclamationMark;
-  public static PrefixStr = '!';
+  SuffixComplementToken: TokenType;
+  SuffixComplementStr: string;
 
-  public static SuffixTypeToken = TokenType.Tilde;
-  public static SuffixTypeStr = '~';
-  public static SuffixComplementToken = TokenType.UpArrow;
-  public static SuffixComplementStr = '^';
+  QuoteMarcroPrefixToken: TokenType;
+  QuoteMarcroPrefixStr: string;
 
-  public static KnotStartToken = TokenType.BeginBracket;
-  public static KnotEndToken = TokenType.EndBracket;
-  public static KnotStartStr = '[';
-  public static KnotEndStr = ']';
+  SyntaxMarcroPrefix: TokenType;
+  SyntaxMarcroPrefixStr: string;
 
-  public static KnotAnnotationBeginToken = TokenType.BeginBracket;
-  public static KnotAnnotationEndToken = TokenType.EndBracket;
-  public static KnotAnnotationBeginStr = '[';
-  public static KnotAnnotationEndStr = ']';
+  ActionMarcroPrefix: TokenType;
+  ActionMarcroPrefixStr: string;
 
-  public static KnotModifierBeginToken = TokenType.BeginCurlyBracket;
-  public static KnotModifierEndToken = TokenType.EndCurlyBracket;
-  public static KnotModifierBeginStr = '{';
-  public static KnotModifierEndStr = '}';
+  KnotSpecialPrefixToken: TokenType;
+  KnotSpecialPrefixStr: string;
 
-  public static KnotTypeParamBeginToken = TokenType.LowerThan;
-  public static KnotTypeParamEndToken = TokenType.BiggerThan;
-  public static KnotTypeParamBeginStr = '<';
-  public static KnotTypeParamEndStr = '>';
+  KnotMetadataPrefixToken: TokenType;
+  KnotMetadataPrefixStr: string;
 
-  public static KnotContextParamBeginToken = TokenType.BeginParenthese;
-  public static KnotContextParamEndToken = TokenType.EndParenthese;
-  public static KnotContextParamBeginStr = '(';
-  public static KnotContextParamEndStr = ')';
+  KnotMetadataSeparatorToken: TokenType;
+  KnotMetadataSeparatorStr: string;
 
-  public static KnotParamBeginToken = TokenType.BeginParenthese;
-  public static KnotParamEndToken = TokenType.EndParenthese;
-  public static KnotParamBeginStr = '(';
-  public static KnotParamEndStr = ')';
+  ValueFlagToken: TokenType;
+  ValueFlagStr: string;
+  // KeyTagBeforeWord: boolean;
 
-  public static MoreAttrOrBlockToken = TokenType.Percent;
-  public static MoreAttrOrBlockStartStr = '%';
+  FormaterMapKeyAsStr: boolean;
+  FormaterAddPairsSeparator: boolean;
+  PairsSeparatorToken: TokenType;
+  PairsSeparatorStr: string;
 
-  public static KnotBlockStartToken = TokenType.BeginCurlyBracket;
-  public static KnotBlockEndToken = TokenType.EndCurlyBracket;
-  public static KnotBlockStartStr = '{';
-  public static KnotBlockEndStr = '}';
+  UnorderedMapStartToken: TokenType;
+  UnorderedMapEndToken: TokenType;
+  UnorderedMapStartStr: string;
+  UnorderedMapEndStr: string;
+
+  OrderedMapStartToken: TokenType;
+  OrderedMapEndToken: TokenType;
+  OrderedMapStartStr: string;
+  OrderedMapEndStr: string;
+
+  VectorStartToken: TokenType;
+  VectorEndToken: TokenType;
+  VectorStartStr: string;
+  VectorEndStr: string;
+
+  KnotStartToken: TokenType;
+  KnotEndToken: TokenType;
+  KnotStartStr: string;
+  KnotEndStr: string;
+
+  TableStartToken: TokenType;
+  TableEndToken: TokenType;
+  TableStartStr: string;
+  TableEndStr: string;
+
+  KnotPrefixTypeToken: TokenType;
+  KnotPrefixTypeStr: string;
+  KnotPostfixTypeToken: TokenType;
+  KnotPostfixTypeStr: string;
+
+  KnotUnboundTypesBeginToken: TokenType;
+  KnotUnboundTypesEndToken: TokenType;
+  KnotUnboundTypesBeginStr: string;
+  KnotUnboundTypesEndStr: string;
+
+  KnotGenericTypesBeginToken: TokenType;
+  KnotGenericTypesEndToken: TokenType;
+  KnotGenericTypesBeginStr: string;
+  KnotGenericTypesEndStr: string;
+
+  KnotParamBeginToken: TokenType;
+  KnotParamEndToken: TokenType;
+  KnotParamBeginStr: string;
+  KnotParamEndStr: string;
+
+  KnotResultTypeBeginToken: TokenType;
+  KnotResultTypeEndToken: TokenType;
+  KnotResultTypeBeginStr: string;
+  KnotResultTypeEndStr: string;
+
+  KnotCallParamEndToken: TokenType;
+  KnotCallParamEndStr: string;
+
+  KnotBlockStartToken: TokenType;
+  KnotBlockEndToken: TokenType;
+  KnotBlockStartStr: string;
+  KnotBlockEndStr: string;
 }

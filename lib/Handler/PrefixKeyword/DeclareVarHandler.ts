@@ -1,11 +1,11 @@
-import { KnOpCode } from "../../KnOpCode";
+import { XnlOpCode } from "../../KnOpCode";
 import { Instruction } from "../../StateManagement/InstructionStack";
-import { KnState } from "../../KnState";
+import XnlState from "../../KnState";
 import { KnWord } from "../../Model";
 
 // [var a 5]
 export class DeclareVarHandler {
-  public static ExpandDeclareVar(knState: KnState, nodeToRun: any) {
+  public static ExpandDeclareVar(knState: XnlState, nodeToRun: any) {
     let varName = (nodeToRun.Next.Core as KnWord).Value;
     let varExpr = null;
     if (nodeToRun.Next.Next != null) {
@@ -14,17 +14,17 @@ export class DeclareVarHandler {
     
     
     knState.OpBatchStart();
-    knState.AddOp(KnOpCode.ValStack_PushFrame);
-    knState.AddOp(KnOpCode.Node_RunNode, varExpr);
-    knState.AddOp(KnOpCode.ValStack_Duplicate);
-    knState.AddOp(KnOpCode.Env_DeclareLocalVar, varName);
+    knState.AddOp(XnlOpCode.ValStack_PushFrame);
+    knState.AddOp(XnlOpCode.Node_RunNode, varExpr);
+    knState.AddOp(XnlOpCode.ValStack_Duplicate);
+    knState.AddOp(XnlOpCode.Env_DeclareLocalVar, varName);
 
-    knState.AddOp(KnOpCode.ValStack_PopFrameAndPushTopVal);
+    knState.AddOp(XnlOpCode.ValStack_PopFrameAndPushTopVal);
 
     knState.OpBatchCommit();
   }
 
-  public static RunDeclareVar(knState: KnState, opContState : Instruction) {
+  public static RunDeclareVar(knState: XnlState, opContState : Instruction) {
     let varName = opContState.Memo;
     let varValue = knState.GetCurrentFiber().OperandStack.PopValue();
     let curEnv = knState.GetCurEnv();

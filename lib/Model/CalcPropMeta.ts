@@ -1,21 +1,21 @@
 
 import { Env } from "../StateManagement/Env";
-import { KnNodeType } from "./KnType"
+import { KnNodeType } from "./KnNodeType"
 import { KnPropertyFunc } from "./KnPropertyFunc"
 import { IPropertyMeta } from "./IPropertyMeta";
 export class CalcPropMeta implements IPropertyMeta {
-  public _Type = KnNodeType.KnCalcPropMetadata;
+  public _Type = KnNodeType.CalcPropMetadata;
   public Name: string;
   public Definition: any;
 
   public GetterVisibility: string;
-  public GetterFunc: KnPropertyFunc;
+  public GetterFunc: KnPropertyFunc | null;
   public SetterVisibility: string;
-  public SetterFunc: KnPropertyFunc;
+  public SetterFunc: KnPropertyFunc | null;
 
   constructor(name, definition = null,
-    getterVisibility = "public", getterFunc : KnPropertyFunc,
-    setterVisibility = "public", setterFunc : KnPropertyFunc
+    getterVisibility : string = "public", getterFunc : KnPropertyFunc | null,
+    setterVisibility : string = "public", setterFunc : KnPropertyFunc | null
   ) {
     this.Name = name;
     this.Definition = definition;

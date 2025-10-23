@@ -15,7 +15,7 @@
             "args": [
                 "__tests__/Case/Formatter.test.ts",
                 "-g",
-                "knot_single_node",
+                "'DeclareObject'",
                 "--no-timeouts",
             ],
             "cwd": "${workspaceRoot}",

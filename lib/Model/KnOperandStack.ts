@@ -1,7 +1,7 @@
-import { KnNodeType } from "./KnType";
+import { KnNodeType } from "./KnNodeType";
 
 export class KnOperandStack {
-  public _Type = KnNodeType.KnOperandStack;
+  public _Type = KnNodeType.OperandStack;
   public Value: any[];
 
   public constructor(inner: any[]) {

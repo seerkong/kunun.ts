@@ -1,14 +1,14 @@
-import { KnOpCode } from "../../KnOpCode";
-import { KnState } from "../../KnState";
-import { KnWord } from "../../Model";
+import { XnlOpCode } from "../../KnOpCode";
+import XnlState from "../../KnState";
+import { KnKnot, KnWord } from "../../Model";
 
 export class SetToHandler {
-  public static ExpandSetTo(knState: KnState, nodeToRun: any) : number{
-    let varName = (nodeToRun.Core as KnWord).Definition.Value;
+  public static ExpandSetTo(knState: XnlState, nodeToRun: any) : number{
+    let varName = (nodeToRun as KnKnot).Selector;
     
     knState.OpBatchStart();
-    knState.AddOp(KnOpCode.ValStack_Duplicate);
-    knState.AddOp(KnOpCode.Env_SetLocalEnv, varName);
+    knState.AddOp(XnlOpCode.ValStack_Duplicate);
+    knState.AddOp(XnlOpCode.Env_SetLocalEnv, varName);
     knState.OpBatchCommit();
     return 1;
   }

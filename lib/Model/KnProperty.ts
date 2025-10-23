@@ -1,7 +1,7 @@
-import { KnNodeType } from "./KnType";
+import { KnNodeType } from "./KnNodeType";
 
 export class KnProperty {
-  public _Type = KnNodeType.KnProperty;
+  public _Type = KnNodeType.Property;
   public Value: any;
 
   public constructor(inner: string) {

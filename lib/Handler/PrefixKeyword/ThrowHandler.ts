@@ -1,17 +1,16 @@
-import { TableHandler } from "./TableHandler";
-import { KnNodeType } from "../../Model/KnType";
+import { KnNodeType } from "../../Model/KnNodeType";
 import { KnSymbol } from "../../Model/KnSymbol";
-import { NodeHelper } from "../../Util/NodeHelper";
-import { KnOpCode } from "../../KnOpCode";
+import { KnNodeHelper } from "../../Util/KnNodeHelper";
+import { XnlOpCode } from "../../KnOpCode";
 import { Instruction } from "../../StateManagement/InstructionStack";
-import { KnState } from "../../KnState";
+import XnlState from "../../KnState";
 
 export class ThrowHandler {
-  public static ExpandThrow(knState: KnState, nodeToRun: any) {
+  public static ExpandThrow(knState: XnlState, nodeToRun: any) {
     let field = nodeToRun.Value;
     knState.OpBatchStart();
-    knState.AddOp(KnOpCode.Node_RunNode, field);
-    knState.AddOp(KnOpCode.Node_RunGetSubscript);
+    knState.AddOp(XnlOpCode.Node_RunNode, field);
+    knState.AddOp(XnlOpCode.Node_RunGetSubscript);
     knState.OpBatchCommit();
   }
 }

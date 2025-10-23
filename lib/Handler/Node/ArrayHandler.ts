@@ -1,23 +1,23 @@
-import { KnOpCode } from "../../KnOpCode";
+import { XnlOpCode } from "../../KnOpCode";
 import { Instruction } from "../../StateManagement/InstructionStack";
-import { KnState } from "../../KnState";
+import XnlState from "../../KnState";
 import { NodeHandler } from "./NodeHandler";
 
 export class ArrayHandler {
-  public static ExpandOpenArray(knState: KnState, nodeToRun: any) {
+  public static ExpandOpenArray(knState: XnlState, nodeToRun: any) {
     knState.OpBatchStart();
-    knState.AddOp(KnOpCode.ValStack_PushFrame);
+    knState.AddOp(XnlOpCode.ValStack_PushFrame);
     for (let item of nodeToRun) {
-      knState.AddOp(KnOpCode.Node_RunNode, item);
+      knState.AddOp(XnlOpCode.Node_RunNode, item);
     }
 
-    knState.AddOp(KnOpCode.Node_MakeVector);
-    knState.AddOp(KnOpCode.ValStack_PopFrameAndPushTopVal);
+    knState.AddOp(XnlOpCode.Node_MakeVector);
+    knState.AddOp(XnlOpCode.ValStack_PopFrameAndPushTopVal);
     knState.OpBatchCommit();
   }
 
-  public static RunMakeArray(knState: KnState, opContState : Instruction) {
+  public static RunMakeArray(knState: XnlState, opContState : Instruction) {
     let evaledNodes = knState.GetCurrentFiber().OperandStack.PeekAndClearFrameAllValues();
-    knState.AddOpDirectly(KnOpCode.ValStack_PushValue, evaledNodes);
+    knState.AddOpDirectly(XnlOpCode.ValStack_PushValue, evaledNodes);
   }
 }

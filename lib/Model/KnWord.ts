@@ -1,22 +1,24 @@
-import { KnNodeType } from "./KnType";
+import { KnQualifiedIdentifier } from "./KnQualifiedIdentifier";
+import { KnNodeType } from "./KnNodeType";
+import { KnModifierGroup } from "./KnModifierGroup";
 
-export class KnWord {
-  public _Type = KnNodeType.KnWord;
-  public Annotation: any[];
-  public Flags: any[];
-  public Modifier: any[];
-  
+export class KnWord extends KnQualifiedIdentifier {
+  public _Type = KnNodeType.Word;
 
-  public Definition: any;
-  public Complement: any[];
-  public Value: any;
 
-  public constructor(inner: string) {
+  public PreModifiers: KnModifierGroup;
+  public PostModifiers: KnModifierGroup;
+
+  public constructor(inner: string, qualifiers: string[] = []) {
+    super();
     this.Value = inner;
+    this.Qualifiers = qualifiers;
   }
 
   public static IsSingleLineWord(w : KnWord) : boolean {
-    return (w.Annotation == null || w.Annotation.length == 0)
-      && (w.Complement == null || w.Complement.length == 0);
+    return true;
+    // return (w.Annotation == null || w.Annotation.length == 0)
+    //   && (w.Complement == null || w.Complement.length == 0);
   }
+
 }

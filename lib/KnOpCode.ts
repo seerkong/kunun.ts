@@ -1,4 +1,4 @@
-export enum KnOpCode {
+export enum XnlOpCode {
     OpStack_LandSuccess = 'OpStack_LandSuccess',
     OpStack_LandFail = 'OpStack_LandFail',
 

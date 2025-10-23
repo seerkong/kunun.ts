@@ -1,10 +1,10 @@
 
 import { Env } from "../StateManagement/Env";
-import { KnNodeType } from "./KnType"
-import { KnCompositeFunctionBase } from "./KnFunctionBase";
+import { KnNodeType } from "./KnNodeType"
+import { KnCompositeFunctionBase } from "./KnCompositeFunctionBase";
 import { KnWord } from "./KnWord";
 export class KnPropertyFunc extends KnCompositeFunctionBase {
-  public _Type = KnNodeType.KnPropertyFunc;
+  public _Type = KnNodeType.PropertyFunc;
   public RequiredFields: string[];
   public Name: string;
 

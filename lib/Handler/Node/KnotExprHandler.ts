@@ -1,25 +1,25 @@
-import { KnNodeType } from "../../Model/KnType";
-import { NodeHelper } from "../../Util/NodeHelper";
-import { KnOpCode } from "../../KnOpCode";
+import { KnNodeType } from "../../Model/KnNodeType";
+import { KnNodeHelper } from "../../Util/KnNodeHelper";
+import { XnlOpCode } from "../../KnOpCode";
 import { Instruction } from "../../StateManagement/InstructionStack";
-import { KnState } from "../../KnState";
+import XnlState from "../../KnState";
 import { BlockHandler } from "./BlockHandler";
 import { PropertyHandler } from "./PropertyHandler";
 import { SubscriptHandler } from "./SubscriptHandler";
 import { NodeHandler } from "./NodeHandler";
 import { ExtensionRegistry } from "../../ExtensionRegistry";
-import { KnKnot } from "../../Model";
+import { KnKnot, KnTuple } from "../../Model";
 
 export class KnotExprHandler {
-  public static ExpandKnotSingleResultSentence(knState: KnState, nodeToRun: any) {
+  public static ExpandKnotSingleResultSentence(knState: XnlState, nodeToRun: any) {
     knState.OpBatchStart();
-    knState.AddOp(KnOpCode.ValStack_PushFrame);
-    knState.AddOp(KnOpCode.Node_IterEvalKnotClause, nodeToRun);
-    knState.AddOp(KnOpCode.ValStack_PopFrameAndPushTopVal);
+    knState.AddOp(XnlOpCode.ValStack_PushFrame);
+    knState.AddOp(XnlOpCode.Node_IterEvalKnotClause, nodeToRun);
+    knState.AddOp(XnlOpCode.ValStack_PopFrameAndPushTopVal);
     knState.OpBatchCommit();
   }
 
-  public static HandleIterEvalKnotClause(knState: KnState, opContState: Instruction) {
+  public static HandleIterEvalKnotClause(knState: XnlState, opContState: Instruction) {
     let knot : KnKnot = opContState.Memo;
     let core = knot.Core;
     let nextKnotClause = null;
@@ -30,20 +30,21 @@ export class KnotExprHandler {
     knState.OpBatchStart();
     if (core == null) {
 
-      if (knot.Body != null) {
+      if (knot.Block != null) {
         // as a block
-        BlockHandler.ExpandBlock(knState, knot.Body)
+        BlockHandler.ExpandBlock(knState, knot.Block)
       }
-      else if (knot.Param != null) {
+      else if (knot.Params != null) {
+        let paramTable = knot.Params as KnTuple;
         // curring
-        for (let i = 0; i < knot.Param.length; i++) {
-          knState.AddOp(KnOpCode.Node_RunNode, knot.Param[i]);
+        for (let i = 0; i < paramTable.Value.length; i++) {
+          knState.AddOp(XnlOpCode.Node_RunNode, paramTable.Value[i]);
         }
-        knState.AddOp(KnOpCode.Ctrl_ApplyToFrameBottom);
+        knState.AddOp(XnlOpCode.Ctrl_ApplyToFrameBottom);
       }
 
     }
-    else if (NodeHelper.GetType(core) == KnNodeType.KnWord
+    else if (KnNodeHelper.GetType(core) == KnNodeType.Word
       && ExtensionRegistry.IsInfixKeyWord(core.Value)
     ) {
       let keyWordStr = core.Value;
@@ -56,27 +57,28 @@ export class KnotExprHandler {
       nextKnotClause = iter;
     }
     else {
-      knState.AddOp(KnOpCode.Node_RunNode, core);
-      if (knot.Apply === true) {
-        // func apply
-        knState.AddOp(KnOpCode.Ctrl_ApplyToFrameTop);
-      }
-      else if (knot.Param != null) {
+      knState.AddOp(XnlOpCode.Node_RunNode, core);
+      // if (knot.Apply === true) {
+      //   // func apply
+      //   knState.AddOp(XnlOpCode.Ctrl_ApplyToFrameTop);
+      // }
+      // else 
+      if (knot.Params != null) {
         // func call
-        let args = knot.Param;
-        for (let i = 0; i < args.length; i++) {
-          knState.AddOp(KnOpCode.Node_RunNode, args[i]);
+        let args = knot.Params as KnTuple;
+        for (let i = 0; i < args.Value.length; i++) {
+          knState.AddOp(XnlOpCode.Node_RunNode, args[i]);
         }
-        knState.AddOp(KnOpCode.Ctrl_ApplyToFrameBottom);
+        knState.AddOp(XnlOpCode.Ctrl_ApplyToFrameBottom);
       }
-      else if (knot.Attr != null || knot.Body != null) {
+      else if (knot.Attr != null || knot.Block != null) {
         // TODO
       }
 
     }
 
     if (nextKnotClause != null) {
-      knState.AddOp(KnOpCode.Node_IterEvalKnotClause, nextKnotClause);
+      knState.AddOp(XnlOpCode.Node_IterEvalKnotClause, nextKnotClause);
     }
 
 

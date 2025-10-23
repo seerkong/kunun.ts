@@ -1,8 +1,8 @@
 
 import { Env } from "../StateManagement/Env";
-import { KnNodeType } from "./KnType"
+import { KnNodeType } from "./KnNodeType"
 export class FieldStorageMeta {
-  public _Type = KnNodeType.KnFieldStorageMetadata;
+  public _Type = KnNodeType.FieldStorageMetadata;
   public Name: string;
   public Index: number;
   public Definition: any;

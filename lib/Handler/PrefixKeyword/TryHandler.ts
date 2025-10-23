@@ -1,16 +1,16 @@
-import { TableHandler } from "./TableHandler";
-import { KnNodeType } from "../../Model/KnType";
+
+import { KnNodeType } from "../../Model/KnNodeType";
 import { KnSymbol } from "../../Model/KnSymbol";
-import { NodeHelper } from "../../Util/NodeHelper";
-import { KnOpCode } from "../../KnOpCode";
+import { KnNodeHelper } from "../../Util/KnNodeHelper";
+import { XnlOpCode } from "../../KnOpCode";
 import { Instruction } from "../../StateManagement/InstructionStack";
-import { KnState } from "../../KnState";
+import XnlState from "../../KnState";
 import { KnKnot } from "../../Model/KnKnot";
 
 export class TryHandler {
-  public static ExpandTry(knState: KnState, nodeToRun: any) {
+  public static ExpandTry(knState: XnlState, nodeToRun: any) {
     let tryNode = nodeToRun as KnKnot;
-    let tryBlock = tryNode.Body;
+    let tryBlock = tryNode.Block;
 
     let effectHandlerMap = {};
     let continuationMap = {};
@@ -18,9 +18,15 @@ export class TryHandler {
     let iter = tryNode.Next;
     while (iter != null) {
       let coreNode = iter.Core;
-      if (NodeHelper.IsWordStr(coreNode, 'handle')) {
+      if (KnNodeHelper.IsWordStr(coreNode, 'handle')) {
+        if (!iter.Next) {
+          throw new Error('Expected effect name after handle');
+        }
         let effectName = iter.Next.Core;
-        let effectNameStr = NodeHelper.GetInnerString(effectName);
+        let effectNameStr = KnNodeHelper.GetInnerString(effectName);
+        if (!iter.Next.Next) {
+          throw new Error('Expected effect handler after effect name'); 
+        }
         let effectHandlerName = iter.Next.Next.Core;
         effectHandlerMap[effectNameStr] = effectHandlerName;
         // continuationMap[effectNameStr] = NodeHelper.Ukn;
@@ -33,15 +39,15 @@ export class TryHandler {
     }
 
     knState.OpBatchStart();
-    knState.AddOp(KnOpCode.Env_DiveLocalEnv);
-    knState.AddOp(KnOpCode.Ctrl_MakeContExcludeTopNInstruction, 6);
-    knState.AddOp(KnOpCode.Env_SetLocalEnv, '__ContinuationAfterTry');
-    knState.AddOp(KnOpCode.Node_RunNode, effectHandlerMap);
-    knState.AddOp(KnOpCode.Env_SetLocalEnv, '__EffectHandlerMap');
+    knState.AddOp(XnlOpCode.Env_DiveLocalEnv);
+    knState.AddOp(XnlOpCode.Ctrl_MakeContExcludeTopNInstruction, 6);
+    knState.AddOp(XnlOpCode.Env_SetLocalEnv, '__ContinuationAfterTry');
+    knState.AddOp(XnlOpCode.Node_RunNode, effectHandlerMap);
+    knState.AddOp(XnlOpCode.Env_SetLocalEnv, '__EffectHandlerMap');
     // knState.AddOp(OpCode.Node_RunNode, continuationMap);
     // knState.AddOp(OpCode.Env_SetLocalEnv, '__ContinuationMap');
-    knState.AddOp(KnOpCode.Node_RunBlock, tryBlock);
-    knState.AddOp(KnOpCode.Env_Rise);
+    knState.AddOp(XnlOpCode.Node_RunBlock, tryBlock);
+    knState.AddOp(XnlOpCode.Env_Rise);
     knState.OpBatchCommit();
   }
 }

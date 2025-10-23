@@ -1,10 +1,8 @@
-
-import { Env } from "../StateManagement/Env";
-import { KnNodeType } from "./KnType"
 import { TableMeta } from "./TableMeta";
-import { KnPropertyFunc } from "./KnPropertyFunc"
+import { KnNodeType } from "./KnNodeType"
+
 export class KnTable {
-  public _Type = KnNodeType.KnTable;
+  public _Type = KnNodeType.Table;
   public Metadata: TableMeta;
   public Fields: any[];
 

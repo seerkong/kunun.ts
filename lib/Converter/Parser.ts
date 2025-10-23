@@ -47,17 +47,17 @@ class PrefixContext {
     public Definition = null;
     public Annotation = [];
     public Flags  = [];
-    public Modifier = [];
+    public Modifiers = [];
 
     public TypeParams = [];
-    public ContextParam = [];
+    public ContextParams = [];
     public TypeWhere = null;
 }
 
 class SuffixContext {
     public Definition  = null;
     public TypeResult  = null;
-    public Complement = [];
+    public Complements = [];
 }
 
 class SuffixItem {
@@ -127,10 +127,6 @@ export class Parser {
 
         // return parser.parseRoot();
         return parser.Value();
-    }
-
-    SkipBlankTokens() {
-        this.lexer.SkipWhitespaces();
     }
 
 
@@ -224,7 +220,7 @@ export class Parser {
                 return PrefixType.Modifier;
             } else if (nextChar == SyntaxConfig.KnotContextParamBeginStr) {
                 return PrefixType.ContextParam;
-            } else if (nextChar == SyntaxConfig.MoreAttrOrBlockToken) {
+            } else if (nextChar == SyntaxConfig.KnotAttrStartStr) {
                 return PrefixType.TypeWhere;
             } else if (/^[_a-zA-Z=@\+\-\*\/]/.test(nextChar)) {
                 return PrefixType.Flag;
@@ -279,10 +275,10 @@ export class Parser {
             let itemVal = this.Value({AcceptPrefix: false, AcceptSuffix: false});
             return new PrefixItem(PrefixType.Definition, itemVal);
         }
-        // else if (prefixType === PrefixType.TypeWhere) {
-        //     let itemVal = this.KnMapInner(SyntaxConfig.MoreAttrOrBlockToken, SyntaxConfig.KnotAttrEndToken);
-        //     return new PrefixItem(PrefixType.TypeWhere, itemVal);
-        // }
+        else if (prefixType === PrefixType.TypeWhere) {
+            let itemVal = this.KnMapInner(SyntaxConfig.KnotAttrStartToken, SyntaxConfig.KnotAttrEndToken);
+            return new PrefixItem(PrefixType.TypeWhere, itemVal);
+        }
         
         return null;
     }
@@ -355,9 +351,9 @@ export class Parser {
         }
         let result = new PrefixContext();
         result.Flags = flags;
-        result.Modifier = modifiers;
+        result.Modifiers = modifiers;
         result.Annotation = annotations;
-        result.ContextParam = contextParams;
+        result.ContextParams = contextParams;
         result.TypeWhere = typeWhere;
         result.Definition = definition;
         result.TypeParams = typeParam;
@@ -392,7 +388,7 @@ export class Parser {
         let result = new SuffixContext();
         result.Definition = definition;
         result.TypeResult = typeResult;
-        result.Complement = complements;
+        result.Complements = complements;
         return result;
     }
 
@@ -406,14 +402,14 @@ export class Parser {
         if (prefixContext.Flags.length > 0) {
             value.Flags = prefixContext.Flags;
         }
-        if (prefixContext.Modifier.length > 0) {
-            value.Modifier = prefixContext.Modifier;
+        if (prefixContext.Modifiers.length > 0) {
+            value.Modifiers = prefixContext.Modifiers;
         }
         if (prefixContext.Annotation.length > 0) {
-            value.Annotation = prefixContext.Annotation;
+            value.Annotations = prefixContext.Annotation;
         }
-        if (prefixContext.ContextParam != null && prefixContext.ContextParam.length > 0) {
-            value.ContextParam = prefixContext.ContextParam;
+        if (prefixContext.ContextParams != null && prefixContext.ContextParams.length > 0) {
+            value.ContextParams = prefixContext.ContextParams;
         }
         if (prefixContext.TypeWhere != null) {
             value.TypeWhere = prefixContext.TypeWhere;
@@ -441,8 +437,8 @@ export class Parser {
             if (suffixContext.Definition != null) {
                 word.Definition = suffixContext.Definition;
             }
-            if (suffixContext.Complement != null) {
-                word.Complement = suffixContext.Complement;
+            if (suffixContext.Complements != null) {
+                word.Complements = suffixContext.Complements;
             }
         }
         return word;
@@ -517,76 +513,33 @@ export class Parser {
         return array;
     }
 
-    // Key() {
-    //     // return this.String();
-    //     if (this.currentToken.Type === TokenType.String) {
-    //         return this.String();
-    //     } else if (this.currentToken.Type === TokenType.Word) {
-    //         const str = this.currentToken.Value;
-    //         this.Consume(TokenType.Word);
-    //         return str;
-    //     } else {
-    //         this.Error(`parse key error, line ${this.currentToken.Line}, column ${this.currentToken.Column}`);
-    //     }
-    // }
-
-    // KeyValPair() {
-    //     let key = this.Key();
-    //     let val = NodeHelper.Ukn;
-    //     if (this.currentToken.Type === SyntaxConfig.MapPairSeperatorToken) {
-    //         this.Consume(SyntaxConfig.MapPairSeperatorToken);
-    //         val = this.Value();
-    //     }
-    //     if (SyntaxConfig.EnableCommaSeperator
-    //         && this.currentToken.Type === TokenType.Comma
-    //     ) {
-    //         this.Consume(TokenType.Comma);
-    //     }
-    //     return [key, val];
-    // }
-
-    ParsePairDefaultAsKey() {
-        return this.ParsePair(true)
+    Key() {
+        // return this.String();
+        if (this.currentToken.Type === TokenType.String) {
+            return this.String();
+        } else if (this.currentToken.Type === TokenType.Word) {
+            const str = this.currentToken.Value;
+            this.Consume(TokenType.Word);
+            return str;
+        } else {
+            this.Error(`parse key error, line ${this.currentToken.Line}, column ${this.currentToken.Column}`);
+        }
     }
 
-    ParsePairDefaultAsValue() {
-        return this.ParsePair(false)
-    }
-
-    ParsePair(defaultAsKey) {
-        let firstNode = this.Value();
-        let secondNode = null;
-        this.SkipBlankTokens();
+    KeyValPair() {
+        let key = this.Key();
+        let val = NodeHelper.Ukn;
         if (this.currentToken.Type === SyntaxConfig.MapPairSeperatorToken) {
             this.Consume(SyntaxConfig.MapPairSeperatorToken);
-            secondNode = this.Value();
-            this.SkipBlankTokens();
+            val = this.Value();
         }
-        let key = null;
-        let val = null;
-        if (secondNode != null) {
-            key = this.AsPairKey(firstNode);
-            val = secondNode;
-        }
-        else if (defaultAsKey) {
-            key = this.AsPairKey(firstNode);
-            val = NodeHelper.Ukn;
-        }
-        else {
-            val = firstNode;
+        if (SyntaxConfig.EnableCommaSeperator
+            && this.currentToken.Type === TokenType.Comma
+        ) {
+            this.Consume(TokenType.Comma);
         }
         return [key, val];
     }
-
-    AsPairKey(parseResult) {
-        let nodeType = NodeHelper.GetType(parseResult);
-        if (nodeType == KnNodeType.KnString) {
-            return parseResult;
-        } else if (nodeType == KnNodeType.KnWord) {
-            return (parseResult as KnWord).Value;
-        }
-    }
-
 
     KnMap() {
         return this.KnMapInner(SyntaxConfig.MapStartToken, SyntaxConfig.MapEndToken);
@@ -596,7 +549,7 @@ export class Parser {
         const result = {};
         this.Consume(beginToken);
         while (this.currentToken.Type != endToken) {
-            let pair = this.ParsePairDefaultAsKey();
+            let pair = this.KeyValPair();
             result[pair[0]] = pair[1];
         }
         this.Consume(endToken);
@@ -660,7 +613,7 @@ export class Parser {
                     top = new KnKnot({});
                     nodes.push(top);
                 }
-                top.Apply = true;
+                top.SegmentStop = true;
             }
 
             else if (this.currentToken.Type === SyntaxConfig.KnotParamBeginToken) {
@@ -683,53 +636,23 @@ export class Parser {
                     }
                     top.TypeResult = suffixContext.TypeResult;
                 }
-                if (suffixContext.Complement != null) {
-                    if (!this.KnotAcceptComplement(top)
+                if (suffixContext.Complements != null) {
+                    if (!this.KnotAcceptComplements(top)
                     ) {
                         top = new KnKnot({});
                         nodes.push(top);
                     }
-                    top.Complement = suffixContext.Complement;
+                    top.Complements = suffixContext.Complements;
                 }
             }
 
-            // else if (this.currentToken.Type === SyntaxConfig.KnotAttrStartToken) {
-            //     if (!this.KnotAcceptAttr(top)) {
-            //         top = new KnKnot({});
-            //         nodes.push(top);
-            //     }
-            //     let map = this.KnMapInner(SyntaxConfig.KnotAttrStartToken, SyntaxConfig.KnotAttrEndToken);
-            //     top.Attr = map;
-            // }
-
-            else if (this.currentToken.Type === SyntaxConfig.MoreAttrOrBlockToken) {
-                this.Consume( SyntaxConfig.MoreAttrOrBlockToken);
-                let nodeAfterPrefix = this.Value();
-                let nodeAfterPrefixType = NodeHelper.GetType(nodeAfterPrefix);
-                if (KnNodeType.KnMap == nodeAfterPrefixType) {
-                    if (!this.KnotAcceptAttr(top)) {
-                        top = new KnKnot({});
-                        nodes.push(top);
-                    }
-                    top.Attr = nodeAfterPrefix;
-                } else if (KnNodeType.KnWord == nodeAfterPrefixType) {
-                    let tagStr = (nodeAfterPrefix as KnWord).Value;
-                    let nodeAfterTag = this.Value();
-                    let nodeAfterTagType = NodeHelper.GetType(nodeAfterTag);
-                    if (KnNodeType.KnMap == nodeAfterTagType) {
-                        if (top.Feature == null) {
-                            top.Feature = {};
-                        }
-                        top.Feature[tagStr] = nodeAfterTag;
-                    }
-                    else if (KnNodeType.KnVector == nodeAfterTagType) {
-                        if (top.Section == null) {
-                            top.Section = {};
-                        }
-                        top.Section[tagStr] = nodeAfterTag;
-                    }
+            else if (this.currentToken.Type === SyntaxConfig.KnotAttrStartToken) {
+                if (!this.KnotAcceptAttr(top)) {
+                    top = new KnKnot({});
+                    nodes.push(top);
                 }
-
+                let map = this.KnMapInner(SyntaxConfig.KnotAttrStartToken, SyntaxConfig.KnotAttrEndToken);
+                top.Attr = map;
             }
 
             else if (this.currentToken.Type === SyntaxConfig.KnotBlockStartToken) {
@@ -738,7 +661,7 @@ export class Parser {
                     nodes.push(top);
                 }
                 let vector = this.KnVectorInner(SyntaxConfig.KnotBlockStartToken, SyntaxConfig.KnotBlockEndToken);
-                top.Body = vector;
+                top.Block = vector;
             }
             else {
                 if (!this.KnotAcceptCore(top)) {
@@ -762,7 +685,7 @@ export class Parser {
     }
 
     KnotAcceptTypeParam(knot) {
-        return (knot.TypeParam == null)  && this.KnotAcceptParam(knot);
+        return (knot.TypeParam == null)  && this.KnotAcceptSegmentStop(knot);
     }
 
     KnotAcceptSegmentStop(knot) {
@@ -770,15 +693,15 @@ export class Parser {
     }
 
     KnotAcceptParam(knot: KnKnot) {
-        return (knot.Param == null && knot.Apply != true) && this.KnotAcceptTypeResult(knot);
+        return (knot.Param == null && knot.SegmentStop != true) && this.KnotAcceptTypeResult(knot);
     }
 
     KnotAcceptTypeResult(knot: KnKnot) {
-        return (knot.TypeResult == null) && this.KnotAcceptComplement(knot);
+        return (knot.TypeResult == null) && this.KnotAcceptComplements(knot);
     }
 
-    KnotAcceptComplement(knot: KnKnot) {
-        return (knot.Complement == null || knot.Complement.length == 0) && this.KnotAcceptAttr(knot);
+    KnotAcceptComplements(knot: KnKnot) {
+        return (knot.Complements == null) && this.KnotAcceptAttr(knot);
     }
 
     KnotAcceptAttr(knot : KnKnot) {
@@ -786,7 +709,7 @@ export class Parser {
     }
 
     KnotAcceptBlock(knot : KnKnot) {
-        return (knot.Body == null);
+        return (knot.Block == null);
     }
 }
 

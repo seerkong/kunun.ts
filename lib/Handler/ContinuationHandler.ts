@@ -3,10 +3,10 @@ import { Env } from "../StateManagement/Env";
 import { Instruction, InstructionStack } from "../StateManagement/InstructionStack";
 import { OperandStack } from "../StateManagement/OperandStack";
 import { KnContinuation } from "../Model/KnContinuation";
-import { KnState } from "../KnState";
+import XnlState from "../KnState";
 
 export class ContinuationHandler {
-  public static RunMakeContExcludeTopNInstruction(knState: KnState, opContState : Instruction) {
+  public static RunMakeContExcludeTopNInstruction(knState: XnlState, opContState : Instruction) {
     let excludeN = opContState.Memo;
     let cont = ContinuationHandler.MakeContinuation(knState);
     let instructionsBackup = cont.InstructionStackBackup.GetItems();
@@ -18,7 +18,7 @@ export class ContinuationHandler {
     knState.GetCurrentFiber().OperandStack.PushValue(cont);
   }
 
-  public static MakeContinuation(knState : KnState) : KnContinuation {
+  public static MakeContinuation(knState : XnlState) : KnContinuation {
     let fiber = knState.GetCurrentFiber();
     let operandStack : OperandStack = fiber.OperandStack;
     let operandStackBackup: StackMachineData<any> = operandStack.ToStackMachineData();
@@ -32,7 +32,7 @@ export class ContinuationHandler {
     return result;
   }
 
-  public static RestoreContinuationAppendOperandStack(knState : KnState, cont : KnContinuation, operands: any[]) {
+  public static RestoreContinuationAppendOperandStack(knState : XnlState, cont : KnContinuation, operands: any[]) {
     let fiber = knState.GetCurrentFiber();
     fiber.CurrentEnvId = cont.CurrentEnvId;
     fiber.InstructionStack.LoadStackMachineData(cont.InstructionStackBackup);

@@ -1,11 +1,11 @@
 import { StackMachine } from "../Algo/StackMachine";
-import { KnOpCode } from "../KnOpCode";
+import { XnlOpCode } from "../KnOpCode";
 export class Instruction {
     public OpCode : string;
     public EnvId : number;
     public Memo : any;
 
-    constructor(opCode : KnOpCode, envId : number, memo = null) {
+    constructor(opCode : XnlOpCode, envId : number, memo: any = null) {
         this.OpCode = opCode;
         this.EnvId = envId;
         this.Memo = memo;

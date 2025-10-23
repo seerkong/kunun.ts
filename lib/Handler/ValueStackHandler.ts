@@ -1,35 +1,35 @@
 import { KnOperandStack } from "../Model/KnOperandStack";
-import { NodeHelper } from "../Util/NodeHelper";
+import { KnNodeHelper } from "../Util/KnNodeHelper";
 import { Instruction } from "../StateManagement/InstructionStack";
-import { KnState } from "../KnState";
+import XnlState from "../KnState";
 
 export class ValueStackHandler {
-  public static RunPushFrame(knState: KnState, opContState : Instruction) {
+  public static RunPushFrame(knState: XnlState, opContState : Instruction) {
     knState.GetCurrentFiber().OperandStack.PushFrame();
   }
 
-  public static RunPushValue(knState: KnState, opContState : Instruction) {
+  public static RunPushValue(knState: XnlState, opContState : Instruction) {
     knState.GetCurrentFiber().OperandStack.PushValue(opContState.Memo);
   }
 
-  public static RunPopValue(knState: KnState, opContState : Instruction) {
+  public static RunPopValue(knState: XnlState, opContState : Instruction) {
     knState.GetCurrentFiber().OperandStack.PopValue();
   }
 
-  public static RunDuplicate(knState: KnState, opContState : Instruction) {
+  public static RunDuplicate(knState: XnlState, opContState : Instruction) {
     let lastVal = knState.GetCurrentFiber().OperandStack.PeekTop();
     knState.GetCurrentFiber().OperandStack.PushValue(lastVal);
   }
 
-  public static RunPopFrameAndPushTopVal(knState: KnState, opContState : Instruction) {
+  public static RunPopFrameAndPushTopVal(knState: XnlState, opContState : Instruction) {
     knState.GetCurrentFiber().OperandStack.PopFrameAndPushTopVal();
   }
 
-  public static RunPopFrameIgnoreResult(knState: KnState, opContState : Instruction) {
+  public static RunPopFrameIgnoreResult(knState: XnlState, opContState : Instruction) {
     knState.GetCurrentFiber().OperandStack.PopFrameAllValues();
   }
 
-  public static RunIsTopValTrue(knState: KnState, opContState : Instruction) {
+  public static RunIsTopValTrue(knState: XnlState, opContState : Instruction) {
     let lastVal = knState.GetCurrentFiber().OperandStack.PopValue();
     if (lastVal) {
       knState.GetCurrentFiber().OperandStack.PushValue(true);

@@ -1,7 +1,7 @@
-import { KnNodeType } from "./KnType";
+import { KnNodeType } from "./KnNodeType";
 
 export class KnSubscript {
-  public _Type = KnNodeType.KnSubscript;
+  public _Type = KnNodeType.Subscript;
   public Value: any;
 
   public constructor(inner: string) {

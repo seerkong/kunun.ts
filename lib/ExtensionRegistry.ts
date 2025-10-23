@@ -1,12 +1,12 @@
 import { BlockHandler } from './Handler/Node/BlockHandler';
 import { FuncHandler } from './Handler/PrefixKeyword/FuncHandler';
-import { KnState } from "./KnState";
+import XnlState from "./KnState";
 import { ConditionHandler } from './Handler/PrefixKeyword/ConditionHandler';
 import { DeclareVarHandler } from './Handler/PrefixKeyword/DeclareVarHandler';
 import { SetEnvHandler } from './Handler/PrefixKeyword/SetEnvHandler';
 import { IfElseHandler } from './Handler/PrefixKeyword/IfElseHandler';
 import { ForeachHandler } from './Handler/PrefixKeyword/ForeachHandler';
-import { KnOpCode } from './KnOpCode';
+import { XnlOpCode } from './KnOpCode';
 import { Instruction } from './StateManagement/InstructionStack';
 import { OpStackHandler } from './Handler/OpStackHandler';
 import { SelfUpdate } from './Handler/PrefixKeyword/SelfUpdate';
@@ -41,68 +41,68 @@ import { JsCallHandler } from './Handler/PrefixKeyword/JsCallHandler';
 import { JsApplyHandler } from './Handler/PrefixKeyword/JsApplyHandler';
 
 export class ExtensionRegistry {
-  private static InstructionHandlerMap : {[ k : string] : (knState: KnState, opContState : Instruction) => void } = {
-    [KnOpCode.ValStack_PushFrame] : ValueStackHandler.RunPushFrame,
-    [KnOpCode.ValStack_PushValue] : ValueStackHandler.RunPushValue,
-    [KnOpCode.ValStack_PopValue] : ValueStackHandler.RunPopValue,
-    [KnOpCode.ValStack_Duplicate] : ValueStackHandler.RunDuplicate,
-    [KnOpCode.ValStack_PopFrameAndPushTopVal] : ValueStackHandler.RunPopFrameAndPushTopVal,
-    [KnOpCode.ValStack_PopFrameIgnoreResult] : ValueStackHandler.RunPopFrameIgnoreResult,
-    [KnOpCode.ValStack_IsTopValTrue] : ValueStackHandler.RunIsTopValTrue,
+  private static InstructionHandlerMap : {[ k : string] : (knState: XnlState, opContState : Instruction) => void } = {
+    [XnlOpCode.ValStack_PushFrame] : ValueStackHandler.RunPushFrame,
+    [XnlOpCode.ValStack_PushValue] : ValueStackHandler.RunPushValue,
+    [XnlOpCode.ValStack_PopValue] : ValueStackHandler.RunPopValue,
+    [XnlOpCode.ValStack_Duplicate] : ValueStackHandler.RunDuplicate,
+    [XnlOpCode.ValStack_PopFrameAndPushTopVal] : ValueStackHandler.RunPopFrameAndPushTopVal,
+    [XnlOpCode.ValStack_PopFrameIgnoreResult] : ValueStackHandler.RunPopFrameIgnoreResult,
+    [XnlOpCode.ValStack_IsTopValTrue] : ValueStackHandler.RunIsTopValTrue,
     
-    [KnOpCode.Env_DiveProcessEnv] : EnvTreeHandler.RunDiveProcessEnv,
-    [KnOpCode.Env_DiveLocalEnv] : EnvTreeHandler.RunDiveLocalEnv,
-    [KnOpCode.Env_Rise] : EnvTreeHandler.RunRise,
-    [KnOpCode.Env_ChangeEnvById] : EnvTreeHandler.RunChangeEnvById,
-    [KnOpCode.Env_DeclareGlobalVar] : DeclareVarHandler.RunDeclareVar,
-    [KnOpCode.Env_DeclareLocalVar] : DeclareVarHandler.RunDeclareVar,
-    [KnOpCode.Env_SetLocalEnv] : SetEnvHandler.RunSetEnv,
-    [KnOpCode.Env_SetGlobalEnv] : SetEnvHandler.RunSetEnv,
-    [KnOpCode.Env_BindEnvByMap] : EnvTreeHandler.RunBindEnvByMap,
+    [XnlOpCode.Env_DiveProcessEnv] : EnvTreeHandler.RunDiveProcessEnv,
+    [XnlOpCode.Env_DiveLocalEnv] : EnvTreeHandler.RunDiveLocalEnv,
+    [XnlOpCode.Env_Rise] : EnvTreeHandler.RunRise,
+    [XnlOpCode.Env_ChangeEnvById] : EnvTreeHandler.RunChangeEnvById,
+    [XnlOpCode.Env_DeclareGlobalVar] : DeclareVarHandler.RunDeclareVar,
+    [XnlOpCode.Env_DeclareLocalVar] : DeclareVarHandler.RunDeclareVar,
+    [XnlOpCode.Env_SetLocalEnv] : SetEnvHandler.RunSetEnv,
+    [XnlOpCode.Env_SetGlobalEnv] : SetEnvHandler.RunSetEnv,
+    [XnlOpCode.Env_BindEnvByMap] : EnvTreeHandler.RunBindEnvByMap,
     
-    [KnOpCode.Ctrl_ApplyToFrameTop] : FuncHandler.RunApplyToFrameTop,
-    [KnOpCode.Ctrl_ApplyToFrameBottom] : FuncHandler.RunApplyToFrameBottom,
-    [KnOpCode.Ctrl_Jump] : OpStackHandler.RunJump,
-    [KnOpCode.Ctrl_JumpIfFalse] : OpStackHandler.RunJumpIfFalse,
-    [KnOpCode.Ctrl_IterConditionPairs] : ConditionHandler.RunConditionPair,
-    [KnOpCode.Ctrl_IterForEachLoop] : ForeachHandler.RunIterForeachLoop,
-    [KnOpCode.Ctrl_IterForLoop] : ForLoopHandler.RunIterForLoop,
-    [KnOpCode.Ctrl_MakeContExcludeTopNInstruction] : ContinuationHandler.RunMakeContExcludeTopNInstruction,
-    [KnOpCode.Ctrl_JsCall] : JsCallHandler.RunJsCall,
-    [KnOpCode.Ctrl_JsApply] : JsApplyHandler.RunJsApply,
+    [XnlOpCode.Ctrl_ApplyToFrameTop] : FuncHandler.RunApplyToFrameTop,
+    [XnlOpCode.Ctrl_ApplyToFrameBottom] : FuncHandler.RunApplyToFrameBottom,
+    [XnlOpCode.Ctrl_Jump] : OpStackHandler.RunJump,
+    [XnlOpCode.Ctrl_JumpIfFalse] : OpStackHandler.RunJumpIfFalse,
+    [XnlOpCode.Ctrl_IterConditionPairs] : ConditionHandler.RunConditionPair,
+    [XnlOpCode.Ctrl_IterForEachLoop] : ForeachHandler.RunIterForeachLoop,
+    [XnlOpCode.Ctrl_IterForLoop] : ForLoopHandler.RunIterForLoop,
+    [XnlOpCode.Ctrl_MakeContExcludeTopNInstruction] : ContinuationHandler.RunMakeContExcludeTopNInstruction,
+    [XnlOpCode.Ctrl_JsCall] : JsCallHandler.RunJsCall,
+    [XnlOpCode.Ctrl_JsApply] : JsApplyHandler.RunJsApply,
 
-    [KnOpCode.Ctrl_CurrentFiberToIdle] : FiberScheduleHandler.RunCurrentFiberToIdle,
-    [KnOpCode.Ctrl_CurrentFiberToSuspended] : FiberScheduleHandler.RunCurrentFiberToSuspended,
-    [KnOpCode.Ctrl_AwakenMultiFibers] : FiberScheduleHandler.RunAwakenMultiFibers,
-    [KnOpCode.YieldToParentAndChangeCurrentFiberState] : FiberScheduleHandler.RunYieldToParentAndChangeCurrentFiberState,
-    [KnOpCode.YieldToFiberAndChangeCurrentFiberState] : FiberScheduleHandler.RunYieldToFiberAndChangeCurrentFiberState,
-    [KnOpCode.Ctrl_FinalizeFiber] : FiberScheduleHandler.RunFinalizeFiber,
+    [XnlOpCode.Ctrl_CurrentFiberToIdle] : FiberScheduleHandler.RunCurrentFiberToIdle,
+    [XnlOpCode.Ctrl_CurrentFiberToSuspended] : FiberScheduleHandler.RunCurrentFiberToSuspended,
+    [XnlOpCode.Ctrl_AwakenMultiFibers] : FiberScheduleHandler.RunAwakenMultiFibers,
+    [XnlOpCode.YieldToParentAndChangeCurrentFiberState] : FiberScheduleHandler.RunYieldToParentAndChangeCurrentFiberState,
+    [XnlOpCode.YieldToFiberAndChangeCurrentFiberState] : FiberScheduleHandler.RunYieldToFiberAndChangeCurrentFiberState,
+    [XnlOpCode.Ctrl_FinalizeFiber] : FiberScheduleHandler.RunFinalizeFiber,
 
-    [KnOpCode.Node_RunNode] : NodeHandler.RunNode,
-    [KnOpCode.Node_RunLastVal] : NodeHandler.RunLastVal,
-    [KnOpCode.Node_MakeVector] : ArrayHandler.RunMakeArray,
-    [KnOpCode.Node_MakeMap] : MapHandler.RunMakeMap,
-    [KnOpCode.Node_IterOpenKnotNode] : OpenKnotDataHandler.HandleIterOpenKnotNode,
-    [KnOpCode.Node_MakeKnotNode] : OpenKnotDataHandler.HandleMakeKnotNode,
-    [KnOpCode.Node_MakeKnotChain] : OpenKnotDataHandler.MakeKnotChain,
-    [KnOpCode.Node_IterEvalKnotClause] : KnotExprHandler.HandleIterEvalKnotClause,
-    [KnOpCode.Node_RunBlock] : BlockHandler.RunBlock,
-    [KnOpCode.Node_RunGetProperty] : PropertyHandler.RunGetProperty,
-    [KnOpCode.Node_RunSetProperty] : PropertyHandler.RunSetProperty,
-    [KnOpCode.Node_RunGetSubscript] : SubscriptHandler.RunGetSubscript,
-    [KnOpCode.Node_RunSetSubscript] : SubscriptHandler.RunSetSubscript,
-    [KnOpCode.Node_RunMakeSubscript] : SubscriptHandler.RunMakeSubscript,
-    [KnOpCode.Node_MakeUnquote] : null,
+    [XnlOpCode.Node_RunNode] : NodeHandler.RunNode,
+    [XnlOpCode.Node_RunLastVal] : NodeHandler.RunLastVal,
+    [XnlOpCode.Node_MakeVector] : ArrayHandler.RunMakeArray,
+    [XnlOpCode.Node_MakeMap] : MapHandler.RunMakeMap,
+    [XnlOpCode.Node_IterOpenKnotNode] : OpenKnotDataHandler.HandleIterOpenKnotNode,
+    [XnlOpCode.Node_MakeKnotNode] : OpenKnotDataHandler.HandleMakeKnotNode,
+    [XnlOpCode.Node_MakeKnotChain] : OpenKnotDataHandler.MakeKnotChain,
+    [XnlOpCode.Node_IterEvalKnotClause] : KnotExprHandler.HandleIterEvalKnotClause,
+    [XnlOpCode.Node_RunBlock] : BlockHandler.RunBlock,
+    [XnlOpCode.Node_RunGetProperty] : PropertyHandler.RunGetProperty,
+    [XnlOpCode.Node_RunSetProperty] : PropertyHandler.RunSetProperty,
+    [XnlOpCode.Node_RunGetSubscript] : SubscriptHandler.RunGetSubscript,
+    [XnlOpCode.Node_RunSetSubscript] : SubscriptHandler.RunSetSubscript,
+    [XnlOpCode.Node_RunMakeSubscript] : SubscriptHandler.RunMakeSubscript,
+    [XnlOpCode.Node_MakeUnquote] : null,
   };
 
-  private static PrefixKeyWordExpanderMap: { [key: string]: (knState: KnState, nodeToRun: any) => any } = {
-    'do': function(knState: KnState, nodeToRun: KnKnot) : any {
-      BlockHandler.ExpandBlock(knState, nodeToRun.Body)
+  private static PrefixKeyWordExpanderMap: { [key: string]: (knState: XnlState, nodeToRun: any) => any } = {
+    'do': function(knState: XnlState, nodeToRun: KnKnot) : any {
+      BlockHandler.ExpandBlock(knState, nodeToRun.Block)
     },
-    'main': function(knState: KnState, nodeToRun: KnKnot) : any {
-      BlockHandler.ExpandBlock(knState, nodeToRun.Body)
+    'main': function(knState: XnlState, nodeToRun: KnKnot) : any {
+      BlockHandler.ExpandBlock(knState, nodeToRun.Block)
     },
-    'func': function(knState: KnState, nodeToRun: any) : any {
+    'func': function(knState: XnlState, nodeToRun: any) : any {
       FuncHandler.ExpandDeclareFunc(knState, nodeToRun)
     },
     'cond': ConditionHandler.ExpandCondition,
@@ -127,7 +127,7 @@ export class ExtensionRegistry {
     '/=': SelfUpdate.SelfUpdate_Divide
   }
 
-  private static InfixKeyWordExpanderMap: { [key: string]: (knState: KnState, nodeToRun: any) => any } = {
+  private static InfixKeyWordExpanderMap: { [key: string]: (knState: XnlState, nodeToRun: any) => any } = {
     '=': ObjectAssignHandler.ExpandObjectAssign,
     'save_operands': SaveOperandValuesHandler.ExpandSaveStack,
     'def_to': DefineToHandler.ExpandDefineTo,
@@ -137,7 +137,7 @@ export class ExtensionRegistry {
     'or_else': OptionalOrElseHandler.ExpandOrElse,
   }
 
-  public static GetInstructionHandler(name: string) : (knState: KnState, opContState : Instruction) => void {
+  public static GetInstructionHandler(name: string) : (knState: XnlState, opContState : Instruction) => void {
     return ExtensionRegistry.InstructionHandlerMap[name];
   }
 

@@ -1,10 +1,10 @@
 import { Env } from "../StateManagement/Env";
-import { KnNodeType } from "./KnType"
-import { NodeHelper } from "../Util/NodeHelper";
-import { KnCompositeFunctionBase } from "./KnFunctionBase";
+import { KnNodeType } from "./KnNodeType"
+import { KnNodeHelper } from "../Util/KnNodeHelper";
+import { KnCompositeFunctionBase } from "./KnCompositeFunctionBase";
 import { KnWord } from "./KnWord";
 export class KnLambdaFunction extends KnCompositeFunctionBase {
-  public _Type = KnNodeType.KnLambdaFunc;
+  public _Type = KnNodeType.Lambda;
   public Env: Env;
   public Name: string;
 
