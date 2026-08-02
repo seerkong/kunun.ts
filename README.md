@@ -101,7 +101,6 @@ packages/converter    kunun-converter    parser, formatter, syntax profiles (Knl
 packages/runtime      kunun-runtime      RuntimeInterpreter, HostSupport (depends on depa-actor;
                                          defines the TypeSystemBridge hook, never imports type-system;
                                          workflow mechanics are generic: explicit job expansion, no ai_* semantics)
-packages/workflow-dsl kunun-workflow-dsl ai_* workflow DSL: lowering, RunWorkflowSync/ResumeWorkflowSync
 packages/type-system  kunun-type-system  row/effect type system (implements and registers the bridge)
 packages/kunun        kunun              umbrella package: re-exports everything; importing it
                                          auto-registers the TypeSystemBridge for typed execution
@@ -109,32 +108,7 @@ packages/kunun        kunun              umbrella package: re-exports everything
 
 Each package keeps its sources in `lib/` and its tests in `__tests__/`. Cross-package imports must use package names (`kunun-core/Model/KnKnot`), resolved through the root `tsconfig.json` paths (bun reads them natively).
 
-## Dynamic workflows for coding agents
-
-kunun ships a durable multi-agent workflow system: workflows are written in
-the Kon DSL (`examples/*.kon`), executed by the `kwf` CLI
-(`packages/workflow-host`), and every agent call is a checkpoint boundary —
-runs can be paused, resumed, and crash-recovered from mid-workflow.
-
-```bash
-bun packages/workflow-host/bin/kwf.ts run examples/fan-out-reduce.kon --wait
-```
-
-Before running for real, `kwf validate <file.kon>` and `kwf dry-run <file.kon>`
-check a workflow **without dispatching any agent**: `validate` executes to the
-first yield or completion, `dry-run` simulates the whole flow with schema-shaped
-mock results. Both support `--json` / `--show-prompts` and are also exposed as
-the `kwf_validate_workflow` / `kwf_dry_run_workflow` MCP tools.
-
-Host agents (Claude Code, Codex, …) integrate via [skill/SKILL.md](skill/SKILL.md)
-or the MCP server (`kwf mcp stdio`, exposing `kwf_*` tools); agent CLIs are
-configured declaratively (see
-[skill/kwf.config.example.json](skill/kwf.config.example.json)).
-
-`bun run build:bin` produces a self-contained single executable
-(`dist-bin/kwf`): prompts, bundled examples, and the skill document are
-embedded via bunfs, so `kwf examples export` / `kwf skill` / `kwf mcp stdio`
-work on machines without the repository or bun installed.
+Dynamic workflow authoring, hosting, CLI/MCP, agent integration, skills, and examples are maintained by the separate KWF project, which consumes versioned Kunun language packages.
 
 ## Develop
 
@@ -159,4 +133,3 @@ type check / build the distributable umbrella package (ESM + CJS)
 npm run typecheck
 npm run dist
 ```
-

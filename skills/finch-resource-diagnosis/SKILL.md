@@ -22,7 +22,7 @@ finch vm status          # 需要 Running；若 Stopped：
 finch vm start           # 启动 Lima VM（首次较慢，会拉取 VM 镜像）
 ```
 - 容器镜像选**与本机匹配的运行时**，如 `oven/bun:1.3.6`（bun 版本对齐宿主，避免 node_modules/ABI 不一致）。
-- **依赖挂载**：把整个 repo 挂进容器（`-v <repo>:/w -w /w`）。若有**仓库外**的本地依赖（symlink / file: 指向外部路径），需把那个外部路径**按同样的绝对路径**也挂进去，symlink 才能在容器里解析。本仓的 depa-actor 是**仓库内**的 vendored tarball（`vendor/*.tgz`），无需额外挂载。
+- **依赖挂载**：把整个 repo 挂进容器（`-v <repo>:/w -w /w`）。若有**仓库外**的本地依赖（symlink / file: 指向外部路径），需把那个外部路径**按同样的绝对路径**也挂进去，symlink 才能在容器里解析。本仓的 depa-actor 通过 package registry 安装，无需额外挂载。
 
 ## 定位流程（最小爆炸半径优先）
 
@@ -46,7 +46,6 @@ echo 'import {KnConverter} from "kunun-converter/KnConverter"; console.log(JSON.
 1. 只解析：`KnConverter.Kon.Parser.Parse(SRC)`
 2. 求值：`RuntimeInterpreter.ExecSync(...)` / `EvalBlockSourceSync(SRC)`
 3. 类型化：`EvaluateTypedBlockSync(SRC)`（需 `import "kunun"`）
-4. 工作流：`kwf dry-run`
 每条都经 `capped-probe.sh` 跑。哪一层 / 哪条输入被 cap 杀掉，就锁定到那。
 
 ### 第 3 步 · 输入二分 & 测试文件二分
@@ -76,24 +75,6 @@ git stash pop        # 恢复
 
 ## 关键脚本
 - `scripts/capped-probe.sh`：从 stdin 读探针源码，写入 `<repo>/.tmp/`，在 `finch run --memory --memory-swap(=禁swap) --cpus --pids-limit` + 容器内 `timeout -s KILL` 下执行，按退出码判定 runaway 类型。
-- `scripts/capped-codex-workflow.sh`：在**封顶容器内跑真实 dynamic workflow 并调用本机 codex**（详见下节）。把 kunun 解释器/调度的 runaway 隔离在容器内，同时让 ai_agent 步骤真实调 LLM。
-
-## 封顶跑真实 dynamic workflow（调外部 agent CLI，如 codex）
-目标：既要**真实**验证 dynamic workflow（kunun → spawn codex → 调 LLM → 回填），又要防 kunun 的 bug 把宿主 CPU/内存搞爆。把整个 kunun workflow-host（bun）连同它 `spawn` 的 codex 子进程一起放进封顶容器即可。
-
-**隔离边界**：`--cpus`/`--memory`(+`--memory-swap` 禁 swap)/`--pids-limit` 挡住 kunun 的死循环/无界分配/fork 爆炸（死机来源）；**不挡**网络外联与 codex 的 token 花费/API 限流——靠 `maxAgents`/`timeout`/最小输入控制（codex 是网络 IO，不爆 CPU/内存）。
-
-**容器内调到 codex 的 4 个坑（实测，已被脚本解决）**：
-1. **跨平台二进制**：`@openai/codex` 是 Rust 二进制，npm 包 `vendor/` 自带各平台版本。**直接挂载本机包**、按容器 arch 选 `*-unknown-linux-musl` 那份即可，无需容器内装 node/codex。（macOS 的二进制不能进 Linux 容器，但包里就有 Linux 版。）
-2. **认证**：`~/.codex` 只读挂载，`auth.json` 复制进容器内可写 `CODEX_HOME`（本机 `.codex` 不被写）。**`auth.json` 即足够认证**；`~/.codex/auth-keys/` 是用户备份的各 provider auth.json，**不要复制进容器**。若遇 `403`（额度/`Invalid token` 类），多半是网关**瞬时状态**（限流/余额波动）——重试或换有余额的网关，别误归因为"缺认证文件"。
-3. **自定义网关**：复制本机 `config.toml`（`model`/`model_provider`/`base_url`），但**剥离 `[mcp_servers]` 段**（容器内 `npx` 起不来会卡 `startup_timeout`，最久几分钟）和 **`notify` 行**（指向本机 `.app`）。
-4. **TLS / CA 证书**：`oven/bun`(debian-slim)**无 CA 证书** → codex(reqwest, 用系统 CA)TLS 验证失败，表现为「TCP 连上 443 但 `error sending request`」。容器内 `apt-get install -y ca-certificates` 修复。（bun 用内置 CA，所以 `bun fetch` 能通而 codex 不通——这是关键误导点。）
-
-**网络排查顺序**（codex 报 network error 时，逐层定位，全用 `bun fetch`/`getent` 零成本）：连通(example.com 200?) → DNS(`getent hosts`) → 目标网关(`/v1/models` 给 401=连通) → **CA 证书在不在**（`ls /etc/ssl/certs/ca-certificates.crt`）→ reqwest debug(`-e RUST_LOG=debug` 看是 `connected` 后失败=TLS，还是 connect 失败=网络)。IPv6 一般不是问题（reqwest 自己选 IPv4）。
-
-**最小验证两步（先零成本，再花钱）**：
-1. `codex --version`（`--network none`，零成本）确认 Linux 二进制能在容器跑。
-2. 单个 `(ai_agent …)` 最小用例（挂认证+网络+CA），确认认证/网关/TLS/LLM 全通——**这步真实花 token**，用最短 prompt、`maxAgents=1`、小 `timeout`。
 
 ## 修复后
 定位到具体输入 + 代码路径后：写一个**会触发 runaway 的失败测试**（在 cap 下跑，确认它现在被杀），修复使其在 cap 内正常完成，再封顶复跑确认 `OK`。修复要么让循环收敛、要么对病态输入**给明确诊断/有界拒绝**。

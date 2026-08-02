@@ -1,0 +1,15 @@
+<behavior-patch capability="kwf-external-boundary" version="1">
+  <upsert selector="behavior://kwf-external-boundary/requirements/no-upper-layer-ownership">
+    <requirement id="no-upper-layer-ownership">
+      <statement>Kunun SHALL own language core、converter、runtime 与 type system，SHALL NOT own 或反向依赖 KWF workflow-dsl、workflow-host、CLI/MCP、agent assets 或 ZenFS。</statement>
+      <suite name="repository-boundary">
+        <case name="单向依赖">
+          <given>Kunun package graph、workspace manifests 与源码</given>
+          <when>执行静态依赖扫描与语言测试</when>
+          <then>Kunun 不包含 KWF packages/assets 且 core/runtime 测试通过</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>
+

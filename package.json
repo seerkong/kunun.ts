@@ -12,8 +12,7 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "dist": "cd packages/kunun && bun run dist",
-    "lint": "tslint \"packages/*/lib/**/*.ts\"",
-    "build:bin": "bun build packages/workflow-host/bin/kwf.ts --compile --outfile dist-bin/kwf"
+    "lint": "tslint \"packages/*/lib/**/*.ts\""
   },
   "author": "",
   "license": "MIT",

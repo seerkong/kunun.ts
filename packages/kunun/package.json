@@ -21,12 +21,15 @@
     "dist": "rm -rf dist && bun build lib/index.ts --outfile dist/index.mjs --format esm --target node && bun build lib/index.ts --outfile dist/index.cjs --format cjs --target node"
   },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.com"
+  },
   "dependencies": {
     "kunun-converter": "workspace:*",
     "kunun-core": "workspace:*",
     "kunun-runtime": "workspace:*",
     "kunun-type-annotations": "workspace:*",
-    "kunun-type-system": "workspace:*",
-    "kunun-workflow-dsl": "workspace:*"
+    "kunun-type-system": "workspace:*"
   }
 }

@@ -34,15 +34,11 @@
             "kunun-converter/*": ["packages/converter/lib/*"],
             "kunun-runtime": ["packages/runtime/lib/index.ts"],
             "kunun-runtime/*": ["packages/runtime/lib/*"],
-            "kunun-workflow-dsl": ["packages/workflow-dsl/lib/index.ts"],
-            "kunun-workflow-dsl/*": ["packages/workflow-dsl/lib/*"],
             "kunun-type-system": ["packages/type-system/lib/index.ts"],
             "kunun-type-system/*": ["packages/type-system/lib/*"],
             "kunun-type-annotations": ["packages/type-annotations/lib/index.ts"],
             "kunun-type-annotations/*": ["packages/type-annotations/lib/*"],
-            "kunun": ["packages/kunun/lib/index.ts"],
-            "kunun-workflow-host": ["packages/workflow-host/lib/index.ts"],
-            "kunun-workflow-host/*": ["packages/workflow-host/lib/*"]
+            "kunun": ["packages/kunun/lib/index.ts"]
         },
     },
     "include": [

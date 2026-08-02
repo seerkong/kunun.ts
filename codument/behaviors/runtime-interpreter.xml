@@ -1,11 +1,11 @@
 <behaviors capability="runtime-interpreter" version="1">
   <requirement id="depa-actor-substrate">
-    <statement>The project SHALL provide a new optional interpreter runtime that uses depa-actor@0.2.0 execution kernel primitives from the local file dependency file:/Users/kongweixian/infra-dev/depa-actor as its generic execution substrate.</statement>
+    <statement>The project SHALL provide an interpreter runtime that uses the versioned depa-actor@0.2.0 package contract as its generic execution substrate without a machine-specific or repository-local file dependency.</statement>
     <suite id="substrate" name="Substrate Integration">
       <case id="uses-linked-depa-actor">
-        <given>depa-actor is configured as a local file dependency pointing to /Users/kongweixian/infra-dev/depa-actor</given>
-        <when>The new interpreter runtime is built</when>
-        <then>The runtime SHALL import depa-actor primitives for instruction stack, operand stack, and generic dispatch while resolving the package version from depa-actor's own package.json.</then>
+        <given>depa-actor@0.2.0 is configured as a registry dependency</given>
+        <when>The interpreter runtime is built</when>
+        <then>The runtime SHALL import depa-actor primitives for instruction stack, operand stack, and generic dispatch from that versioned package contract.</then>
       </case>
       <case id="does-not-reimplement-generic-kernel">
         <given>depa-actor exposes stack/frame and dispatch primitives</given>
@@ -14,8 +14,8 @@
       </case>
       <case id="legacy-path-unchanged">
         <given>A caller uses the existing Interpreter API</given>
-        <when>The new runtime interpreter is added</when>
-        <then>The existing interpreter path SHALL remain available and behaviorally unchanged unless a caller opts into the new runtime.</then>
+        <when>The runtime dependency delivery changes</when>
+        <then>The existing interpreter path SHALL remain behaviorally unchanged.</then>
       </case>
     </suite>
   </requirement>
@@ -429,7 +429,7 @@
     </suite>
     <suite id="host-aliases" name="Host aliases">
       <case id="common-host-aliases">
-        <given>A script uses common legacy host aliases such as Writeln, append, console, clear_interval, &amp;amp;amp;amp;gt;=, or &amp;amp;amp;amp;lt;=</given>
+        <given>A script uses common legacy host aliases such as Writeln, append, console, clear_interval, &amp;amp;amp;amp;amp;gt;=, or &amp;amp;amp;amp;amp;lt;=</given>
         <when>The RuntimeInterpreter executes the script</when>
         <then>The runtime SHALL provide equivalent behavior or explicit host bridge mappings for those aliases.</then>
       </case>

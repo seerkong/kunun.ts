@@ -5,5 +5,3 @@ export * from 'kunun-runtime'
 // module-load side effect, so importing this package enables typed execution.
 export * from 'kunun-type-system'
 export * from 'kunun-type-annotations'
-// workflow DSL split out of kunun-runtime; keep it on the umbrella surface
-export * from 'kunun-workflow-dsl'

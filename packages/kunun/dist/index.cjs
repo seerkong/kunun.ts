@@ -34,6 +34,7 @@ __export(exports_lib, {
   getTypeName: () => getTypeName,
   firstTypePrefix: () => firstTypePrefix,
   WrapTypedRuntimeValue: () => WrapTypedRuntimeValue,
+  ValidateDepaOrmRelation: () => ValidateDepaOrmRelation,
   UnwrapTypedRuntimeValue: () => UnwrapTypedRuntimeValue,
   TypedValue: () => TypedValue,
   TypeSystem: () => TypeSystem,
@@ -48,6 +49,9 @@ __export(exports_lib, {
   TableMeta: () => TableMeta,
   StringValue: () => StringValue,
   SplitTopLevelExpressions: () => SplitTopLevelExpressions,
+  SchemaTypeSymbol: () => SchemaTypeSymbol,
+  SchemaMixinSymbol: () => SchemaMixinSymbol,
+  SchemaConstraintProfile: () => SchemaConstraintProfile,
   RuntimeTypeCheckError: () => RuntimeTypeCheckError,
   RuntimeState: () => RuntimeState,
   RuntimeReturnSignal: () => RuntimeReturnSignal,
@@ -68,10 +72,16 @@ __export(exports_lib, {
   RowMember: () => RowMember,
   RowImplementation: () => RowImplementation,
   RequireTypeSystemBridge: () => RequireTypeSystemBridge,
+  RelationTypeSymbol: () => RelationTypeSymbol,
   RegisterTypeSystemBridge: () => RegisterTypeSystemBridge,
   ProjectedObjectValue: () => ProjectedObjectValue,
   PrimitiveTypeSymbol: () => PrimitiveTypeSymbol,
   ParseKonSourceItems: () => ParseKonSourceItems,
+  OrmRelationAnnotationValidator: () => OrmRelationAnnotationValidator,
+  OrmRelationAnnotationProfile: () => OrmRelationAnnotationProfile,
+  OrmFieldAnnotationProfile: () => OrmFieldAnnotationProfile,
+  OrmEntityAnnotationProfile: () => OrmEntityAnnotationProfile,
+  OrmDataSourceAnnotationProfile: () => OrmDataSourceAnnotationProfile,
   ObjectValue: () => ObjectValue,
   NodeHelper: () => KnNodeHelper,
   NeverTypeSymbol: () => NeverTypeSymbol,
@@ -124,15 +134,21 @@ __export(exports_lib, {
   FieldStorageMeta: () => FieldStorageMeta,
   FieldStorage: () => FieldStorage,
   FieldPropMeta: () => FieldPropMeta,
+  EnumValueSymbol: () => EnumValueSymbol,
+  EnumTypeSymbol: () => EnumTypeSymbol,
   EffectSymbol: () => EffectSymbol,
   EffectRow: () => EffectRow,
+  DomainFieldAnnotationProfile: () => DomainFieldAnnotationProfile,
   ClearTypeSystemBridge: () => ClearTypeSystemBridge,
   ClassTypeSymbol: () => ClassTypeSymbol,
   ClassDefinition: () => ClassDefinition,
   CalcPropMeta: () => CalcPropMeta,
+  BuiltInAnnotationNames: () => BuiltInAnnotationNames,
+  BrandedScalarTypeSymbol: () => BrandedScalarTypeSymbol,
   BoolValue: () => BoolValue,
   AnyValue: () => AnyValue,
   AnyTypeSymbol: () => AnyTypeSymbol,
+  AnnotationExtractor: () => AnnotationExtractor,
   AccessModifier: () => AccessModifier
 });
 module.exports = __toCommonJS(exports_lib);
@@ -751,7 +767,9 @@ class TaskQueue {
     while (this.activeTaskNum < this.limit && this.queue.length > 0) {
       const task = this.queue.shift();
       this.activeTaskNum++;
-      this.execute(task);
+      this.execute(task).catch(() => {
+        return;
+      });
     }
   }
   log(msg) {
@@ -897,7 +915,7 @@ class Lexer {
       }
       match = this.reg_.exec(input);
       if (match == null || match.index !== startat) {
-        throw new LexException("Invalid Token", row, column);
+        throw this.UnrecognizedTokenError(input, startat, row, column);
       }
       let found = false;
       for (const [groupName, value] of Object.entries(match.groups || {})) {
@@ -949,13 +967,25 @@ class Lexer {
         }
       }
       if (!found) {
-        throw new LexException("Invalid Token", row, column);
+        throw this.UnrecognizedTokenError(input, startat, row, column);
       } else {
         startat = match.index + match[0].length;
         this.reg_.lastIndex = startat;
       }
     }
     return tokenList;
+  }
+  static UnrecognizedTokenError(input, start, row, column) {
+    const codePoint = input.codePointAt(start);
+    if (codePoint === undefined) {
+      return new LexException(`Unexpected end of input at row ${row}, column ${column}`, row, column);
+    }
+    const char = String.fromCodePoint(codePoint);
+    const hex = codePoint.toString(16).toUpperCase().padStart(4, "0");
+    if (codePoint > 127) {
+      return new LexException(`Unexpected non-ASCII character '${char}' (U+${hex}) at row ${row}, column ${column}: ` + `non-ASCII characters are not supported as identifiers (identifiers must match [_a-zA-Z][_a-zA-Z0-9]*)`, row, column);
+    }
+    return new LexException(`Unexpected character '${char}' (U+${hex}) at row ${row}, column ${column}`, row, column);
   }
   static ReadStringToken(input, start, row, column) {
     const quote = input[start];
@@ -982,6 +1012,11 @@ class Lexer {
       }
       const ch = input[index];
       if (quote === '"' && ch === "\\") {
+        const interpOpen = input[index + 1];
+        if (interpOpen === "(" || interpOpen === "[") {
+          index = this.SkipInterpolationBlock(input, index + 1, row, column);
+          continue;
+        }
         escaped = true;
         index++;
         continue;
@@ -1004,6 +1039,47 @@ class Lexer {
       index++;
     }
     throw new LexException("Unterminated string literal", row, column);
+  }
+  static SkipInterpolationBlock(input, openIndex, row, column) {
+    const open = input[openIndex];
+    const close = open === "(" ? ")" : "]";
+    let depth = 0;
+    let index = openIndex;
+    while (index < input.length) {
+      const ch = input[index];
+      if (ch === '"' || ch === "'") {
+        const nestedTriple = input.startsWith(ch.repeat(3), index);
+        const nestedDelimiter = nestedTriple ? ch.repeat(3) : ch;
+        index += nestedDelimiter.length;
+        while (index < input.length) {
+          if (ch === '"' && input[index] === "\\") {
+            index += 2;
+            continue;
+          }
+          if (input.startsWith(nestedDelimiter, index)) {
+            index += nestedDelimiter.length;
+            break;
+          }
+          index++;
+        }
+        continue;
+      }
+      if (ch === open) {
+        depth++;
+        index++;
+        continue;
+      }
+      if (ch === close) {
+        depth--;
+        index++;
+        if (depth === 0) {
+          return index;
+        }
+        continue;
+      }
+      index++;
+    }
+    throw new LexException("Unterminated string interpolation", row, column);
   }
   static FindLineEnd(input, start) {
     let index = start;
@@ -1637,7 +1713,17 @@ class KnParserV1 {
     return this.Start(tokens);
   }
   Start(input) {
-    return this.ParseValue(new TokenStreamV1(input));
+    const s = new TokenStreamV1(input);
+    const value = this.ParseValue(s);
+    this.EnsureNoTrailingTokens(s);
+    return value;
+  }
+  EnsureNoTrailingTokens(s) {
+    s.SkipBlankTokens();
+    if (!s.End()) {
+      const token = s.Current();
+      throw new ParseException(`Unexpected token '${token.Value}' at ${token.Row}:${token.Column}: ` + `trailing tokens after a complete value. ` + `(In head/symbol position, '-' is the subtraction operator, so a name ` + `like 'foo-bar' is parsed as 'foo - bar'; quote the identifier or remove ` + `the hyphen if a single name was intended.)`);
+    }
   }
   ParseValue(s, acceptPrefix = true, acceptSuffix = true, arrowAsContainer = false) {
     s.SkipBlankTokens();
@@ -1791,11 +1877,15 @@ class KnParserV1 {
     const r = new KnModifierGroup;
     s.SkipBlankTokens();
     while (!s.End() && s.Current().Type === tokenType) {
+      const prefixToken = s.Current();
       s.ConsumeTypeAndSkipBlankTokens(tokenType);
+      if (s.End()) {
+        throw new ParseException(`Modifier '${TokenType[tokenType]}' at ${prefixToken.Row}:${prefixToken.Column} must be followed by a value`);
+      }
       const node = this.ParseValue(s, false, false, true);
       const nodeType = KnNodeHelper.GetType(node);
       if (nodeType === "Word" /* Word */) {
-        if (s.Next().Type === 22 /* Comma */) {
+        if (s.Next()?.Type === 22 /* Comma */) {
           const nextNode = this.ParseValue(s, false, false);
           r.NamedValues.set(node, nextNode);
         } else {
@@ -1940,6 +2030,13 @@ class KnParserV1 {
         return { value: '"', nextIndex: index + 2 };
       case "\\":
         return { value: "\\", nextIndex: index + 2 };
+      case "u": {
+        const hex = source.substring(index + 2, index + 6);
+        if (hex.length === 4 && /^[0-9A-Fa-f]{4}$/.test(hex)) {
+          return { value: String.fromCharCode(parseInt(hex, 16)), nextIndex: index + 6 };
+        }
+        throw new Error(`Invalid \\u escape: expected four hex digits after \\u`);
+      }
       default:
         return { value: next, nextIndex: index + 2 };
     }
@@ -2041,10 +2138,16 @@ class KnParserV1 {
     s.ConsumeTypeAndSkipBlankTokens(26 /* LowerThan */);
     const args = [];
     while (!s.End() && s.Current().Type !== 27 /* BiggerThan */) {
+      const before = s.Current();
       args.push(this.ParseValue(s, true, false));
       s.SkipBlankTokens();
+      if (!s.End() && s.Current() === before) {
+        break;
+      }
     }
-    s.ConsumeTypeAndSkipBlankTokens(27 /* BiggerThan */);
+    if (!s.End() && s.Current().Type === 27 /* BiggerThan */) {
+      s.ConsumeTypeAndSkipBlankTokens(27 /* BiggerThan */);
+    }
     return args;
   }
   ParseInOutTable(s) {
@@ -2105,13 +2208,20 @@ class KnParserV1 {
     s.ConsumeTypeAndSkipBlankTokens(begin);
     const children = [];
     s.SkipBlankTokens();
-    while (s.Current().Type !== end) {
+    while (!s.End() && s.Current().Type !== end) {
       if (s.Current().Type === 22 /* Comma */ && this.SyntaxConfig.PairsSeparatorToken !== 22 /* Comma */) {
         throw new Error("Comma separators are not allowed in this syntax profile");
       }
+      const before = s.Current();
       const item = parser(s);
       children.push(item);
       s.SkipBlankTokens();
+      if (!s.End() && s.Current() === before) {
+        break;
+      }
+    }
+    if (s.End() || s.Current().Type !== end) {
+      throw new ParseException(`Unclosed container: expected closing delimiter but reached ` + `${s.End() ? "end of input" : `'${s.Current().Value}'`}.`);
     }
     const container = factory(children);
     s.ConsumeTypeAndSkipBlankTokens(end);
@@ -2141,8 +2251,12 @@ class KnParserV1 {
     if (!s.End() && s.Current().Type == this.SyntaxConfig.PairsSeparatorToken) {
       s.Consume(this.SyntaxConfig.PairsSeparatorToken);
     }
-    let key = this.AsPairKey(firstNode).Value;
-    let val = secondNode;
+    const keyNode = this.AsPairKey(firstNode);
+    if (keyNode == null) {
+      throw new ParseException(`Map key must be a bare word or string literal, got ` + `${firstNode == null ? "nothing" : firstNode.constructor?.name ?? typeof firstNode}` + ` — use {name = v} or {"name" = v} (number / expression keys are not allowed).`);
+    }
+    const key = keyNode.Value;
+    const val = secondNode;
     return [key, val];
   }
   AsPairKey(parseResult) {
@@ -3328,47 +3442,47 @@ var SyntaxConfig = {
   SuffixTypeStr: "~",
   SuffixComplementToken: 8 /* UpArrow */,
   SuffixComplementStr: "^",
-  MapStartToken: 5 /* BeginParenthese */,
-  MapEndToken: 6 /* EndParenthese */,
+  MapStartToken: 4 /* BeginParenthese */,
+  MapEndToken: 5 /* EndParenthese */,
   MapStartStr: "(",
   MapEndStr: ")",
-  VectorStartToken: 1 /* BeginCurlyBracket */,
-  VectorEndToken: 2 /* EndCurlyBracket */,
+  VectorStartToken: 0 /* BeginCurlyBracket */,
+  VectorEndToken: 1 /* EndCurlyBracket */,
   VectorStartStr: "{",
   VectorEndStr: "}",
-  KnotStartToken: 3 /* BeginBracket */,
-  KnotEndToken: 4 /* EndBracket */,
+  KnotStartToken: 2 /* BeginBracket */,
+  KnotEndToken: 3 /* EndBracket */,
   KnotStartStr: "[",
   KnotEndStr: "]",
   EnableCommaSeperator: true,
-  MapPairSeperatorToken: 18 /* Equal */,
+  MapPairSeperatorToken: 24 /* Equal */,
   MapPairSeperatorStr: "=",
-  KnotTypeParamBeginToken: 20 /* LowerThan */,
-  KnotTypeParamEndToken: 21 /* BiggerThan */,
+  KnotTypeParamBeginToken: 26 /* LowerThan */,
+  KnotTypeParamEndToken: 27 /* BiggerThan */,
   KnotTypeParamBeginStr: "<",
   KnotTypeParamEndStr: ">",
   KnotAnnotationBeginStr: "[",
   KnotAnnotationEndStr: "]",
-  KnotAnnotationBeginToken: 3 /* BeginBracket */,
-  KnotAnnotationEndToken: 4 /* EndBracket */,
-  KnotModifierBeginToken: 1 /* BeginCurlyBracket */,
-  KnotModifierEndToken: 2 /* EndCurlyBracket */,
+  KnotAnnotationBeginToken: 2 /* BeginBracket */,
+  KnotAnnotationEndToken: 3 /* EndBracket */,
+  KnotModifierBeginToken: 0 /* BeginCurlyBracket */,
+  KnotModifierEndToken: 1 /* EndCurlyBracket */,
   KnotModifierBeginStr: "{",
   KnotModifierEndStr: "}",
-  KnotContextParamBeginToken: 5 /* BeginParenthese */,
-  KnotContextParamEndToken: 6 /* EndParenthese */,
+  KnotContextParamBeginToken: 4 /* BeginParenthese */,
+  KnotContextParamEndToken: 5 /* EndParenthese */,
   KnotContextParamBeginStr: "(",
   KnotContextParamEndStr: ")",
-  KnotParamBeginToken: 5 /* BeginParenthese */,
-  KnotParamEndToken: 6 /* EndParenthese */,
+  KnotParamBeginToken: 4 /* BeginParenthese */,
+  KnotParamEndToken: 5 /* EndParenthese */,
   KnotParamBeginStr: "(",
   KnotParamEndStr: ")",
   KnotAttrStartToken: 11 /* Percent */,
   KnotAttrEndToken: 11 /* Percent */,
   KnotAttrStartStr: "%",
   KnotAttrEndStr: "%",
-  KnotBlockStartToken: 3 /* BeginBracket */,
-  KnotBlockEndToken: 4 /* EndBracket */,
+  KnotBlockStartToken: 2 /* BeginBracket */,
+  KnotBlockEndToken: 3 /* EndBracket */,
   KnotBlockStartStr: "[",
   KnotBlockEndStr: "]"
 };
@@ -3430,7 +3544,7 @@ function RequireTypeSystemBridge() {
   }
   return activeBridge;
 }
-// ../../node_modules/.bun/depa-actor@file+..+..+infra-dev+depa-actor/node_modules/depa-actor/dist/core/ActorSystem.js
+// ../../node_modules/.bun/depa-actor@..+..+vendor+depa-actor-0.2.0.tgz/node_modules/depa-actor/dist/core/ActorSystem.js
 class ActorSystem {
   getRuntime;
   onLog;
@@ -3574,7 +3688,7 @@ class ActorSystem {
     };
   }
 }
-// ../../node_modules/.bun/depa-actor@file+..+..+infra-dev+depa-actor/node_modules/depa-actor/dist/runtime/ActorRuntime.js
+// ../../node_modules/.bun/depa-actor@..+..+vendor+depa-actor-0.2.0.tgz/node_modules/depa-actor/dist/runtime/ActorRuntime.js
 class ActorRuntime {
   system;
   plugins = [];
@@ -3635,7 +3749,7 @@ class ActorRuntime {
     }
   }
 }
-// ../../node_modules/.bun/depa-actor@file+..+..+infra-dev+depa-actor/node_modules/depa-actor/dist/runtime/completion.js
+// ../../node_modules/.bun/depa-actor@..+..+vendor+depa-actor-0.2.0.tgz/node_modules/depa-actor/dist/runtime/completion.js
 class CompletionSignalRegistry {
   waiters = new Map;
   subscribe(key, waiter) {
@@ -3677,7 +3791,7 @@ class CompletionSignalRegistry {
     this.waiters.clear();
   }
 }
-// ../../node_modules/.bun/depa-actor@file+..+..+infra-dev+depa-actor/node_modules/depa-actor/dist/runtime/indexing.js
+// ../../node_modules/.bun/depa-actor@..+..+vendor+depa-actor-0.2.0.tgz/node_modules/depa-actor/dist/runtime/indexing.js
 class RuntimeIndexHook {
   entries = new Map;
   constructor(initial) {
@@ -3704,7 +3818,7 @@ class RuntimeIndexHook {
     return Object.fromEntries(this.entries.entries());
   }
 }
-// ../../node_modules/.bun/depa-actor@file+..+..+infra-dev+depa-actor/node_modules/depa-actor/dist/execution/stack.js
+// ../../node_modules/.bun/depa-actor@..+..+vendor+depa-actor-0.2.0.tgz/node_modules/depa-actor/dist/execution/stack.js
 class ArrayStackMachine {
   items;
   frameBottoms;
@@ -3788,7 +3902,7 @@ function createInstructionStack(state) {
 function createOperandStack(state) {
   return createStackMachine(state);
 }
-// ../../node_modules/.bun/depa-actor@file+..+..+infra-dev+depa-actor/node_modules/depa-actor/dist/execution/dispatcher.js
+// ../../node_modules/.bun/depa-actor@..+..+vendor+depa-actor-0.2.0.tgz/node_modules/depa-actor/dist/execution/dispatcher.js
 function dispatchInstructions(context, resolveHandler, options) {
   const maxInstructions = options?.maxInstructions ?? Number.POSITIVE_INFINITY;
   const effects = [];
@@ -4400,6 +4514,7 @@ class RuntimeState {
   infixKeywordExpanders = {};
   hostFunctions = {};
   hostFunctionArities = {};
+  hostFunctionVariadic = {};
   effectHandlers = [];
   activeEffectHandlerMaps = [];
   namedEffectHandlers = {};
@@ -4658,6 +4773,10 @@ class RuntimeState {
     const declareEnv = this.envTree.LookupDeclareEnv(this.getCurrentEnv(), key);
     return declareEnv.Lookup(key);
   }
+  hasBinding(key) {
+    const declareEnv = this.envTree.LookupDeclareEnv(this.getCurrentEnv(), key);
+    return declareEnv.ContainsVar(key);
+  }
   define(key, obj) {
     this.getCurrentEnv().Define(key, obj);
   }
@@ -4816,7 +4935,46 @@ class RuntimeState {
       fiber.operandStack.push(operand);
     }
   }
-  captureSnapshot() {
+  captureSnapshot(options = {}) {
+    const snapshot = this.buildSnapshot();
+    if (options.strict === true) {
+      RuntimeState.assertSnapshotSerializable(snapshot);
+    }
+    return snapshot;
+  }
+  static assertSnapshotSerializable(value, path = "snapshot", seen = new Set) {
+    if (value == null) {
+      return;
+    }
+    const valueType = typeof value;
+    if (valueType === "function") {
+      throw new Error(`Snapshot value at ${path} is not JSON-serializable: function`);
+    }
+    if (valueType === "bigint" || valueType === "symbol") {
+      throw new Error(`Snapshot value at ${path} is not JSON-serializable: ${valueType}`);
+    }
+    if (valueType !== "object") {
+      return;
+    }
+    if (seen.has(value)) {
+      throw new Error(`Snapshot value at ${path} contains a circular reference`);
+    }
+    seen.add(value);
+    try {
+      if (Array.isArray(value)) {
+        for (let i = 0;i < value.length; i++) {
+          RuntimeState.assertSnapshotSerializable(value[i], `${path}[${i}]`, seen);
+        }
+        return;
+      }
+      for (const [key, child] of Object.entries(value)) {
+        RuntimeState.assertSnapshotSerializable(child, `${path}.${key}`, seen);
+      }
+    } finally {
+      seen.delete(value);
+    }
+  }
+  buildSnapshot() {
     const currentFiber = this.getCurrentFiber();
     return {
       version: 1,
@@ -4938,9 +5096,10 @@ class RuntimeState {
   getInfixKeywordExpander(keyword) {
     return this.infixKeywordExpanders[keyword];
   }
-  registerHostFunction(name, fn, arity = fn.length) {
+  registerHostFunction(name, fn, arity = fn.length, options = {}) {
     this.hostFunctions[name] = fn;
     this.hostFunctionArities[name] = arity;
+    this.hostFunctionVariadic[name] = options.variadic === true;
   }
   getHostFunction(name) {
     return this.hostFunctions[name];
@@ -4950,6 +5109,9 @@ class RuntimeState {
   }
   getHostFunctionArity(name) {
     return this.hostFunctionArities[name] ?? this.getHostFunction(name)?.length ?? 0;
+  }
+  isHostFunctionVariadic(name) {
+    return this.hostFunctionVariadic[name] === true;
   }
   callHostFunction(name, args) {
     const fn = this.getHostFunction(name);
@@ -5118,28 +5280,16 @@ class RuntimeState {
     };
   }
   buildPendingWorkflowJobs(extensionName, sourceNodeId, args) {
-    const primitiveName = this.getWorkflowPrimitiveName(extensionName);
-    if (primitiveName === "parallel") {
-      return args.map((arg, index) => this.createPendingWorkflowJob(extensionName, sourceNodeId, `${sourceNodeId}/item:${index}`, [arg], { itemIndex: index }));
+    const options = this.workflowExtensions[extensionName]?.options ?? {};
+    if (options.buildJobs != null) {
+      return this.clonePendingWorkflowJobs(options.buildJobs(args, sourceNodeId, extensionName));
     }
-    if (primitiveName === "pipeline") {
-      const items = Array.isArray(args[0]) ? args[0] : args;
-      const stageNames = Array.isArray(args[1]) ? args[1].map(String) : ["stage"];
-      const jobs = [];
-      for (let itemIndex = 0;itemIndex < items.length; itemIndex++) {
-        for (let stageIndex = 0;stageIndex < stageNames.length; stageIndex++) {
-          const stageName = stageNames[stageIndex];
-          jobs.push(this.createPendingWorkflowJob(extensionName, sourceNodeId, `${sourceNodeId}/item:${itemIndex}:${stageName}`, [items[itemIndex], stageName], { itemIndex, stageIndex, stageName }));
-        }
-      }
-      return jobs;
+    if (options.jobExpansion === "perArg") {
+      return args.map((arg, index) => this.createPendingWorkflowJob(extensionName, sourceNodeId, `${sourceNodeId}/item:${index}`, [arg], { itemIndex: index }));
     }
     return [
       this.createPendingWorkflowJob(extensionName, sourceNodeId, `${sourceNodeId}/job:0`, args, { itemIndex: 0 })
     ];
-  }
-  getWorkflowPrimitiveName(extensionName) {
-    return extensionName.startsWith("ai_") ? extensionName.slice(3) : extensionName;
   }
   createPendingWorkflowJob(extensionName, sourceNodeId, path, args, metadata) {
     return {
@@ -5394,6 +5544,9 @@ class RuntimeInterpreter {
       const memo = instruction.memo ?? {};
       const items = operandStack.peek() ?? [];
       const index = memo.index ?? 0;
+      if (typeof items.length !== "number") {
+        throw new Error(`foreach expects an array to iterate, got ` + `${items === null ? "null" : typeof items} — provide a vector/list.`);
+      }
       if (index >= items.length) {
         return;
       }
@@ -5868,7 +6021,7 @@ class RuntimeInterpreter {
       runtime.getTimerHost().clearInterval?.(handle);
       return null;
     }, 1);
-    runtime.registerHostFunction("Concat", (...args) => args.join(""), 2);
+    runtime.registerHostFunction("Concat", (...args) => args.join(""), 2, { variadic: true });
     runtime.registerHostFunction("Length", (value) => String(value).length, 1);
     runtime.registerHostFunction("ToUpper", (value) => String(value).toUpperCase(), 1);
     runtime.registerHostFunction("ToLower", (value) => String(value).toLowerCase(), 1);
@@ -5986,6 +6139,7 @@ class RuntimeInterpreter {
     runtime.addOpDirectly(RuntimeOpCode.RunBlock, nodesToRun);
     try {
       RuntimeInterpreter.StartLoopSync(runtime);
+      RuntimeInterpreter.AssertNoUnboundTopLevelWords(runtime, nodesToRun);
       return operandStack.popFrameAndPushTopValue();
     } catch (error) {
       RuntimeInterpreter.PopOperandFramesAfterAbrupt(runtime, initialFrameCount);
@@ -6497,8 +6651,24 @@ class RuntimeInterpreter {
     if (KnNodeHelper.GetType(knot.Core) === "Word" /* Word */) {
       const callable = RuntimeInterpreter.TryResolveCallable(runtime, knot.Core);
       if (RuntimeInterpreter.IsCallable(callable)) {
+        const headName = RuntimeInterpreter.GetWordName(knot.Core);
         const arity = RuntimeInterpreter.GetCallableArity(runtime, knot.Core, callable);
         const existingCount = RuntimeInterpreter.GetCurrentFrameValueCount(runtime);
+        if (runtime.hasHostFunction(headName) && runtime.isHostFunctionVariadic(headName)) {
+          let nextNode2 = knot.Next;
+          let consumed = 0;
+          while (nextNode2 != null) {
+            ops.push(RuntimeInterpreter.Op(RuntimeOpCode.RunNode, nextNode2.Core));
+            nextNode2 = nextNode2.Next;
+            consumed += 1;
+          }
+          const argCount = Math.max(existingCount + consumed, arity);
+          ops.push(RuntimeInterpreter.Op(RuntimeOpCode.ApplyCallable, {
+            callableNode: knot.Core,
+            argCount
+          }));
+          return nextNode2;
+        }
         let needed = Math.max(arity - existingCount, 0);
         let nextNode = knot.Next;
         while (needed > 0 && nextNode != null) {
@@ -6514,6 +6684,9 @@ class RuntimeInterpreter {
           return nextNode;
         }
       }
+      if (RuntimeInterpreter.IsUnboundName(runtime, knot.Core)) {
+        throw new Error(`Unbound name: ${RuntimeInterpreter.GetWordName(knot.Core)}`);
+      }
     }
     ops.push(RuntimeInterpreter.Op(RuntimeOpCode.RunNode, knot.Core));
     return knot.Next;
@@ -6522,6 +6695,16 @@ class RuntimeInterpreter {
     if (RuntimeInterpreter.GetCurrentFrameValueCount(runtime) >= 2) {
       ops.push(RuntimeInterpreter.Op(RuntimeOpCode.ApplyLogicalOperator, { name, phase: "apply" }));
       return knot.Next;
+    }
+    if (RuntimeInterpreter.GetCurrentFrameValueCount(runtime) === 0 && inputNodes.length >= 2) {
+      ops.push(RuntimeInterpreter.Op(RuntimeOpCode.RunNode, inputNodes[0]));
+      ops.push(RuntimeInterpreter.Op(RuntimeOpCode.ApplyLogicalOperator, {
+        name,
+        phase: "decide",
+        rightNode: inputNodes[1],
+        nextNode: knot.Next
+      }));
+      return null;
     }
     const rightNode = inputNodes[0] ?? knot.Next?.Core ?? null;
     if (rightNode == null) {
@@ -6606,8 +6789,15 @@ class RuntimeInterpreter {
     const frameBottom = snapshot.frameBottoms.at(-1) ?? 0;
     return snapshot.items.length - frameBottom;
   }
+  static AssertVarNameIsPlainBinding(nameNode) {
+    if (nameNode != null && (nameNode.InOutTable != null || nameNode.Body != null)) {
+      const declaredName = RuntimeInterpreter.GetWordName(nameNode.Core) ?? "<name>";
+      throw new Error(`var "${declaredName}" attaches a parameter list or block to the name but binds ` + `no value — a function literal needs the fn keyword, e.g. ` + `(var ${declaredName} (fn |..| :[ .. ])).`);
+    }
+  }
   static ExpandVar(runtime, knot) {
     const nodes = RuntimeInterpreter.KnotToArray(knot);
+    RuntimeInterpreter.AssertVarNameIsPlainBinding(nodes[1]);
     const name = RuntimeInterpreter.GetWordName(nodes[1]?.Core);
     runtime.addOpsInOrder([
       RuntimeInterpreter.Op(RuntimeOpCode.RunNode, nodes[2]?.Core),
@@ -7022,6 +7212,17 @@ class RuntimeInterpreter {
       values.push(RuntimeInterpreter.ApplyLogicalOperator(name, left2, right2));
       return 0;
     }
+    const paramNodes = RuntimeInterpreter.GetInputNodes(knot.Params ?? knot.InOutTable);
+    if (values.length === 0 && paramNodes.length >= 2) {
+      const left2 = RuntimeInterpreter.EvaluateNode(runtime, paramNodes[0]);
+      if (RuntimeInterpreter.ShouldShortCircuitLogicalOperator(name, left2)) {
+        values.push(RuntimeInterpreter.ApplyShortCircuitLogicalOperator(name, left2));
+        return 0;
+      }
+      const right2 = RuntimeInterpreter.EvaluateNode(runtime, paramNodes[1]);
+      values.push(RuntimeInterpreter.ApplyLogicalOperator(name, left2, right2));
+      return 0;
+    }
     const left = values.pop();
     const skipCount = RuntimeInterpreter.HasDeferredRightOperand(knot, lookaheadStart, chainNodes) ? 1 : 0;
     if (name === "and" && !RuntimeInterpreter.IsTruthy(left)) {
@@ -7086,12 +7287,14 @@ class RuntimeInterpreter {
       const name = RuntimeInterpreter.GetWordName(nodeToRun);
       if (runtime.hasHostFunction(name)) {
         const arity = runtime.getHostFunctionArity(name);
+        const variadic = runtime.isHostFunctionVariadic(name);
         let consumed = 0;
-        while (values.length < arity && lookaheadStart + consumed < chainNodes.length) {
+        while ((variadic || values.length < arity) && lookaheadStart + consumed < chainNodes.length) {
           const nextCore = chainNodes[lookaheadStart + consumed].Core;
           consumed += 1 + RuntimeInterpreter.EvaluateChainItem(runtime, nextCore, values, chainNodes, lookaheadStart + consumed + 1);
         }
-        const args = values.splice(Math.max(values.length - arity, 0), arity);
+        const takeCount = variadic ? values.length : arity;
+        const args = values.splice(Math.max(values.length - takeCount, 0), takeCount);
         values.push(runtime.callHostFunction(name, args));
         return consumed;
       }
@@ -7106,6 +7309,9 @@ class RuntimeInterpreter {
         const args = values.splice(Math.max(values.length - arity, 0), arity);
         values.push(RuntimeInterpreter.CallResolvedCallable(runtime, callable, args, name));
         return consumed;
+      }
+      if (RuntimeInterpreter.IsUnboundName(runtime, nodeToRun)) {
+        throw new Error(`Unbound name: ${name}`);
       }
     }
     values.push(RuntimeInterpreter.EvaluateNode(runtime, nodeToRun));
@@ -7152,6 +7358,23 @@ class RuntimeInterpreter {
   }
   static IsCallable(value) {
     return typeof value === "function" || value?.kind === "RuntimeLambdaFunction" || RuntimeInterpreter.IsRuntimeContinuation(value);
+  }
+  static IsUnboundName(runtime, node) {
+    if (KnNodeHelper.GetType(node) !== "Word" /* Word */) {
+      return false;
+    }
+    const name = RuntimeInterpreter.GetWordName(node);
+    return !runtime.hasHostFunction(name) && !runtime.hasWorkflowExtension(name) && !runtime.hasBinding(name);
+  }
+  static AssertNoUnboundTopLevelWords(runtime, nodes) {
+    if (!Array.isArray(nodes)) {
+      return;
+    }
+    for (const node of nodes) {
+      if (RuntimeInterpreter.IsUnboundName(runtime, node)) {
+        throw new Error(`Unbound name: ${RuntimeInterpreter.GetWordName(node)}`);
+      }
+    }
   }
   static GetCallableArity(runtime, callableNode, callable, fallbackArity = 0) {
     const name = RuntimeInterpreter.GetWordName(callableNode);
@@ -7714,6 +7937,7 @@ class RuntimeInterpreter {
   }
   static EvaluateVar(runtime, knot) {
     const nodes = RuntimeInterpreter.KnotToArray(knot);
+    RuntimeInterpreter.AssertVarNameIsPlainBinding(nodes[1]);
     const name = RuntimeInterpreter.GetWordName(nodes[1]?.Core);
     const value = RuntimeInterpreter.EvaluateNode(runtime, nodes[2]?.Core);
     runtime.define(name, value);
@@ -7771,7 +7995,14 @@ class RuntimeInterpreter {
     return RuntimeInterpreter.GetWordName(knot?.Core);
   }
   static GetWordName(word) {
-    return typeof word?.GetFullNameStr === "function" ? word.GetFullNameStr() : String(word);
+    if (typeof word?.GetFullNameStr === "function") {
+      return word.GetFullNameStr();
+    }
+    if (word != null && typeof word === "object" && typeof word.Value === "string") {
+      const name = [...word.Qualifiers ?? [], word.Value].join(".");
+      return word.SourceQualifier == null ? name : `${word.SourceQualifier}:::${name}`;
+    }
+    return String(word);
   }
   static ParseKonSourceBlock(source) {
     return RuntimeInterpreter.BuildPostfixRuntimeForms(RuntimeInterpreter.SplitTopLevelExpressions(source).map((expr) => RuntimeInterpreter.ParseKonExpression(expr)));
@@ -7843,10 +8074,23 @@ class RuntimeInterpreter {
         if (escape) {
           escape = false;
         } else if (ch === "\\") {
+          if (quote === '"' && (source[i + 1] === "(" || source[i + 1] === "[")) {
+            i = RuntimeInterpreter.SkipInterpolationBlockEnd(source, i + 1) - 1;
+            continue;
+          }
           escape = true;
         } else if (ch === quote) {
           quote = null;
         }
+        continue;
+      }
+      if (ch === "/" && source[i + 1] === "/") {
+        let j = i + 2;
+        while (j < source.length && source[j] !== `
+`) {
+          j += 1;
+        }
+        i = j;
         continue;
       }
       if (ch === '"' || ch === "'") {
@@ -7864,6 +8108,19 @@ class RuntimeInterpreter {
       }
       if ((ch === "#" || ch === "%") && source[i + 1] === "(" && depth === 0) {
         continue;
+      }
+      if (ch === "$" && depth === 0) {
+        const next = source[i + 1];
+        if (next === "(" || next === "[" || next === "{") {
+          continue;
+        }
+        if (next === "<") {
+          const end = RuntimeInterpreter.SkipAngleMacroBlockEnd(source, i + 1);
+          result.push(source.slice(start, end));
+          i = end - 1;
+          start = -1;
+          continue;
+        }
       }
       if (ch === "(" || ch === "[" || ch === "{") {
         depth += 1;
@@ -7887,6 +8144,76 @@ class RuntimeInterpreter {
       result.push(source.slice(start).trim());
     }
     return result.filter((item) => item.length > 0);
+  }
+  static SkipInterpolationBlockEnd(source, openIndex) {
+    const open = source[openIndex];
+    const close = open === "(" ? ")" : "]";
+    let depth = 0;
+    let index = openIndex;
+    while (index < source.length) {
+      const ch = source[index];
+      if (ch === '"' || ch === "'") {
+        const triple = source.startsWith(ch.repeat(3), index);
+        const delimiter = triple ? ch.repeat(3) : ch;
+        index += delimiter.length;
+        while (index < source.length) {
+          if (ch === '"' && source[index] === "\\") {
+            index += 2;
+            continue;
+          }
+          if (source.startsWith(delimiter, index)) {
+            index += delimiter.length;
+            break;
+          }
+          index += 1;
+        }
+        continue;
+      }
+      if (ch === open) {
+        depth += 1;
+      } else if (ch === close) {
+        depth -= 1;
+        if (depth === 0) {
+          return index + 1;
+        }
+      }
+      index += 1;
+    }
+    return source.length;
+  }
+  static SkipAngleMacroBlockEnd(source, openIndex) {
+    let depth = 0;
+    let index = openIndex;
+    while (index < source.length) {
+      const ch = source[index];
+      if (ch === '"' || ch === "'") {
+        const triple = source.startsWith(ch.repeat(3), index);
+        const delimiter = triple ? ch.repeat(3) : ch;
+        index += delimiter.length;
+        while (index < source.length) {
+          if (ch === '"' && source[index] === "\\") {
+            index += 2;
+            continue;
+          }
+          if (source.startsWith(delimiter, index)) {
+            index += delimiter.length;
+            break;
+          }
+          index += 1;
+        }
+        continue;
+      }
+      if (ch === "<") {
+        depth += 1;
+      } else if (ch === ">") {
+        depth -= 1;
+        if (depth === 0) {
+          return index + 1;
+        }
+      }
+      index += 1;
+    }
+    return source.length;
   }
   static EvaluateIf(runtime, condition, thenBody, elseBody = []) {
     return RuntimeInterpreter.ExecBlockWithRuntimeSync(runtime, RuntimeInterpreter.IsTruthy(condition) ? thenBody : elseBody);
@@ -7935,6 +8262,16 @@ class RuntimeInterpreter {
   }
   static IsPureTypeSystemDeclaration(node) {
     return node instanceof KnKnot && node.CallType == null && ["type", "trait"].includes(RuntimeInterpreter.GetKnotCoreWordName(node));
+  }
+  static DispatchUntilStop(runtime, maxInstructions = 1e6) {
+    const result = dispatchInstructions(runtime.makeDispatchContext(), (opcode) => runtime.resolveHandler(opcode), { maxInstructions });
+    if (result.stopReason === "error") {
+      throw result.error;
+    }
+    if (result.stopReason === "missing_handler") {
+      throw new Error("Instruction handler not found during dispatch");
+    }
+    return { stopReason: result.stopReason, effects: result.effects ?? [] };
   }
   static StartLoopSync(runtime) {
     while (runtime.getResumeFiberTokenCount() > 0) {
@@ -8074,6 +8411,62 @@ class EffectSymbol {
     this.Name = Name;
   }
 }
+
+class BrandedScalarTypeSymbol {
+  Name;
+  Representation;
+  Metadata;
+  constructor(Name, Representation, Metadata = {}) {
+    this.Name = Name;
+    this.Representation = Representation;
+    this.Metadata = Metadata;
+  }
+}
+
+class EnumTypeSymbol {
+  Name;
+  Representation;
+  Metadata;
+  Values = [];
+  IsClosed = true;
+  constructor(Name, Representation, Metadata = {}) {
+    this.Name = Name;
+    this.Representation = Representation;
+    this.Metadata = Metadata;
+  }
+  AddValue(name, code, metadata = {}) {
+    if (this.Values.some((value2) => value2.ValueName === name)) {
+      throw new Error(`Enum '${this.Name}' already contains value '${name}'.`);
+    }
+    const value = new EnumValueSymbol(name, this, code, metadata);
+    this.Values.push(value);
+    return value;
+  }
+  RequireValue(name) {
+    const value = this.Values.find((candidate) => candidate.ValueName === name);
+    if (value == null) {
+      throw new Error(`Enum '${this.Name}' does not contain value '${name}'.`);
+    }
+    return value;
+  }
+}
+
+class EnumValueSymbol {
+  ValueName;
+  Owner;
+  Code;
+  Metadata;
+  Name;
+  QualifiedName;
+  constructor(ValueName, Owner, Code = ValueName, Metadata = {}) {
+    this.ValueName = ValueName;
+    this.Owner = Owner;
+    this.Code = Code;
+    this.Metadata = Metadata;
+    this.QualifiedName = `${Owner.Name}.${ValueName}`;
+    this.Name = this.QualifiedName;
+  }
+}
 var RowQualifier;
 ((RowQualifier2) => {
   RowQualifier2["Default"] = "default";
@@ -8157,7 +8550,9 @@ class RowMember {
     this.IsMethod = IsMethod;
     this.Access = options.Access ?? "public" /* Public */;
     this.EffectContext = options.EffectContext;
+    this.Metadata = options.Metadata ?? {};
   }
+  Metadata;
   get IsVirtual() {
     return this.Qualifier === "virtual" /* Virtual */;
   }
@@ -8182,26 +8577,28 @@ class RowMember {
   WithEffectContext(effectContext) {
     return new RowMember(this.Name, this.Type, this.Qualifier, this.Origin, this.IsMethod, {
       Access: this.Access,
-      EffectContext: effectContext
+      EffectContext: effectContext,
+      Metadata: this.Metadata
     });
   }
   WithType(type) {
     return new RowMember(this.Name, type, this.Qualifier, this.Origin, this.IsMethod, {
       Access: this.Access,
-      EffectContext: this.EffectContext
+      EffectContext: this.EffectContext,
+      Metadata: this.Metadata
     });
   }
 }
 
 class RowMemberBuilder {
-  static Method(origin, name, type, qualifier = "default" /* Default */, access = "public" /* Public */) {
-    return new RowMember(name, type, qualifier, origin, true, { Access: access });
+  static Method(origin, name, type, qualifier = "default" /* Default */, access = "public" /* Public */, metadata = {}) {
+    return new RowMember(name, type, qualifier, origin, true, { Access: access, Metadata: metadata });
   }
-  static Field(origin, name, type, qualifier = "default" /* Default */, access = "public" /* Public */) {
-    return new RowMember(name, type, qualifier, origin, false, { Access: access });
+  static Field(origin, name, type, qualifier = "default" /* Default */, access = "public" /* Public */, metadata = {}) {
+    return new RowMember(name, type, qualifier, origin, false, { Access: access, Metadata: metadata });
   }
-  static Spread(origin, name, type) {
-    return new RowMember(`..${name}`, type, "default" /* Default */, origin, false);
+  static Spread(origin, name, type, metadata = {}) {
+    return new RowMember(`..${name}`, type, "default" /* Default */, origin, false, { Metadata: metadata });
   }
 }
 var RowMemberResolutionStatus;
@@ -8260,6 +8657,49 @@ class RowTypeSymbol {
   }
   EnumerateByName(name) {
     return this.Members.filter((member) => member.Name === name);
+  }
+}
+
+class SchemaMixinSymbol {
+  Name;
+  Row;
+  Metadata;
+  constructor(Name, Row, Metadata = {}) {
+    this.Name = Name;
+    this.Row = Row;
+    this.Metadata = Metadata;
+  }
+}
+
+class SchemaTypeSymbol {
+  Name;
+  DeclaredRow;
+  EffectiveRow;
+  Parent;
+  Mixins;
+  Metadata;
+  constructor(Name, DeclaredRow, EffectiveRow, Parent, Mixins = [], Metadata = {}) {
+    this.Name = Name;
+    this.DeclaredRow = DeclaredRow;
+    this.EffectiveRow = EffectiveRow;
+    this.Parent = Parent;
+    this.Mixins = Mixins;
+    this.Metadata = Metadata;
+  }
+}
+
+class RelationTypeSymbol {
+  Name;
+  From;
+  To;
+  Directed;
+  Metadata;
+  constructor(Name, From, To, Directed = true, Metadata = {}) {
+    this.Name = Name;
+    this.From = From;
+    this.To = To;
+    this.Directed = Directed;
+    this.Metadata = Metadata;
   }
 }
 
@@ -8677,6 +9117,7 @@ var TypeComputationOps = {
   DefineGenericRowType: "type.compute.define_generic_row_type",
   InstantiateGenericRowType: "type.compute.instantiate_generic_row_type",
   DefineClass: "type.compute.define_class",
+  DefineEnum: "type.compute.define_enum",
   InstantiateGenericClass: "type.compute.instantiate_generic_class",
   MergeRows: "type.compute.merge_rows",
   IsSubtype: "type.compute.is_subtype",
@@ -8711,6 +9152,9 @@ class KonTypeComputationRuntime {
       typeParameters
     ]);
   }
+  defineEnum(typeSystem, name, values, options) {
+    return this.call(TypeComputationOps.DefineEnum, [typeSystem, name, values, options]);
+  }
   instantiateGenericClass(typeSystem, classType, typeArguments) {
     return this.call(TypeComputationOps.InstantiateGenericClass, [typeSystem, classType, typeArguments]);
   }
@@ -8732,6 +9176,7 @@ class KonTypeComputationRuntime {
     this.Runtime.registerHostFunction(TypeComputationOps.DefineGenericRowType, (typeSystem, name, typeParameters, members, isOpen) => typeSystem.defineGenericRowTypeDirect(name, typeParameters, members, isOpen), 5);
     this.Runtime.registerHostFunction(TypeComputationOps.InstantiateGenericRowType, (typeSystem, genericType, typeArguments) => typeSystem.instantiateGenericRowTypeDirect(genericType, ...typeArguments), 3);
     this.Runtime.registerHostFunction(TypeComputationOps.DefineClass, (typeSystem, name, members, isOpen, bases, methodBodies, isTrait, typeParameters) => typeSystem.defineClassDirect(name, members, isOpen, bases, methodBodies, isTrait, typeParameters), 8);
+    this.Runtime.registerHostFunction(TypeComputationOps.DefineEnum, (typeSystem, name, values, options) => typeSystem.defineEnumDirect(name, values, options), 4);
     this.Runtime.registerHostFunction(TypeComputationOps.InstantiateGenericClass, (typeSystem, classType, typeArguments) => typeSystem.instantiateGenericClassDirect(classType, ...typeArguments), 3);
     this.Runtime.registerHostFunction(TypeComputationOps.MergeRows, (typeSystem, resultName, rows) => typeSystem.mergeRowsDirect(resultName, ...rows), 3);
     this.Runtime.registerHostFunction(TypeComputationOps.IsSubtype, (typeSystem, candidate, target) => typeSystem.isSubtypeDirect(candidate, target), 3);
@@ -8742,6 +9187,14 @@ class KonTypeComputationRuntime {
 // ../type-system/lib/TypeSystem.ts
 class TypeSystem {
   classes = new Map;
+  enums = new Map;
+  brandedScalars = new Map;
+  schemaMixins = new Map;
+  schemaTypes = new Map;
+  relations = new Map;
+  schemaTypeAliases = new Map;
+  relationAliases = new Map;
+  attributeAliases = new Map;
   computationRuntime;
   Registry = new TypeRegistry;
   constructor(computationRuntime = new KonTypeComputationRuntime) {
@@ -8830,6 +9283,208 @@ class TypeSystem {
     }
     return definition;
   }
+  DefineEnum(name, values, options = {}) {
+    return this.computationRuntime.defineEnum(this, name, values, options);
+  }
+  defineEnumDirect(name, values, options = {}) {
+    if (this.enums.has(name)) {
+      throw new Error(`Enum '${name}' is already registered.`);
+    }
+    const enumType = new EnumTypeSymbol(name, options.Representation ?? this.Registry.String, options.Metadata ?? {});
+    const seen = new Set;
+    const seenCodes = new Set;
+    for (const item of values) {
+      const input = typeof item === "string" ? { Name: item } : item;
+      if (seen.has(input.Name)) {
+        throw new Error(`Enum '${name}' contains duplicate value '${input.Name}'.`);
+      }
+      seen.add(input.Name);
+      if (input.Code != null) {
+        if (seenCodes.has(input.Code)) {
+          throw new Error(`Enum '${name}' contains duplicate code '${input.Code}'.`);
+        }
+        seenCodes.add(input.Code);
+      }
+      enumType.AddValue(input.Name, input.Code, input.Metadata);
+    }
+    this.enums.set(name, enumType);
+    this.Registry.Register(enumType);
+    for (const value of enumType.Values) {
+      this.Registry.Register(value);
+    }
+    return enumType;
+  }
+  RequireEnum(name) {
+    const symbol = this.enums.get(name) ?? this.Registry.TryGet(name);
+    if (symbol instanceof EnumTypeSymbol) {
+      return symbol;
+    }
+    throw new Error(`Enum '${name}' is not registered.`);
+  }
+  DefineBrandedScalar(name, representation = this.Registry.String, metadata = {}) {
+    if (this.brandedScalars.has(name)) {
+      throw new Error(`Branded scalar '${name}' is already registered.`);
+    }
+    const scalar = new BrandedScalarTypeSymbol(name, representation, metadata);
+    this.brandedScalars.set(name, scalar);
+    this.Registry.Register(scalar);
+    return scalar;
+  }
+  RequireBrandedScalar(name) {
+    const scalar = this.brandedScalars.get(name) ?? this.Registry.TryGet(name);
+    if (scalar instanceof BrandedScalarTypeSymbol) {
+      return scalar;
+    }
+    throw new Error(`Branded scalar '${name}' is not registered.`);
+  }
+  DefineSchemaMixin(name, members, isOpen = true, metadata = {}) {
+    if (this.schemaMixins.has(name)) {
+      throw new Error(`Schema mixin '${name}' is already registered.`);
+    }
+    const row = new RowTypeSymbol(`${name}.mixin`, members, isOpen);
+    const mixin = new SchemaMixinSymbol(name, row, metadata);
+    this.schemaMixins.set(name, mixin);
+    this.Registry.Register(mixin);
+    this.Registry.Register(row);
+    return mixin;
+  }
+  RequireSchemaMixin(name) {
+    const mixin = this.schemaMixins.get(name);
+    if (mixin == null) {
+      throw new Error(`Schema mixin '${name}' is not registered.`);
+    }
+    return mixin;
+  }
+  DefineSchemaType(name, members, options = {}) {
+    if (this.schemaTypes.has(name)) {
+      throw new Error(`Schema type '${name}' is already registered.`);
+    }
+    const parent = typeof options.Parent === "string" ? this.RequireSchemaType(options.Parent) : options.Parent;
+    const mixins = (options.Mixins ?? []).map((mixin) => typeof mixin === "string" ? this.RequireSchemaMixin(mixin) : mixin);
+    const declared = new RowTypeSymbol(`${name}.schema.decl`, members, options.IsOpen ?? true);
+    const effective = this.BuildSchemaEffectiveRow(name, declared, parent, mixins);
+    const schema = new SchemaTypeSymbol(name, declared, effective, parent, mixins, options.Metadata ?? {});
+    this.schemaTypes.set(name, schema);
+    this.Registry.Register(schema);
+    this.Registry.RegisterLazy(`${name}.schema.rows`, () => schema.EffectiveRow);
+    return schema;
+  }
+  RequireSchemaType(name) {
+    const canonical = this.ResolveSchemaTypeName(name);
+    const schema = this.schemaTypes.get(canonical);
+    if (schema == null) {
+      throw new Error(`Schema type '${name}' is not registered.`);
+    }
+    return schema;
+  }
+  IsSchemaSubtype(candidate, target) {
+    let current = candidate;
+    while (current != null) {
+      if (current === target || current.Name === target.Name) {
+        return true;
+      }
+      current = current.Parent;
+    }
+    return false;
+  }
+  DefineRelation(name, from, to, directed = true, metadata = {}) {
+    if (this.relations.has(name)) {
+      throw new Error(`Relation '${name}' is already registered.`);
+    }
+    const relation = new RelationTypeSymbol(name, typeof from === "string" ? this.RequireSchemaType(from) : from, typeof to === "string" ? this.RequireSchemaType(to) : to, directed, metadata);
+    this.relations.set(name, relation);
+    this.Registry.Register(relation);
+    return relation;
+  }
+  RequireRelation(name) {
+    const canonical = this.ResolveRelationName(name);
+    const relation = this.relations.get(canonical);
+    if (relation == null) {
+      throw new Error(`Relation '${name}' is not registered.`);
+    }
+    return relation;
+  }
+  CheckRelationEndpoints(relation, from, to) {
+    const forward = this.IsSchemaSubtype(from, relation.From) && this.IsSchemaSubtype(to, relation.To);
+    if (relation.Directed || forward) {
+      return forward;
+    }
+    return this.IsSchemaSubtype(from, relation.To) && this.IsSchemaSubtype(to, relation.From);
+  }
+  GetSchemaTypeSet(type, options = {}) {
+    const root = typeof type === "string" ? this.RequireSchemaType(type) : type;
+    if (options.exact) {
+      return [root];
+    }
+    return Array.from(this.schemaTypes.values()).filter((candidate) => this.IsSchemaSubtype(candidate, root));
+  }
+  DefineSchemaTypeAlias(alias, canonical) {
+    this.schemaTypeAliases.set(alias, canonical);
+    this.ResolveAlias(alias, this.schemaTypeAliases, "schema type");
+  }
+  DefineRelationAlias(alias, canonical) {
+    this.relationAliases.set(alias, canonical);
+    this.ResolveAlias(alias, this.relationAliases, "relation");
+  }
+  DefineAttributeAlias(typeName, alias, canonical) {
+    const type = this.ResolveSchemaTypeName(typeName);
+    const aliases = this.attributeAliases.get(type) ?? new Map;
+    aliases.set(alias, canonical);
+    this.attributeAliases.set(type, aliases);
+    this.ResolveAlias(alias, aliases, `attribute for ${type}`);
+  }
+  ResolveSchemaTypeName(name) {
+    return this.ResolveAlias(name, this.schemaTypeAliases, "schema type");
+  }
+  ResolveRelationName(name) {
+    return this.ResolveAlias(name, this.relationAliases, "relation");
+  }
+  ResolveAttributeName(typeName, name) {
+    let current = this.RequireSchemaType(typeName);
+    while (current != null) {
+      const aliases = this.attributeAliases.get(current.Name);
+      if (aliases?.has(name)) {
+        return this.ResolveAlias(name, aliases, `attribute for ${current.Name}`);
+      }
+      current = current.Parent;
+    }
+    return name;
+  }
+  BuildSchemaEffectiveRow(name, declared, parent, mixins = []) {
+    const members = [];
+    for (const mixin of mixins) {
+      members.push(...mixin.Row.Members);
+    }
+    const ancestors = [];
+    let current = parent;
+    while (current != null) {
+      ancestors.unshift(current);
+      current = current.Parent;
+    }
+    for (const ancestor of ancestors) {
+      members.push(...ancestor.DeclaredRow.Members);
+    }
+    for (const member of declared.Members) {
+      const inherited = members.find((candidate) => candidate.Name === member.Name);
+      if (inherited != null && !this.AreTypesCompatible(member.Type, inherited.Type)) {
+        throw new Error(`Schema member '${member.Name}' in '${name}' cannot change inherited type '${inherited.Type.Name}' to '${member.Type.Name}'.`);
+      }
+      members.push(member);
+    }
+    return new RowTypeSymbol(`${name}.schema.rows`, members, declared.IsOpen || mixins.some((mixin) => mixin.Row.IsOpen) || ancestors.some((ancestor) => ancestor.EffectiveRow.IsOpen));
+  }
+  ResolveAlias(name, aliases, kind) {
+    const seen = new Set;
+    let current = name;
+    while (aliases.has(current)) {
+      if (seen.has(current)) {
+        throw new Error(`Alias cycle detected for ${kind} '${name}'.`);
+      }
+      seen.add(current);
+      current = aliases.get(current);
+    }
+    return current;
+  }
   MergeRows(resultName, ...rows) {
     return this.computationRuntime.mergeRows(this, resultName, rows);
   }
@@ -8874,6 +9529,15 @@ class TypeSystem {
   areTypesCompatibleDirect(candidate, required) {
     if (candidate === required || candidate.Name === required.Name) {
       return true;
+    }
+    if (candidate.Owner instanceof EnumTypeSymbol && required instanceof EnumTypeSymbol) {
+      return candidate.Owner.Name === required.Name;
+    }
+    if (candidate instanceof BrandedScalarTypeSymbol || required instanceof BrandedScalarTypeSymbol) {
+      return false;
+    }
+    if (candidate instanceof SchemaTypeSymbol && required instanceof SchemaTypeSymbol) {
+      return this.IsSchemaSubtype(candidate, required);
     }
     if (candidate instanceof FunctionTypeSymbol && required instanceof FunctionTypeSymbol) {
       if (candidate.Parameters.length !== required.Parameters.length || candidate.Outputs.length !== required.Outputs.length) {
@@ -8920,6 +9584,28 @@ function SplitTopLevelExpressions(source) {
         escape = true;
       } else if (ch === quote) {
         quote = null;
+      }
+      continue;
+    }
+    if (ch === "/" && source[i + 1] === "/") {
+      if (depth === 0 && start >= 0) {
+        const expr = source.slice(start, i).trim();
+        if (isStandaloneAnnotationPrefix(expr, source, i)) {
+          pendingAnnotationPrefix = true;
+        } else {
+          if (pendingAnnotationPrefix && expr.length > 0 && expr.startsWith("#(")) {
+            result.push(expr);
+            pendingAnnotationPrefix = false;
+          } else if (expr.length > 0) {
+            result.push(expr);
+            pendingAnnotationPrefix = false;
+          }
+        }
+        start = -1;
+      }
+      while (i < source.length && source[i] !== `
+`) {
+        i++;
       }
       continue;
     }
@@ -9111,6 +9797,24 @@ class KonTypeBinder {
       case "trait":
         this.BindClassDeclaration(declaration, true);
         break;
+      case "enum":
+        this.BindEnumDeclaration(declaration);
+        break;
+      case "scalar":
+        this.BindScalarDeclaration(declaration);
+        break;
+      case "mixin":
+        this.BindSchemaMixinDeclaration(declaration);
+        break;
+      case "schema":
+        this.BindSchemaDeclaration(declaration);
+        break;
+      case "relation":
+        this.BindRelationDeclaration(declaration);
+        break;
+      case "attr":
+        this.BindTopLevelAttributeDeclaration(declaration);
+        break;
       default:
         this.AddDiagnostic("KTB002", `Unsupported top-level type-system declaration '${keyword ?? "<missing>"}'.`, keyword);
         break;
@@ -9202,6 +9906,178 @@ class KonTypeBinder {
       this.RestoreTypeParameters(previous);
     }
   }
+  BindEnumDeclaration(knot) {
+    const name = this.GetDeclarationName(knot, "enum");
+    if (name == null) {
+      return;
+    }
+    const values = [];
+    const seen = new Set;
+    for (const item of knot.Body ?? []) {
+      if (!(item instanceof KnKnot) || getWord(item.Core) !== "value") {
+        this.AddDiagnostic("KTB110", `Enum '${name}' body items must be value declarations.`, name);
+        continue;
+      }
+      const valueName = this.GetDeclarationName(item, "value");
+      if (valueName == null) {
+        continue;
+      }
+      if (seen.has(valueName)) {
+        this.AddDiagnostic("KTB111", `Enum '${name}' contains duplicate value '${valueName}'.`, valueName);
+        continue;
+      }
+      seen.add(valueName);
+      const valueMetadata = this.ReadTypeMetadata(item);
+      values.push({
+        Name: valueName,
+        Code: readConfigValue(item, "code"),
+        Metadata: valueMetadata
+      });
+    }
+    if (values.length === 0) {
+      this.AddDiagnostic("KTB112", `Enum '${name}' must declare at least one value.`, name);
+      return;
+    }
+    const reprName = getTypeName(readConfigValue(knot, "repr"));
+    const representation = reprName == null ? this.typeSystem.Registry.String : this.TryResolvePrimitiveAlias(reprName) ?? this.typeSystem.Registry.TryGet(reprName);
+    if (representation == null) {
+      this.AddDiagnostic("KTB113", `Enum '${name}' representation '${reprName}' is not defined.`, reprName);
+      return;
+    }
+    try {
+      this.typeSystem.DefineEnum(name, values, {
+        Representation: representation,
+        Metadata: this.ReadTypeMetadata(knot)
+      });
+    } catch (error) {
+      this.AddDiagnostic("KTB114", error?.message ?? String(error), name);
+    }
+  }
+  BindScalarDeclaration(knot) {
+    const name = this.GetDeclarationName(knot, "scalar");
+    if (name == null) {
+      return;
+    }
+    const reprName = getTypeName(readConfigValue(knot, "repr"));
+    const representation = reprName == null ? this.typeSystem.Registry.String : this.TryResolvePrimitiveAlias(reprName) ?? this.typeSystem.Registry.TryGet(reprName);
+    if (representation == null) {
+      this.AddDiagnostic("KTB115", `Scalar '${name}' representation '${reprName}' is not defined.`, reprName);
+      return;
+    }
+    try {
+      this.typeSystem.DefineBrandedScalar(name, representation, this.ReadTypeMetadata(knot));
+    } catch (error) {
+      this.AddDiagnostic("KTB116", error?.message ?? String(error), name);
+    }
+  }
+  BindSchemaMixinDeclaration(knot) {
+    const name = this.GetDeclarationName(knot, "mixin");
+    if (name == null) {
+      return;
+    }
+    const members = this.BindSchemaMembers(name, knot.Body ?? []);
+    try {
+      this.typeSystem.DefineSchemaMixin(name, members, readBoolConfig(knot, "open", true), this.ReadTypeMetadata(knot));
+    } catch (error) {
+      this.AddDiagnostic("KTB120", error?.message ?? String(error), name);
+    }
+  }
+  BindSchemaDeclaration(knot) {
+    const name = this.GetDeclarationName(knot, "schema");
+    if (name == null) {
+      return;
+    }
+    const aliasTarget = getTypeName(readConfigValue(knot, "alias_of"));
+    if (aliasTarget != null) {
+      this.BindSchemaAliasDeclaration(name, aliasTarget, knot);
+      return;
+    }
+    const members = this.BindSchemaMembers(name, knot.Body ?? []);
+    const parent = getTypeName(readConfigValue(knot, "extends"));
+    const mixins = readConfigItems(knot, "mixins").map((item) => getTypeName(item)).filter((item) => item != null);
+    try {
+      this.typeSystem.DefineSchemaType(name, members, {
+        IsOpen: readBoolConfig(knot, "open", true),
+        Parent: parent,
+        Mixins: mixins,
+        Metadata: this.ReadTypeMetadata(knot)
+      });
+    } catch (error) {
+      this.AddDiagnostic("KTB123", error?.message ?? String(error), name);
+    }
+  }
+  BindSchemaAliasDeclaration(name, aliasTarget, knot) {
+    if ((knot.Body?.length ?? 0) > 0 || hasConfigValue(knot, "extends") || hasConfigValue(knot, "mixins")) {
+      this.AddDiagnostic("KTB130", `Schema alias '${name}' must not include body, extends, or mixins.`, name);
+      return;
+    }
+    try {
+      this.typeSystem.DefineSchemaTypeAlias(name, aliasTarget);
+      this.typeSystem.RequireSchemaType(name);
+    } catch (error) {
+      this.AddDiagnostic("KTB132", error?.message ?? String(error), name);
+    }
+  }
+  BindRelationDeclaration(knot) {
+    const name = this.GetDeclarationName(knot, "relation");
+    if (name == null) {
+      return;
+    }
+    const aliasTarget = getTypeName(readConfigValue(knot, "alias_of"));
+    if (aliasTarget != null) {
+      this.BindRelationAliasDeclaration(name, aliasTarget, knot);
+      return;
+    }
+    const from = getTypeName(readConfigValue(knot, "from"));
+    const to = getTypeName(readConfigValue(knot, "to"));
+    if (from == null || to == null) {
+      this.AddDiagnostic("KTB141", `Relation '${name}' must include from and to schema targets in :{ ... }.`, name);
+      return;
+    }
+    try {
+      this.typeSystem.DefineRelation(name, from, to, readBoolConfig(knot, "directed", true), this.ReadTypeMetadata(knot));
+    } catch (error) {
+      this.AddDiagnostic("KTB140", error?.message ?? String(error), name);
+    }
+  }
+  BindRelationAliasDeclaration(name, aliasTarget, knot) {
+    if (hasConfigValue(knot, "from") || hasConfigValue(knot, "to")) {
+      this.AddDiagnostic("KTB141", `Relation alias '${name}' must not include from or to config.`, name);
+      return;
+    }
+    try {
+      this.typeSystem.DefineRelationAlias(name, aliasTarget);
+      this.typeSystem.RequireRelation(name);
+    } catch (error) {
+      this.AddDiagnostic("KTB142", error?.message ?? String(error), name);
+    }
+  }
+  BindTopLevelAttributeDeclaration(knot) {
+    const name = this.GetDeclarationName(knot, "attr");
+    if (name == null) {
+      return;
+    }
+    const aliasTarget = getTypeName(readConfigValue(knot, "alias_of"));
+    if (aliasTarget == null) {
+      this.AddDiagnostic("KTB150", `Top-level attr declaration '${name}' must use alias_of in :{ ... }.`, name);
+      return;
+    }
+    const target = this.ParseAttributeAliasTarget(aliasTarget);
+    if (target == null) {
+      this.AddDiagnostic("KTB151", `Attribute alias '${name}' target must be SchemaName.attributeName.`, aliasTarget);
+      return;
+    }
+    try {
+      const schema = this.typeSystem.RequireSchemaType(target.Schema);
+      if (!schema.EffectiveRow.Members.some((member) => member.Name === target.Attribute)) {
+        this.AddDiagnostic("KTB153", `Schema '${target.Schema}' has no attribute '${target.Attribute}'.`, aliasTarget);
+        return;
+      }
+      this.typeSystem.DefineAttributeAlias(target.Schema, name, target.Attribute);
+    } catch (error) {
+      this.AddDiagnostic("KTB152", error?.message ?? String(error), name);
+    }
+  }
   BindFunctionDeclaration(knot) {
     const name = this.GetDeclarationName(knot, "fn");
     if (name == null) {
@@ -9250,6 +10126,21 @@ class KonTypeBinder {
         return null;
     }
   }
+  BindSchemaMembers(owner, bodyItems) {
+    const members = [];
+    for (const item of bodyItems) {
+      this.ReadEffectPrefixes(item);
+      if (item instanceof KnKnot && getWord(item.Core) === "attr" && hasConfigValue(item, "alias_of")) {
+        this.AddDiagnostic("KTB122", "Attribute aliases must be top-level attr declarations, not schema body items.", getTypeName(item.Name) ?? owner);
+        continue;
+      }
+      const member = this.BindMember(owner, item);
+      if (member != null) {
+        members.push(member);
+      }
+    }
+    return members;
+  }
   BindMethodMember(owner, knot) {
     const memberInfo = this.ReadMemberName(owner, knot);
     const inOutTable = this.GetMemberInOutTable(knot);
@@ -9260,7 +10151,7 @@ class KonTypeBinder {
     const effectContext = this.pendingFunctionEffectRow;
     const signature = this.BindFunctionSignature(`${memberInfo.origin}::${memberInfo.name}`, inOutTable, effectContext);
     this.pendingFunctionEffectRow = null;
-    const member = RowMemberBuilder.Method(memberInfo.origin, memberInfo.name, signature, readQualifier(knot), readAccess(knot));
+    const member = RowMemberBuilder.Method(memberInfo.origin, memberInfo.name, signature, readQualifier(knot), readAccess(knot), this.ReadTypeMetadata(knot));
     return effectContext == null ? member : member.WithEffectContext(effectContext);
   }
   BindFieldMember(owner, knot) {
@@ -9270,7 +10161,7 @@ class KonTypeBinder {
       return null;
     }
     const fieldType = firstTypePrefix(knot) ?? this.firstInOutInput(knot) ?? this.typeSystem.Registry.Any;
-    return RowMemberBuilder.Field(memberInfo.origin, memberInfo.name, this.BindTypeNode(fieldType), readQualifier(knot), readAccess(knot));
+    return RowMemberBuilder.Field(memberInfo.origin, memberInfo.name, this.BindTypeNode(fieldType), readQualifier(knot), readAccess(knot), this.ReadTypeMetadata(knot));
   }
   BindFunctionSignature(name, table, effectRow) {
     const rows = table.RawValue;
@@ -9513,6 +10404,45 @@ class KonTypeBinder {
     this.AddDiagnostic("KTB010", `${keyword} declaration must include a symbol name.`, keyword);
     return null;
   }
+  ParseAttributeAliasTarget(target) {
+    const index = target.lastIndexOf(".");
+    if (index <= 0 || index === target.length - 1) {
+      return null;
+    }
+    return {
+      Schema: target.slice(0, index),
+      Attribute: target.slice(index + 1)
+    };
+  }
+  ReadTypeMetadata(knot) {
+    const metadata = {
+      ...knot.Attr ?? {},
+      ...readConfigMap(knot) ?? {}
+    };
+    if (knot.Metadata instanceof Map) {
+      for (const [key, value] of knot.Metadata.entries()) {
+        const name = getTypeName(key);
+        if (name != null) {
+          metadata[name] = value;
+        }
+      }
+    }
+    const sourceAnnotations = this.ReadSourceAnnotations(knot);
+    if (sourceAnnotations != null) {
+      metadata.source_annotations = sourceAnnotations;
+    }
+    return metadata;
+  }
+  ReadSourceAnnotations(knot) {
+    const sourceAnnotations = {};
+    if (hasModifierContent(knot.PreModifiers)) {
+      sourceAnnotations.PreModifiers = knot.PreModifiers;
+    }
+    if (hasModifierContent(knot.PostModifiers)) {
+      sourceAnnotations.PostModifiers = knot.PostModifiers;
+    }
+    return Object.keys(sourceAnnotations).length === 0 ? null : sourceAnnotations;
+  }
   firstInOutInput(knot) {
     const rows = knot.InOutTable?.RawValue;
     return rows?.[0]?.[2]?.[0] ?? null;
@@ -9574,9 +10504,61 @@ function readArrayAttr(knot, attrName) {
   const attr = knot.Attr?.[attrName];
   return Array.isArray(attr) ? attr : null;
 }
+function readConfigMap(knot) {
+  if (knot.Conf == null) {
+    return null;
+  }
+  const result = {};
+  for (const [key, value] of Object.entries(knot.Conf)) {
+    if (typeof value !== "function") {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+function readConfigValue(knot, name) {
+  const conf = readConfigMap(knot);
+  return conf?.[name] ?? knot.Attr?.[name];
+}
+function hasConfigValue(knot, name) {
+  return readConfigValue(knot, name) != null;
+}
+function readConfigItems(knot, name) {
+  const value = readConfigValue(knot, name);
+  if (value == null) {
+    return [];
+  }
+  return Array.isArray(value) ? value : [value];
+}
+function readBoolConfig(knot, name, defaultValue) {
+  return readBoolValue(readConfigValue(knot, name), defaultValue);
+}
 function readBoolAttr(knot, attrName, defaultValue) {
-  const value = knot.Attr?.[attrName];
-  return value == null ? defaultValue : Boolean(value);
+  return readBoolValue(knot.Attr?.[attrName], defaultValue);
+}
+function readBoolValue(value, defaultValue) {
+  if (value == null) {
+    return defaultValue;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+  const name = getTypeName(value);
+  if (name != null) {
+    switch (name.toLowerCase()) {
+      case "true":
+        return true;
+      case "false":
+        return false;
+    }
+  }
+  return Boolean(value);
+}
+function hasModifierContent(group) {
+  if (group == null) {
+    return false;
+  }
+  return (group.Identifiers?.length ?? 0) > 0 || (group.NamedValues?.size ?? 0) > 0 || (group.Knots?.length ?? 0) > 0 || group.UnorderedMap != null || group.OrderedMap != null || group.Vector != null;
 }
 function readQualifier(knot) {
   const raw = getTypeName(knot.Attr?.qualifier ?? knot.Attr?.mode);
@@ -9835,6 +10817,10 @@ class KonTypeChecker {
       if (genericFunction != null) {
         const signature = this.InstantiateGenericFunction(genericFunction, node, [], node.Value);
         return signature == null ? null : { Outputs: signature.Outputs, Location: node.GetFullNameStr(), EffectRow: signature.EffectRow };
+      }
+      const registered = this.binding.TypeSystem.Registry.TryGet(node.GetFullNameStr());
+      if (registered instanceof EnumValueSymbol) {
+        return single(registered.Owner, registered.QualifiedName, EffectRow.EmptyClosed);
       }
     }
     return null;
@@ -11612,3 +12598,1001 @@ function registerTypeSystemBridge() {
 }
 // ../type-system/lib/index.ts
 registerTypeSystemBridge();
+// ../type-annotations/lib/Annotations.ts
+var BuiltInAnnotationNames = {
+  Required: "required",
+  Description: "description",
+  Storage: "storage",
+  Label: "label",
+  Source: "source",
+  Migration: "migration"
+};
+
+class AnnotationExtractor {
+  Extract(node) {
+    const entries = [];
+    this.ReadMetadata(entries, node?.Metadata);
+    this.ReadConfig(entries, node?.Conf);
+    this.ReadAttr(entries, node?.Attr);
+    this.ReadNamedAttr(entries, node?.NamedAttr);
+    this.ReadModifierGroup(entries, "preModifier", node?.PreModifiers);
+    this.ReadModifierGroup(entries, "postModifier", node?.PostModifiers);
+    return { Entries: entries };
+  }
+  Get(node, name) {
+    return this.Extract(node).Entries.filter((entry) => entry.Name === name);
+  }
+  GetFirstValue(node, name) {
+    return this.Get(node, name)[0]?.Value;
+  }
+  IsRequired(node) {
+    return this.GetFirstValue(node, BuiltInAnnotationNames.Required) === true;
+  }
+  ReadMetadata(entries, metadata) {
+    if (metadata == null) {
+      return;
+    }
+    if (metadata instanceof Map) {
+      for (const [key, value] of metadata.entries()) {
+        entries.push({
+          Source: "metadata",
+          Name: wordName(key),
+          Value: value
+        });
+      }
+      return;
+    }
+    for (const [key, value] of Object.entries(metadata)) {
+      entries.push({
+        Source: "metadata",
+        Name: key,
+        Value: value
+      });
+    }
+  }
+  ReadAttr(entries, attr) {
+    if (attr == null) {
+      return;
+    }
+    for (const [name, value] of Object.entries(attr)) {
+      entries.push({
+        Source: "attr",
+        Name: name,
+        Value: value
+      });
+    }
+  }
+  ReadConfig(entries, config) {
+    if (config == null) {
+      return;
+    }
+    for (const [name, value] of Object.entries(config)) {
+      if (typeof value === "function") {
+        continue;
+      }
+      entries.push({
+        Source: "config",
+        Name: name,
+        Value: configValue(value)
+      });
+    }
+  }
+  ReadNamedAttr(entries, namedAttr) {
+    if (namedAttr == null) {
+      return;
+    }
+    for (const [target, values] of Object.entries(namedAttr)) {
+      for (const [name, value] of Object.entries(values)) {
+        entries.push({
+          Source: "namedAttr",
+          Target: target,
+          Name: name,
+          Value: value
+        });
+      }
+    }
+  }
+  ReadModifierGroup(entries, source, group) {
+    if (group == null) {
+      return;
+    }
+    for (const identifier of group.Identifiers ?? []) {
+      entries.push({
+        Source: source,
+        Name: wordName(identifier),
+        Value: true
+      });
+    }
+    for (const [key, value] of group.NamedValues?.entries?.() ?? []) {
+      entries.push({
+        Source: source,
+        Name: wordName(key),
+        Value: value
+      });
+    }
+    for (const knot of group.Knots ?? []) {
+      const name = wordName(knot.Name) ?? wordName(knot.Core);
+      if (name != null) {
+        entries.push({
+          Source: source,
+          Name: name,
+          Value: knot
+        });
+      }
+    }
+    if (group.UnorderedMap != null) {
+      this.ReadAttr(entries, group.UnorderedMap);
+    }
+  }
+}
+
+class SchemaConstraintProfile {
+  ValidateRequiredOverride(parent, child) {
+    const extractor = new AnnotationExtractor;
+    const parentRequired = extractor.IsRequired(parent);
+    const childRequired = extractor.IsRequired(child);
+    if (parentRequired && !childRequired) {
+      return ["Required annotation cannot be loosened by an overriding declaration."];
+    }
+    return [];
+  }
+}
+function wordName(node) {
+  if (node instanceof KnWord) {
+    return node.GetFullNameStr();
+  }
+  if (node instanceof KnKnot && node.Name instanceof KnWord) {
+    return node.Name.GetFullNameStr();
+  }
+  if (node instanceof KnKnot && node.Core instanceof KnWord) {
+    return node.Core.GetFullNameStr();
+  }
+  return typeof node === "string" ? node : null;
+}
+function configValue(node) {
+  if (node instanceof KnWord) {
+    const name = node.GetFullNameStr();
+    if (name === "true") {
+      return true;
+    }
+    if (name === "false") {
+      return false;
+    }
+    return name;
+  }
+  return node;
+}
+// ../type-annotations/lib/OrmEntityAnnotations.ts
+class OrmEntityAnnotationProfile {
+  Parse(nodeOrMarker) {
+    const diagnostics = [];
+    const descriptor = {
+      PrimaryKey: []
+    };
+    const marker = findMarker(nodeOrMarker, "entity");
+    if (marker == null) {
+      diagnostics.push({
+        Code: "ORMENTITY001",
+        Message: "ORM entity annotation must use #(orm #entity :{ ... })."
+      });
+      return { Descriptor: descriptor, Diagnostics: diagnostics };
+    }
+    for (const item of annotationItems(marker)) {
+      switch (item.Name) {
+        case "type":
+          descriptor.Type = directString(item.Value);
+          break;
+        case "primary_key":
+        case "primaryKey":
+          descriptor.PrimaryKey = stringListValue(item.Value);
+          break;
+        case "db":
+          descriptor.Db = parseDb(item.Value);
+          break;
+        case "logical_delete":
+        case "logicalDelete":
+          descriptor.LogicalDelete = parseLogicalDelete(item.Value);
+          break;
+        case "datasource":
+        case "data_source":
+        case "dataSource":
+          descriptor.DataSource = directString(item.Value);
+          break;
+        default:
+          diagnostics.push({
+            Code: "ORMENTITY004",
+            Message: `Unsupported ORM entity annotation item '${item.Name ?? "<missing>"}'.`,
+            Location: item.Name
+          });
+          break;
+      }
+    }
+    return { Descriptor: descriptor, Diagnostics: diagnostics };
+  }
+}
+
+class OrmDataSourceAnnotationProfile {
+  Parse(nodeOrMarker) {
+    const diagnostics = [];
+    const descriptor = {};
+    const marker = findMarker(nodeOrMarker, "datasource");
+    if (marker == null) {
+      diagnostics.push({
+        Code: "ORMDATASOURCE001",
+        Message: "ORM datasource annotation must use #(orm #datasource :{ ... })."
+      });
+      return { Descriptor: descriptor, Diagnostics: diagnostics };
+    }
+    for (const item of annotationItems(marker)) {
+      switch (item.Name) {
+        case "key":
+          descriptor.Key = directString(item.Value);
+          break;
+        case "name":
+          descriptor.Name = directString(item.Value);
+          break;
+        case "kind":
+          descriptor.Kind = directString(item.Value);
+          break;
+        case "env_conn":
+        case "envConn":
+          descriptor.EnvConn = directString(item.Value);
+          break;
+        case "options":
+          descriptor.Options = objectValue(item.Value);
+          break;
+        default:
+          diagnostics.push({
+            Code: "ORMDATASOURCE004",
+            Message: `Unsupported ORM datasource annotation item '${item.Name ?? "<missing>"}'.`,
+            Location: item.Name
+          });
+          break;
+      }
+    }
+    return { Descriptor: descriptor, Diagnostics: diagnostics };
+  }
+}
+function parseDb(source) {
+  const db = {};
+  setIfDefined(db, "Name", stringProp(source, "name") ?? directString(source));
+  setIfDefined(db, "Schema", stringProp(source, "schema"));
+  return db;
+}
+function parseLogicalDelete(source) {
+  const logicalDelete = {};
+  setIfDefined(logicalDelete, "Field", stringProp(source, "field"));
+  setIfDefined(logicalDelete, "Value", valueProp(source, "value"));
+  return logicalDelete;
+}
+function findMarker(nodeOrMarker, markerName) {
+  if (nodeOrMarker instanceof KnKnot && wordName2(nodeOrMarker.Core) === "orm" && wordName2(nodeOrMarker.Name) === markerName) {
+    return nodeOrMarker;
+  }
+  const annotationSource = nodeOrMarker?.Metadata?.source_annotations ?? nodeOrMarker;
+  const entry = new AnnotationExtractor().Extract(annotationSource).Entries.find((candidate) => candidate.Source === "preModifier" && candidate.Name === markerName && candidate.Value instanceof KnKnot && wordName2(candidate.Value.Core) === "orm");
+  return entry?.Value ?? null;
+}
+function annotationItems(marker) {
+  if (marker.Conf != null) {
+    return Object.entries(marker.Conf).filter(([_, value]) => typeof value !== "function").map(([name, value]) => ({ Name: name, Value: value }));
+  }
+  return (marker.Body ?? []).filter((item) => item instanceof KnKnot).map((item) => ({ Name: wordName2(item.Core), Value: item }));
+}
+function setIfDefined(target, key, value) {
+  if (value !== undefined && value !== null) {
+    target[key] = value;
+  }
+}
+function directString(source) {
+  if (source instanceof KnKnot) {
+    return stringProp(source, "value");
+  }
+  const value = valueToPrimitive(source);
+  return value == null ? undefined : String(value);
+}
+function stringProp(source, name) {
+  const value = valueProp(source, name);
+  return value == null ? undefined : String(value);
+}
+function valueProp(source, name) {
+  if (source instanceof KnKnot) {
+    const confValue = source.Conf?.[name];
+    return confValue === undefined ? valueToPrimitive(source.Attr?.[name]) : valueToPrimitive(confValue);
+  }
+  return valueToPrimitive(source?.[name]);
+}
+function stringListValue(value) {
+  const primitive = valueToPrimitive(value);
+  if (Array.isArray(primitive)) {
+    return primitive.map((item) => valueToPrimitive(item)).filter((item) => item != null).map(String);
+  }
+  return primitive == null ? [] : [String(primitive)];
+}
+function objectValue(value) {
+  const primitive = valueToPrimitive(value);
+  if (primitive == null || typeof primitive !== "object" || Array.isArray(primitive)) {
+    return;
+  }
+  const result = {};
+  for (const [key, item] of Object.entries(primitive)) {
+    if (typeof item !== "function") {
+      result[key] = valueToPrimitive(item);
+    }
+  }
+  return result;
+}
+function valueToPrimitive(value) {
+  if (value instanceof KnWord) {
+    return value.GetFullNameStr();
+  }
+  if (value instanceof KnSymbol) {
+    return value.Value;
+  }
+  if (value instanceof KnKnot) {
+    return wordName2(value.Name) ?? wordName2(value.Core);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => valueToPrimitive(item));
+  }
+  return value;
+}
+function wordName2(node) {
+  if (node instanceof KnWord) {
+    return node.GetFullNameStr();
+  }
+  if (node instanceof KnSymbol) {
+    return node.Value;
+  }
+  if (typeof node === "string") {
+    return node;
+  }
+  return null;
+}
+// ../type-annotations/lib/OrmFieldAnnotations.ts
+class OrmFieldAnnotationProfile {
+  Parse(nodeOrMarker) {
+    const diagnostics = [];
+    const descriptor = {
+      Properties: []
+    };
+    const marker = this.FindMarker(nodeOrMarker);
+    if (marker == null) {
+      diagnostics.push({
+        Code: "ORMFIELD001",
+        Message: "ORM field annotation must use #(orm #field :{ ... })."
+      });
+      return { Descriptor: descriptor, Diagnostics: diagnostics };
+    }
+    for (const item of annotationItems2(marker)) {
+      switch (item.Name) {
+        case "type":
+          descriptor.Type = this.ParseFieldType(item.Value);
+          if (descriptor.Type.Code == null) {
+            diagnostics.push({
+              Code: "ORMFIELD002",
+              Message: "ORM field type annotation should include code in :{ ... }.",
+              Location: "type"
+            });
+          }
+          break;
+        case "db":
+          descriptor.Db = this.ParseDb(item.Value);
+          break;
+        case "items":
+          descriptor.Items = this.ParseFieldType(item.Value);
+          break;
+        case "properties":
+        case "property":
+          for (const property of asArray(item.Value)) {
+            descriptor.Properties.push({
+              Name: property instanceof KnKnot ? wordName3(property.Name) : stringProp2(property, "name"),
+              ...this.ParseFieldType(property)
+            });
+          }
+          break;
+        case "format":
+          descriptor.Format = directString2(item.Value);
+          break;
+        default:
+          diagnostics.push({
+            Code: "ORMFIELD004",
+            Message: `Unsupported ORM field annotation item '${item.Name ?? "<missing>"}'.`,
+            Location: item.Name
+          });
+          break;
+      }
+    }
+    return { Descriptor: descriptor, Diagnostics: diagnostics };
+  }
+  FindMarker(nodeOrMarker) {
+    return findFieldMarker(nodeOrMarker, "orm");
+  }
+  ParseFieldType(source) {
+    const type = {};
+    setIfDefined2(type, "Code", stringProp2(source, "code"));
+    setIfDefined2(type, "Base", stringProp2(source, "base"));
+    setIfDefined2(type, "RefType", stringProp2(source, "ref_type") ?? stringProp2(source, "refType"));
+    setIfDefined2(type, "Multiple", boolProp(source, "multiple"));
+    return type;
+  }
+  ParseDb(source) {
+    const db = {};
+    setIfDefined2(db, "Name", stringProp2(source, "name"));
+    setIfDefined2(db, "Type", stringProp2(source, "type"));
+    return db;
+  }
+}
+
+class DomainFieldAnnotationProfile {
+  Parse(nodeOrMarker) {
+    const diagnostics = [];
+    const descriptor = {
+      Validations: []
+    };
+    const marker = this.FindMarker(nodeOrMarker);
+    if (marker == null) {
+      diagnostics.push({
+        Code: "DOMAINFIELD001",
+        Message: "Domain field annotation must use #(domain #field :{ ... })."
+      });
+      return { Descriptor: descriptor, Diagnostics: diagnostics };
+    }
+    for (const item of annotationItems2(marker)) {
+      switch (item.Name) {
+        case "type":
+          descriptor.Type = this.ParseDomainType(item.Value);
+          if (descriptor.Type.Name == null) {
+            diagnostics.push({
+              Code: "DOMAINFIELD002",
+              Message: "Domain field type annotation should include @name.",
+              Location: "type"
+            });
+          }
+          break;
+        case "validate":
+          for (const validation of asArray(item.Value)) {
+            descriptor.Validations.push(this.ParseValidation(validation));
+          }
+          break;
+        default:
+          diagnostics.push({
+            Code: "DOMAINFIELD004",
+            Message: `Unsupported domain field annotation item '${item.Name ?? "<missing>"}'.`,
+            Location: item.Name
+          });
+          break;
+      }
+    }
+    return { Descriptor: descriptor, Diagnostics: diagnostics };
+  }
+  FindMarker(nodeOrMarker) {
+    return findFieldMarker(nodeOrMarker, "domain");
+  }
+  ParseDomainType(source) {
+    const type = {};
+    setIfDefined2(type, "Name", stringProp2(source, "name"));
+    setIfDefined2(type, "Base", stringProp2(source, "base"));
+    return type;
+  }
+  ParseValidation(source) {
+    const validation = {};
+    setIfDefined2(validation, "Kind", stringProp2(source, "kind"));
+    setIfDefined2(validation, "Value", valueProp2(source, "value"));
+    setIfDefined2(validation, "Pattern", stringProp2(source, "pattern"));
+    return validation;
+  }
+}
+function findFieldMarker(nodeOrMarker, coreName) {
+  if (nodeOrMarker instanceof KnKnot && wordName3(nodeOrMarker.Core) === coreName && wordName3(nodeOrMarker.Name) === "field") {
+    return nodeOrMarker;
+  }
+  const annotationSource = nodeOrMarker?.Metadata?.source_annotations ?? nodeOrMarker;
+  const entry = new AnnotationExtractor().Extract(annotationSource).Entries.find((candidate) => candidate.Source === "preModifier" && candidate.Name === "field" && candidate.Value instanceof KnKnot && wordName3(candidate.Value.Core) === coreName);
+  return entry?.Value ?? null;
+}
+function annotationItems2(marker) {
+  if (marker.Conf != null) {
+    return Object.entries(marker.Conf).filter(([_, value]) => typeof value !== "function").map(([name, value]) => ({ Name: name, Value: value }));
+  }
+  return (marker.Body ?? []).filter((item) => item instanceof KnKnot).map((item) => ({ Name: wordName3(item.Core), Value: item }));
+}
+function setIfDefined2(target, key, value) {
+  if (value !== undefined && value !== null) {
+    target[key] = value;
+  }
+}
+function stringAttr(knot, name) {
+  const value = valueAttr(knot, name);
+  return value == null ? undefined : String(value);
+}
+function directString2(source) {
+  if (source instanceof KnKnot) {
+    return stringAttr(source, "value");
+  }
+  const value = valueToPrimitive2(source);
+  return value == null ? undefined : String(value);
+}
+function stringProp2(source, name) {
+  const value = valueProp2(source, name);
+  return value == null ? undefined : String(value);
+}
+function boolProp(source, name) {
+  return boolValue(valueProp2(source, name));
+}
+function boolValue(value) {
+  if (value == null) {
+    return;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+  const stringValue = String(valueToPrimitive2(value)).toLowerCase();
+  if (stringValue === "true") {
+    return true;
+  }
+  if (stringValue === "false") {
+    return false;
+  }
+  return Boolean(value);
+}
+function valueAttr(knot, name) {
+  return valueToPrimitive2(knot.Attr?.[name]);
+}
+function valueProp2(source, name) {
+  if (source instanceof KnKnot) {
+    const confValue = source.Conf?.[name];
+    return confValue === undefined ? valueAttr(source, name) : valueToPrimitive2(confValue);
+  }
+  return valueToPrimitive2(source?.[name]);
+}
+function asArray(value) {
+  if (value == null) {
+    return [];
+  }
+  return Array.isArray(value) ? value : [value];
+}
+function valueToPrimitive2(value) {
+  if (value instanceof KnWord) {
+    return value.GetFullNameStr();
+  }
+  if (value instanceof KnSymbol) {
+    return value.Value;
+  }
+  if (value instanceof KnKnot) {
+    return wordName3(value.Name) ?? wordName3(value.Core);
+  }
+  return value;
+}
+function wordName3(node) {
+  if (node instanceof KnWord) {
+    return node.GetFullNameStr();
+  }
+  if (node instanceof KnSymbol) {
+    return node.Value;
+  }
+  if (typeof node === "string") {
+    return node;
+  }
+  return null;
+}
+// ../type-annotations/lib/OrmRelationAnnotations.ts
+class OrmRelationAnnotationValidator {
+  Validate(descriptor, options = {}) {
+    const diagnostics = [];
+    this.ValidateEnums(descriptor, options, diagnostics);
+    this.ValidateEndpoints(descriptor, diagnostics);
+    this.ValidateJoinShape(descriptor, diagnostics);
+    this.ValidateSchemaFields(descriptor, options, diagnostics);
+    return diagnostics;
+  }
+  ValidateEnums(descriptor, options, diagnostics) {
+    if (descriptor.Type != null && !includesNormalized(options.AllowedTypes ?? ["LOOK_UP", "MASTER_DETAIL"], descriptor.Type)) {
+      diagnostics.push({
+        Code: "ORMRELVAL001",
+        Message: `Unsupported depa ORM relation type '${descriptor.Type}'.`,
+        Location: "type"
+      });
+    }
+    if (descriptor.Cardinality != null && !includesNormalized(options.AllowedCardinalities ?? ["ONE_TO_ONE", "ONE_TO_MANY", "MANY_TO_ONE", "MANY_TO_MANY"], descriptor.Cardinality)) {
+      diagnostics.push({
+        Code: "ORMRELVAL002",
+        Message: `Unsupported depa ORM relation cardinality '${descriptor.Cardinality}'.`,
+        Location: "cardinality"
+      });
+    }
+    if (descriptor.Write?.CascadeDelete != null && !includesNormalized(options.AllowedCascadeDelete ?? ["delete", "none", "restrict", "nullify", "soft_delete"], descriptor.Write.CascadeDelete)) {
+      diagnostics.push({
+        Code: "ORMRELVAL003",
+        Message: `Unsupported depa ORM cascade_delete value '${descriptor.Write.CascadeDelete}'.`,
+        Location: "write.cascade_delete"
+      });
+    }
+  }
+  ValidateEndpoints(descriptor, diagnostics) {
+    this.ValidateEndpoint("from", descriptor.From, diagnostics);
+    this.ValidateEndpoint("to", descriptor.To, diagnostics);
+  }
+  ValidateEndpoint(location, endpoint, diagnostics) {
+    if (endpoint == null) {
+      diagnostics.push({
+        Code: "ORMRELVAL004",
+        Message: `ORM relation ${location} endpoint is required for depa ORM validation.`,
+        Location: location
+      });
+      return;
+    }
+    if (endpoint.Field == null || (endpoint.Keys ?? []).length === 0) {
+      diagnostics.push({
+        Code: "ORMRELVAL004",
+        Message: `ORM relation ${location} endpoint must include field and keys.`,
+        Location: location
+      });
+    }
+  }
+  ValidateJoinShape(descriptor, diagnostics) {
+    const fromKeys = descriptor.From?.Keys ?? [];
+    const toKeys = descriptor.To?.Keys ?? [];
+    if (descriptor.Through.length === 0) {
+      this.ValidateKeyCount("from.keys", fromKeys, "to.keys", toKeys, diagnostics);
+      return;
+    }
+    const first = descriptor.Through[0];
+    this.ValidateKeyCount("from.keys", fromKeys, "through[0].from_keys", first.FromKeys ?? [], diagnostics);
+    for (let index = 0;index < descriptor.Through.length - 1; index++) {
+      const current = descriptor.Through[index];
+      const next = descriptor.Through[index + 1];
+      this.ValidateKeyCount(`through[${index}].to_keys`, current.ToKeys ?? [], `through[${index + 1}].from_keys`, next.FromKeys ?? [], diagnostics);
+    }
+    const last = descriptor.Through[descriptor.Through.length - 1];
+    this.ValidateKeyCount(`through[${descriptor.Through.length - 1}].to_keys`, last.ToKeys ?? [], "to.keys", toKeys, diagnostics);
+  }
+  ValidateKeyCount(leftLocation, left, rightLocation, right, diagnostics) {
+    if (left.length > 0 && right.length > 0 && left.length !== right.length) {
+      diagnostics.push({
+        Code: "ORMRELVAL005",
+        Message: `Join key count mismatch between ${leftLocation} and ${rightLocation}.`,
+        Location: `${leftLocation}:${rightLocation}`
+      });
+    }
+  }
+  ValidateSchemaFields(descriptor, options, diagnostics) {
+    if (options.Schema?.HasField == null) {
+      return;
+    }
+    this.ValidateEndpointFields(options.FromEntity, "from", descriptor.From, options.Schema, diagnostics);
+    this.ValidateEndpointFields(options.ToEntity, "to", descriptor.To, options.Schema, diagnostics);
+    for (const [index, through] of descriptor.Through.entries()) {
+      this.ValidateFields(through.Entity, `through[${index}]`, [...through.FromKeys ?? [], ...through.ToKeys ?? []], options.Schema, diagnostics);
+    }
+  }
+  ValidateEndpointFields(entityName, location, endpoint, schema, diagnostics) {
+    if (entityName == null || endpoint == null) {
+      return;
+    }
+    this.ValidateFields(entityName, location, [endpoint.Field, ...endpoint.Keys ?? []], schema, diagnostics);
+  }
+  ValidateFields(entityName, location, fields, schema, diagnostics) {
+    if (entityName == null) {
+      return;
+    }
+    for (const field of fields.filter((item) => item != null)) {
+      if (!schema.HasField(entityName, field)) {
+        diagnostics.push({
+          Code: "ORMRELVAL006",
+          Message: `Field '${field}' does not exist on entity '${entityName}'.`,
+          Location: `${location}.${field}`
+        });
+      }
+    }
+  }
+}
+function ValidateDepaOrmRelation(descriptor, options = {}) {
+  return new OrmRelationAnnotationValidator().Validate(descriptor, options);
+}
+
+class OrmRelationAnnotationProfile {
+  Parse(nodeOrMarker) {
+    const diagnostics = [];
+    const descriptor = {
+      Through: []
+    };
+    const marker = this.FindMarker(nodeOrMarker);
+    if (marker == null) {
+      diagnostics.push({
+        Code: "ORMREL001",
+        Message: "ORM relation annotation must use #(orm #relation :{ ... })."
+      });
+      return { Descriptor: descriptor, Diagnostics: diagnostics };
+    }
+    for (const item of annotationItems3(marker)) {
+      switch (item.Name) {
+        case "type":
+          descriptor.Type = directString3(item.Value);
+          break;
+        case "cardinality":
+          descriptor.Cardinality = directString3(item.Value);
+          break;
+        case "from":
+          descriptor.From = this.ParseEndpoint(item.Value, "from", diagnostics);
+          break;
+        case "to":
+          descriptor.To = this.ParseEndpoint(item.Value, "to", diagnostics);
+          break;
+        case "through":
+          for (const through of asArray2(item.Value)) {
+            descriptor.Through.push(this.ParseThrough(through, diagnostics));
+          }
+          break;
+        case "write":
+          descriptor.Write = this.ParseWrite(item.Value);
+          break;
+        default:
+          diagnostics.push({
+            Code: "ORMREL004",
+            Message: `Unsupported ORM relation annotation item '${item.Name ?? "<missing>"}'.`,
+            Location: item.Name
+          });
+          break;
+      }
+    }
+    if (descriptor.From != null && ((descriptor.From.Keys ?? []).length === 0 || descriptor.From.Field == null)) {
+      diagnostics.push({
+        Code: "ORMREL002",
+        Message: "ORM relation from endpoint must include field and keys.",
+        Location: "from"
+      });
+    }
+    if (descriptor.To != null && ((descriptor.To.Keys ?? []).length === 0 || descriptor.To.Field == null)) {
+      diagnostics.push({
+        Code: "ORMREL002",
+        Message: "ORM relation to endpoint must include field and keys.",
+        Location: "to"
+      });
+    }
+    return { Descriptor: descriptor, Diagnostics: diagnostics };
+  }
+  FindMarker(nodeOrMarker) {
+    if (nodeOrMarker instanceof KnKnot && wordName4(nodeOrMarker.Core) === "orm" && wordName4(nodeOrMarker.Name) === "relation") {
+      return nodeOrMarker;
+    }
+    const annotationSource = nodeOrMarker?.Metadata?.source_annotations ?? nodeOrMarker;
+    const entry = new AnnotationExtractor().Extract(annotationSource).Entries.find((candidate) => candidate.Source === "preModifier" && candidate.Name === "relation" && candidate.Value instanceof KnKnot && wordName4(candidate.Value.Core) === "orm");
+    return entry?.Value ?? null;
+  }
+  ParseEndpoint(source, location, diagnostics) {
+    const endpoint = {};
+    setIfDefined3(endpoint, "Field", stringProp3(source, "field"));
+    setIfDefined3(endpoint, "FieldName", stringProp3(source, "field_name") ?? stringProp3(source, "name"));
+    setIfDefined3(endpoint, "Description", stringProp3(source, "description"));
+    const keys = stringListProp(source, "keys");
+    if (keys.length > 0) {
+      endpoint.Keys = keys;
+    }
+    setIfDefined3(endpoint, "Foreign", boolProp2(source, "foreign"));
+    setIfDefined3(endpoint, "Visible", boolProp2(source, "visible"));
+    setIfDefined3(endpoint, "EnableWriteBizFields", boolProp2(source, "enable_write_biz_fields"));
+    if ((endpoint.Keys ?? []).length === 0 || endpoint.Field == null) {
+      diagnostics.push({
+        Code: "ORMREL002",
+        Message: `ORM relation ${location} endpoint must include field and keys.`,
+        Location: location
+      });
+    }
+    return endpoint;
+  }
+  ParseThrough(source, diagnostics) {
+    const through = {
+      Entity: source instanceof KnKnot ? wordName4(source.Name) : stringProp3(source, "entity") ?? stringProp3(source, "name"),
+      FromKeys: stringListProp(source, "from_keys"),
+      ToKeys: stringListProp(source, "to_keys"),
+      Constraints: {
+        On: [],
+        Where: [],
+        Order: []
+      }
+    };
+    setIfDefined3(through, "FromForeign", boolProp2(source, "from_foreign"));
+    setIfDefined3(through, "ToForeign", boolProp2(source, "to_foreign"));
+    this.ParseConstraints(source, through.Constraints);
+    if (through.Entity == null || through.FromKeys.length === 0 || through.ToKeys.length === 0) {
+      diagnostics.push({
+        Code: "ORMREL003",
+        Message: "ORM relation through item must include an entity name, from_keys, and to_keys.",
+        Location: through.Entity
+      });
+    }
+    return through;
+  }
+  ParseConstraints(source, constraints) {
+    for (const item of source?.Body ?? []) {
+      if (!(item instanceof KnKnot)) {
+        continue;
+      }
+      const field = stringProp3(item, "field");
+      switch (wordName4(item.Core)) {
+        case "on":
+          if (field != null) {
+            constraints.On.push({ Field: field, Equals: valueProp3(item, "equals") });
+          }
+          break;
+        case "where":
+          if (field != null) {
+            constraints.Where.push({ Field: field, Equals: valueProp3(item, "equals") });
+          }
+          break;
+        case "order":
+          {
+            const order = parseOrder(item);
+            if (hasOrderValue(order)) {
+              constraints.Order.push(order);
+            }
+          }
+          break;
+        case "limit":
+          {
+            const value = valueProp3(item, "value");
+            if (typeof value === "number") {
+              constraints.Limit = value;
+            }
+          }
+          break;
+      }
+    }
+    for (const item of asArray2(valueProp3(source, "on"))) {
+      const field = stringProp3(item, "field");
+      if (field != null) {
+        constraints.On.push({ Field: field, Equals: valueProp3(item, "equals") });
+      }
+    }
+    for (const item of asArray2(valueProp3(source, "where"))) {
+      const field = stringProp3(item, "field");
+      if (field != null) {
+        constraints.Where.push({ Field: field, Equals: valueProp3(item, "equals") });
+      }
+    }
+    for (const item of asArray2(valueProp3(source, "order"))) {
+      const order = parseOrder(item);
+      if (hasOrderValue(order)) {
+        constraints.Order.push(order);
+      }
+    }
+    const limit = valueProp3(source, "limit");
+    if (typeof limit === "number") {
+      constraints.Limit = limit;
+    }
+  }
+  ParseWrite(source) {
+    const write = {};
+    setIfDefined3(write, "CascadeDelete", stringProp3(source, "cascade_delete"));
+    return write;
+  }
+}
+function parseOrder(source) {
+  const order = {};
+  setIfDefined3(order, "Field", stringProp3(source, "field"));
+  setIfDefined3(order, "Direction", stringProp3(source, "direction"));
+  setIfDefined3(order, "Namespace", stringProp3(source, "namespace"));
+  setIfDefined3(order, "Alias", stringProp3(source, "alias"));
+  setIfDefined3(order, "OrderSet", stringProp3(source, "order_set") ?? stringProp3(source, "orderSet"));
+  setIfDefined3(order, "EntityName", stringProp3(source, "entity_name") ?? stringProp3(source, "entityName"));
+  const relativePath = stringListProp(source, "relative_path");
+  if (relativePath.length > 0) {
+    order.RelativePath = relativePath;
+  }
+  return order;
+}
+function hasOrderValue(order) {
+  return Object.keys(order).length > 0;
+}
+function includesNormalized(allowed, value) {
+  const normalizedValue = normalizeEnumValue(value);
+  return allowed.map(normalizeEnumValue).includes(normalizedValue);
+}
+function normalizeEnumValue(value) {
+  return String(value).replace(/-/g, "_").toUpperCase();
+}
+function annotationItems3(marker) {
+  if (marker.Conf != null) {
+    return Object.entries(marker.Conf).filter(([_, value]) => typeof value !== "function").map(([name, value]) => ({ Name: name, Value: value }));
+  }
+  return (marker.Body ?? []).filter((item) => item instanceof KnKnot).map((item) => ({ Name: wordName4(item.Core), Value: item }));
+}
+function setIfDefined3(target, key, value) {
+  if (value !== undefined && value !== null) {
+    target[key] = value;
+  }
+}
+function stringAttr2(knot, name) {
+  const value = valueAttr2(knot, name);
+  return value == null ? undefined : String(value);
+}
+function directString3(source) {
+  if (source instanceof KnKnot) {
+    return stringAttr2(source, "value");
+  }
+  const value = valueToPrimitive3(source);
+  return value == null ? undefined : String(value);
+}
+function stringProp3(source, name) {
+  const value = valueProp3(source, name);
+  return value == null ? undefined : String(value);
+}
+function stringListAttr(knot, name) {
+  const value = knot.Attr?.[name];
+  if (Array.isArray(value)) {
+    return value.map((item) => valueToPrimitive3(item)).filter((item) => item != null).map(String);
+  }
+  const single2 = valueToPrimitive3(value);
+  return single2 == null ? [] : [String(single2)];
+}
+function stringListProp(source, name) {
+  if (source instanceof KnKnot && source.Conf?.[name] === undefined) {
+    return stringListAttr(source, name);
+  }
+  const value = valueProp3(source, name);
+  if (Array.isArray(value)) {
+    return value.map((item) => valueToPrimitive3(item)).filter((item) => item != null).map(String);
+  }
+  const single2 = valueToPrimitive3(value);
+  return single2 == null ? [] : [String(single2)];
+}
+function boolProp2(source, name) {
+  return boolValue2(valueProp3(source, name));
+}
+function boolValue2(value) {
+  if (value == null) {
+    return;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+  const stringValue = String(valueToPrimitive3(value)).toLowerCase();
+  if (stringValue === "true") {
+    return true;
+  }
+  if (stringValue === "false") {
+    return false;
+  }
+  return Boolean(value);
+}
+function valueAttr2(knot, name) {
+  return valueToPrimitive3(knot.Attr?.[name]);
+}
+function valueProp3(source, name) {
+  if (source instanceof KnKnot) {
+    const confValue = source.Conf?.[name];
+    return confValue === undefined ? valueAttr2(source, name) : valueToPrimitive3(confValue);
+  }
+  return valueToPrimitive3(source?.[name]);
+}
+function asArray2(value) {
+  if (value == null) {
+    return [];
+  }
+  return Array.isArray(value) ? value : [value];
+}
+function valueToPrimitive3(value) {
+  if (value instanceof KnWord) {
+    return value.GetFullNameStr();
+  }
+  if (value instanceof KnSymbol) {
+    return value.Value;
+  }
+  if (value instanceof KnKnot) {
+    return wordName4(value.Name) ?? wordName4(value.Core);
+  }
+  return value;
+}
+function wordName4(node) {
+  if (node instanceof KnWord) {
+    return node.GetFullNameStr();
+  }
+  if (node instanceof KnSymbol) {
+    return node.Value;
+  }
+  if (typeof node === "string") {
+    return node;
+  }
+  return null;
+}

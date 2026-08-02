@@ -1,0 +1,18 @@
+<decision #track.detach.ownership {
+  status = "resolved"
+  priority = "P0"
+  durable_candidate = false
+  blocks = ["deletions"]
+}
+(
+  <question ?>何时以及按什么边界从 Kunun 删除 KWF 上层？</?>
+  <answer { }
+  (
+    <raw-answer ?>先迁移当前相关文件到独立 KWF，再开发新功能。</?>
+    <decision-text ?>仅在 KWF parity 与补充 skill 迁移归档后删除 workflow packages/专属资产；语言 core/runtime 与通用诊断保留。</?>
+    <rationale ?>确保删除可恢复且不误伤 Kunun-owned 能力。</?>
+    <evidence ?>host mission revision 6 与两个已归档 migration tracks。</?>
+  )
+  >
+)>
+

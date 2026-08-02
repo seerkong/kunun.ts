@@ -1,7 +1,7 @@
 {
   "name": "kunun-core",
   "version": "1.0.2",
-  "private": true,
+  "private": false,
   "main": "lib/index.ts",
   "types": "lib/index.ts",
   "exports": {
@@ -12,5 +12,10 @@
     "dist",
     "lib",
     "src"
-  ]
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.com"
+  }
 }

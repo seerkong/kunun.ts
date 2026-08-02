@@ -1,0 +1,24 @@
+<behavior-patch capability="runtime-interpreter" version="1">
+  <upsert selector="behavior://runtime-interpreter/requirements/depa-actor-substrate">
+    <requirement id="depa-actor-substrate">
+      <statement>The project SHALL provide an interpreter runtime that uses the versioned depa-actor@0.2.0 package contract as its generic execution substrate without a machine-specific or repository-local file dependency.</statement>
+      <suite id="substrate" name="Substrate Integration">
+        <case id="uses-linked-depa-actor">
+          <given>depa-actor@0.2.0 is configured as a registry dependency</given>
+          <when>The interpreter runtime is built</when>
+          <then>The runtime SHALL import depa-actor primitives for instruction stack, operand stack, and generic dispatch from that versioned package contract.</then>
+        </case>
+        <case id="does-not-reimplement-generic-kernel">
+          <given>depa-actor exposes stack/frame and dispatch primitives</given>
+          <when>The runtime needs those mechanics</when>
+          <then>The runtime SHALL reuse the depa-actor primitives instead of duplicating generic stack or dispatcher implementations.</then>
+        </case>
+        <case id="legacy-path-unchanged">
+          <given>A caller uses the existing Interpreter API</given>
+          <when>The runtime dependency delivery changes</when>
+          <then>The existing interpreter path SHALL remain behaviorally unchanged.</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

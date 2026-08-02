@@ -12,7 +12,7 @@ import { KnKnot, KnWord } from 'kunun-core';
 const Parser = KnConverter.Knl.Parser;
 
 describe('RuntimeInterpreter', function () {
-  it('can import depa-actor execution primitives through the local file dependency', function () {
+  it('can import depa-actor execution primitives through the versioned package dependency', function () {
     assert.equal(typeof createInstructionStack, 'function');
     assert.equal(typeof createOperandStack, 'function');
     assert.equal(typeof dispatchInstructions, 'function');

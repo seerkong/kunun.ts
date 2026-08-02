@@ -1,0 +1,74 @@
+<Track id="detach-kunun-workflow-layer" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>从 Kunun 移除已迁移到独立 KWF 的 workflow 上层所有权</Goal>
+    <Description>删除 workflow packages、专属资产与文档/umbrella/workspace 引用，保留并验证 Kunun core、converter、runtime、type system 和通用诊断能力</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>auto</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-08-01T09:40:51Z</CreatedAt>
+    <UpdatedAt>2026-08-01T09:51:13Z</UpdatedAt>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="output" name="source" domain="source" path="vfs://@/packages/"/>
+    <MaterialBundle role="output" name="skills" domain="asset" path="vfs://@/skills/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_detach-kunun-workflow-layer" name="detach-kunun-workflow-layer" version="1">
+    <Description>按 package/API、资产/文档、锁文件/验证的顺序解除 Kunun 对 KWF 上层的所有权。</Description>
+    <SubNodes>
+      <TaskGroup id="P1" name="移除 workflow package 与 API 所有权" status="DONE" order="0">
+        <Description>删除两个 workflow package，更新 workspace scripts、TypeScript paths 和 kunun umbrella API。</Description>
+        <SubNodes>
+          <Task id="T1.1" name="删除 workflow packages" status="DONE" order="0" priority="P0">
+            <Description>删除 packages/workflow-dsl 与 packages/workflow-host 的源码、测试和 package manifests。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.1-AC1" checked="true">两个 package 无剩余 tracked source</cdt:Criterion>
+              <cdt:Criterion id="T1.1-AC2" checked="true">Kunun 其余 packages 不 import workflow package</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="更新 manifests 与 umbrella API" status="DONE" order="1" priority="P0">
+            <Description>移除 build:bin、tsconfig aliases、kunun-workflow-dsl dependency/export 和对应 public API assertions。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.2-AC1" checked="true">root 与 umbrella manifests 不再声明 KWF</cdt:Criterion>
+              <cdt:Criterion id="T1.2-AC2" checked="true">语言 package 公开面与 remaining tests 一致</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+      <TaskGroup id="P2" name="移除 KWF 资产与文档所有权" status="DONE" order="1">
+        <Description>删除 KWF skills/examples/behavior registries，保留 Kunun 通用 Finch probe 并移除其中 KWF 专属片段。</Description>
+        <SubNodes>
+          <Task id="T2.1" name="删除专属 assets 与 behavior ownership" status="DONE" order="0" priority="P0">
+            <Description>删除 kunun-dynamic-workflow skill、examples，并通过 behavior deltas 移除三项 KWF behavior registry。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.1-AC1" checked="true">KWF assets 不再由 Kunun 拥有</cdt:Criterion>
+              <cdt:Criterion id="T2.1-AC2" checked="true">Kunun runtime behavior 仍可引用外部上层 contract</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.2" name="收敛 README 与 Finch skill" status="DONE" order="1" priority="P0">
+            <Description>README 移除内置 KWF 使用说明；通用 Finch skill 删除 KWF 专属脚本/章节并保留语言诊断。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.2-AC1" checked="true">Finch 通用 probe 与语言案例保留</cdt:Criterion>
+              <cdt:Criterion id="T2.2-AC2" checked="true">Kunun 文档不再宣称内置 KWF</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+      <TaskGroup id="P3" name="更新锁文件并验证 Kunun 核心" status="DONE" order="2">
+        <Description>移除 lockfile workspace 节点，执行类型检查、剩余 package tests 和反向依赖扫描。</Description>
+        <SubNodes>
+          <Task id="T3.1" name="验证 detach" status="DONE" order="0" priority="P0">
+            <Description>验证 lockfile、typecheck、剩余语言测试套件与 KWF 引用扫描。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T3.1-AC1" checked="true">Kunun typecheck 与 remaining tests 通过</cdt:Criterion>
+              <cdt:Criterion id="T3.1-AC2" checked="true">core/runtime 无 KWF 或 ZenFS 反向依赖</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule><Parallel max-concurrent="1" spot-check="true"/></Schedule>
+</Track>
