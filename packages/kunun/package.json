@@ -1,13 +1,13 @@
 {
   "name": "kunun",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "kunun language: parser, runtime interpreter, and type system",
-  "types": "lib/index.ts",
+  "types": "dist/index.d.ts",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "exports": {
     ".": {
-      "types": "./lib/index.ts",
+      "types": "./dist/index.d.ts",
       "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
     }
@@ -18,7 +18,7 @@
     "src"
   ],
   "scripts": {
-    "dist": "rm -rf dist && bun build lib/index.ts --outfile dist/index.mjs --format esm --target node && bun build lib/index.ts --outfile dist/index.cjs --format cjs --target node"
+    "dist": "bun build lib/index.ts --outfile dist/index.mjs --format esm --target node && bun build lib/index.ts --outfile dist/index.cjs --format cjs --target node"
   },
   "license": "MIT",
   "publishConfig": {
@@ -26,10 +26,10 @@
     "registry": "https://registry.npmjs.com"
   },
   "dependencies": {
-    "kunun-converter": "workspace:*",
-    "kunun-core": "workspace:*",
-    "kunun-runtime": "workspace:*",
-    "kunun-type-annotations": "workspace:*",
-    "kunun-type-system": "workspace:*"
+    "kunun-converter": "1.0.3",
+    "kunun-core": "1.0.3",
+    "kunun-runtime": "1.0.3",
+    "kunun-type-annotations": "1.0.3",
+    "kunun-type-system": "1.0.3"
   }
 }

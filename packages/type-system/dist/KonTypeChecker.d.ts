@@ -1,0 +1,58 @@
+import { TypeBindingDiagnostic, TypeBindingResult } from './KonTypeBinder';
+import { FunctionTypeSymbol } from './Types';
+export declare class TypeCheckingResult {
+    readonly Binding: TypeBindingResult;
+    readonly Diagnostics: TypeBindingDiagnostic[];
+    constructor(Binding: TypeBindingResult, Diagnostics: TypeBindingDiagnostic[]);
+    get TypeSystem(): import("kunun").TypeSystem;
+    get Functions(): {
+        [name: string]: FunctionTypeSymbol;
+    };
+    get Success(): boolean;
+}
+export declare class KonTypeChecker {
+    private readonly binding;
+    private readonly diagnostics;
+    private constructor();
+    static CheckSource(source: string): TypeCheckingResult;
+    private Check;
+    private CheckFunction;
+    private BuildParameterEnvironment;
+    private CheckClassBodies;
+    private CheckClassMethodBody;
+    private CheckConstructorBody;
+    private CheckPropertyBody;
+    private BuildMemberEnvironment;
+    private SignatureHasImplicitReceiver;
+    private CheckBodyAgainstSignature;
+    private CheckExpression;
+    private CheckChain;
+    private CheckChainSegment;
+    private CheckFunctionCallSegment;
+    private CheckSet;
+    private CheckSlotAccess;
+    private CheckReceiverCall;
+    private CheckPerform;
+    private CheckProjectionSegment;
+    private ResolveMember;
+    private IsMemberAccessible;
+    private ReadMemberReference;
+    private GetRows;
+    private ResolveTypeNode;
+    private ResolveTypeName;
+    private ResolvePrimitiveAlias;
+    private AreOutputStacksCompatible;
+    private ApplyHandler;
+    private IsPostfixEffectHandle;
+    private ReadHandlerPostfixes;
+    private ResolveFunctionSignature;
+    private InstantiateGenericFunction;
+    private InferGenericType;
+    private SubstituteGenericType;
+    private ResolvePerformOperation;
+    private ReadPerformArgNodes;
+    private KnotToArray;
+    private ReadTupleInputNodes;
+    private GetLiteralType;
+    private AddDiagnostic;
+}

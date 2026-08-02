@@ -1,6 +1,6 @@
 {
   "name": "kunun-workspace",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "workspaces": [
     "packages/*"
@@ -11,6 +11,8 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
+    "build": "bun run build:types && bun run dist",
+    "build:types": "bun run scripts/build-types.ts",
     "dist": "cd packages/kunun && bun run dist",
     "lint": "tslint \"packages/*/lib/**/*.ts\""
   },

@@ -1,0 +1,37 @@
+import { FormatState } from "./FormatState";
+import type { SyntaxConfig } from "./SyntaxConfig";
+import { KnTuple } from "kunun-core/Model/KnTuple";
+import { KnKnot, KnotCallType } from "kunun-core/Model/KnKnot";
+import { KnWord } from "kunun-core/Model/KnWord";
+import { KnSymbol } from "kunun-core/Model/KnSymbol";
+import { KnInterpolatedString } from "kunun-core/Model/KnInterpolatedString";
+import { KnQualifiedIdentifier } from "kunun-core/Model/KnQualifiedIdentifier";
+import { KnWrapper } from "kunun-core/Model/KnWrapper";
+import { KnModifierGroup } from "kunun-core/Model/KnModifierGroup";
+export declare class KnFormatterV1 {
+    SyntaxConfig: SyntaxConfig;
+    constructor(syntaxConfig: SyntaxConfig);
+    Stringify(node: any, prettify?: boolean): string;
+    NodeToString(node: any, formatState: FormatState): string;
+    InterpolatedStringToString(node: KnInterpolatedString, formatState: FormatState): string;
+    WrapperToString(wrapper: KnWrapper, prefix: string, formatState: FormatState): string;
+    QuoteNodeToString(wrapper: KnWrapper, formatState: FormatState): string;
+    RowSpreadToString(wrapper: KnWrapper, formatState: FormatState): string;
+    ModifiersToString(modifierGroup: KnModifierGroup, prefix: string, formatState: FormatState): string;
+    WordToString(node: KnWord, formatState: FormatState): string;
+    SymbolToString(node: KnSymbol, formatState: FormatState): string;
+    WordToStringCustom(node: KnQualifiedIdentifier | string, formatState: FormatState, prefix: string, typeDefAfterWord?: boolean): string;
+    MapToStringCustom(node: any, formatState: FormatState, preffix: string, suffix: string): string;
+    MapFormatInner(node: any, formatState: FormatState): string;
+    VectorToString(node: any[], formatState: FormatState): string;
+    VectorToStringCustom(innerNodes: any[], formatState: FormatState, preffix: string, suffix: string): string;
+    TupleToString(node: KnTuple, formatState: FormatState, preffix: string, suffix: string): string;
+    VectorFormatInner(innerNodes: any[], formatState: FormatState): string;
+    KnotToString(node: KnKnot, formatState: FormatState): string;
+    KnotFormatInner(node: KnKnot, formatState: FormatState): string;
+    private ShouldJoinNextWithoutSpace;
+    GetCallTypeStr(callType: KnotCallType): string;
+    KnotFormatSegment(node: KnKnot, formatState: FormatState): string;
+    private TupleValuesToString;
+    private InOutTableToString;
+}

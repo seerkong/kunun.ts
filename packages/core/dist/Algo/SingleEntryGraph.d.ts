@@ -1,0 +1,35 @@
+import { SingleEntryGraphNode } from "./SingleEntryGraphNode";
+export declare class SingleEntryGraph<M extends SingleEntryGraphNode<T>, T> {
+    protected vertexDetailMap: Map<T, M>;
+    protected vertexIds: Set<T>;
+    protected entryVertexId: T;
+    protected nextIdsMap: Map<T, Set<T>>;
+    protected prevIdsMap: Map<T, Set<T>>;
+    constructor();
+    SetEntryVertexId(rootId: T): void;
+    GetEntryVertexId(): T;
+    GetEntryVertex(): M;
+    GetNextIdsMap(): Map<T, Set<T>>;
+    GetNextIds(vertextId: T): Set<T>;
+    GetNextVertexDetails(vertexId: T): Set<M>;
+    AddVertex(vertexDetail: M): void;
+    private RemoveVertexAndNeighborEdges;
+    RemoveVertexAndConnectNeighborEdges(vertexId: T): void;
+    AddEdge(prevId: T, nextId: T): void;
+    RemoveEdge(prevId: T, nextId: T): void;
+    AppendDAG<R extends SingleEntryGraph<M, T>>(appendAfterVertexIds: Set<T>, otherDAG: R): R;
+    GetReachableVertexes(): Set<M>;
+    GetVertexesIncludeUnreachable(): Set<M>;
+    GetVertexeIdsIncludeUnreachable(): Set<T>;
+    GetUnreachableVertexeIds(): Set<T>;
+    GetUnreachableVertexes(): Set<M>;
+    GetReachableVertexIds(): Set<T>;
+    GetAllVertexDetailsFromEntryToVertex(queryFromVertexId: T, includeSelf: Boolean): Set<M>;
+    GetAllVertexIdsFromEntryToVertex(queryFromVertexId: T, includeSelf: Boolean): Set<T>;
+    private QueryReachableVertexIds;
+    GetEndVertexIds(): Set<T>;
+    GetPrevVertexIds(vertexId: T): Set<T>;
+    GetPrevVertexesById(vertexId: T): Set<M>;
+    GetVertexDetailsByIds(vertexIds: Set<T>): Set<M>;
+    GetVertexDetail(vertexId: T): M;
+}

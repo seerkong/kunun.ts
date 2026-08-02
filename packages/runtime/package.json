@@ -1,12 +1,18 @@
 {
   "name": "kunun-runtime",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": false,
   "main": "lib/index.ts",
-  "types": "lib/index.ts",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./lib/index.ts",
-    "./*": "./lib/*.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./lib/index.ts"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./lib/*.ts"
+    }
   },
   "files": [
     "dist",
@@ -20,7 +26,7 @@
   },
   "dependencies": {
     "depa-actor": "0.2.0",
-    "kunun-converter": "workspace:*",
-    "kunun-core": "workspace:*"
+    "kunun-converter": "1.0.3",
+    "kunun-core": "1.0.3"
   }
 }

@@ -43,11 +43,11 @@ export class TokenStreamV1 extends IndexedStream<Token, TokenType> {
       }
   }
 
-  public SkipToken(expect: TokenType | null): void {
-      const expectedTypes = [];
-      if (expect !== null) {
-          expectedTypes.push(expect);
-      }
+  public SkipToken(expect?: TokenType | null): void {
+    const expectedTypes = [];
+    if (expect != null) {
+      expectedTypes.push(expect);
+    }
 
       this.SkipBlankTokens();
       if (this.End()) {
