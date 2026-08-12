@@ -1,0 +1,105 @@
+<Track id="add-typed-navigation-property-model" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>在 Kunun public type system 中建立与 field、method、relation primitive 区分的 typed navigation property，并供 source-first 与 code-first 共用。</Goal>
+    <Description>扩展 RowMember kind、typed prop binding、metadata preservation 和 programmatic construction equivalence，同时保持 runtime accessor 与 package boundary。</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>auto</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-08-09T13:45:17Z</CreatedAt>
+    <UpdatedAt>2026-08-09T15:04:10Z</UpdatedAt>
+  </Metadata>
+
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="input" name="type-system-source" domain="repo" path="vfs://@/packages/type-system/"/>
+    <MaterialBundle role="input" name="runtime-source" domain="repo" path="vfs://@/packages/runtime/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+
+  <TaskSpace id="space_add-typed-navigation-property-model" name="add-typed-navigation-property-model" version="1">
+    <Description>用显式 member kind 和 typed prop binding 补齐 Kunun navigation property authority。</Description>
+    <SubNodes>
+      <TaskGroup id="P1" name="Typed Property Contract" status="DONE" order="0">
+        <Description>先建立失败测试，再实现 public member kind、builder 和 source binding。</Description>
+        <cdt:Gate>
+          <cdt:Criterion>P1 property contract tests pass</cdt:Criterion>
+          <cdt:Criterion>Existing field, method, spread and accessor tests remain green</cdt:Criterion>
+        </cdt:Gate>
+        <SubNodes>
+          <Task id="T1.1" name="Add typed property characterization and contract tests" status="DONE" order="0" priority="P0">
+            <Description>添加 field/property/method/spread kind、显式 typed prop、class/trait scope、accessor-only compatibility、typed inline accessor runtime、伴生 method signature compatibility、kind matrix 和 symbolic target 的失败测试。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.1-AC1" checked="true">Tests distinguish Property from Field and Method in the public RowMember model.</cdt:Criterion>
+              <cdt:Criterion id="T1.1-AC2" checked="true">Tests prove explicitly typed prop binds while accessor-only prop keeps existing behavior.</cdt:Criterion>
+              <cdt:Criterion id="T1.1-AC3" checked="true">Tests reject prop in plain type/schema/mixin and define same-name/cross-kind compatibility.</cdt:Criterion>
+              <cdt:Criterion id="T1.1-AC4" checked="true">Tests prove typed inline accessors execute without shadow methods and reject incompatible companion method signatures.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="Implement member kind and typed prop binding" status="DONE" order="1" priority="P0">
+            <Description>实现 RowMemberKind、constructor compatibility、Property builder、copy/substitution preservation、class/trait-only binding、kind compatibility 和 conflict diagnostics。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.2-AC1" checked="true">RowMember kind survives WithType, effect/access projection, generic substitution and class row construction.</cdt:Criterion>
+              <cdt:Criterion id="T1.2-AC2" checked="true">Typed property source uses explicit type and preserves TypeMetadata.</cdt:Criterion>
+              <cdt:Criterion id="T1.2-AC3" checked="true">Subtype, slot lookup, member identity and inheritance enforce the documented kind matrix.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+
+      <TaskGroup id="P2" name="Type-System And Code-First Integration" status="DONE" order="1">
+        <Description>消除所有 !IsMethod=field 假设，并证明 source/programmatic class model 等价。</Description>
+        <cdt:Gate>
+          <cdt:Criterion>Field-only paths explicitly exclude Property</cdt:Criterion>
+          <cdt:Criterion>Source-first and code-first structural-equivalence tests pass</cdt:Criterion>
+        </cdt:Gate>
+        <SubNodes>
+          <Task id="T2.1" name="Audit value-member and storage-field consumers" status="DONE" order="0" priority="P0">
+            <Description>审计 typed execution/checker/runtime context 中 !IsMethod 判断，分别改为 value-member 或 field-only predicate；typed inline accessor 无需影子 method 即可执行，伴生 method signature 服从 property type，model-only property 执行时 fail with missing-accessor。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.1-AC1" checked="true">Storage construction/enumeration excludes properties while property access resolves as a typed value member.</cdt:Criterion>
+              <cdt:Criterion id="T2.1-AC2" checked="true">Existing class projection, inheritance, access and generic behavior tests pass.</cdt:Criterion>
+              <cdt:Criterion id="T2.1-AC3" checked="true">Typed getter/setter bodies are checked against property type and missing accessors never fall back to field storage.</cdt:Criterion>
+              <cdt:Criterion id="T2.1-AC4" checked="true">Inline property accessors execute without companion methods, while incompatible companion getter/setter signatures produce stable diagnostics.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T2.2" name="Add source and programmatic equivalence coverage" status="DONE" order="1" priority="P0">
+            <Description>使用 RowMemberBuilder.Property 与 TypeSystem.DefineClass 构造 code-first 模型，覆盖 single/collection target、metadata、qualifier/access 和 symbolic references。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T2.2-AC1" checked="true">Equivalent source and programmatic classes expose structurally equal fields and properties.</cdt:Criterion>
+              <cdt:Criterion id="T2.2-AC2" checked="true">Property metadata remains available without introducing an ORM dependency into core type-system.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+
+      <TaskGroup id="P3" name="Public Boundary Verification" status="DONE" order="2">
+        <Description>运行 focused/full tests、typecheck/build，并 fresh 审查语言方向和下游可消费性。</Description>
+        <cdt:Gate>
+          <cdt:Criterion>Focused and full Kunun tests pass</cdt:Criterion>
+          <cdt:Criterion>Workspace typecheck and build pass</cdt:Criterion>
+          <cdt:Criterion>No runtime to type-system dependency is introduced</cdt:Criterion>
+        </cdt:Gate>
+        <SubNodes>
+          <Task id="T3.1" name="Run package and workspace verification" status="DONE" order="0" priority="P0">
+            <Description>运行 type-system/runtime tests、workspace typecheck/build、public export checks 和 diff review。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T3.1-AC1" checked="true">All agreed test, typecheck and build commands pass.</cdt:Criterion>
+              <cdt:Criterion id="T3.1-AC2" checked="true">Public package exports expose the typed property contract.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T3.2" name="Verify ORM-neutral navigation-property authority" status="DONE" order="1" priority="P0">
+            <Description>复核 property 是 Kunun class member、metadata 可供下游读取、schema RelationTypeSymbol 未被混用、package dependencies 仍单向。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T3.2-AC1" checked="true">No ORM-specific vocabulary or dependency is introduced into Kunun core/type-system.</cdt:Criterion>
+              <cdt:Criterion id="T3.2-AC2" checked="true">The public contract is sufficient for the downstream depa ORM track without a shadow class model.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+        <Hooks>
+          <Hook on="phase:after"><cdt:AttractorCheck use="coding"/></Hook>
+        </Hooks>
+      </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+</Track>

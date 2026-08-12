@@ -184,7 +184,7 @@ export class KonTypeBinder {
           members.push(spread);
           continue;
         }
-        const member = this.BindMember(name, item);
+        const member = this.BindMember(name, item, false);
         if (member != null) {
           members.push(member);
         }
@@ -239,13 +239,24 @@ export class KonTypeBinder {
       const members: RowMember[] = [];
       for (const item of bodyItems) {
         this.ReadEffectPrefixes(item);
-        const member = this.BindMember(name, item);
+        const member = this.BindMember(name, item, true);
         if (member != null) {
           members.push(member);
         }
       }
       const bases = this.ReadBaseReferences(knot, 'inherits').concat(this.ReadBaseReferences(knot, 'implements'));
-      this.typeSystem.DefineClass(name, members, readBoolAttr(knot, 'open', true), bases, [], isTrait, genericParams);
+      const definition = this.typeSystem.DefineClass(
+        name,
+        members,
+        readBoolAttr(knot, 'open', true),
+        bases,
+        [],
+        isTrait,
+        genericParams,
+      );
+      // Materialize the effective row at the source boundary so inherited
+      // kind conflicts become binding diagnostics instead of latent failures.
+      void definition.Rows;
     } catch (error) {
       this.AddDiagnostic('KTB030', error?.message ?? String(error), name);
     } finally {
@@ -477,7 +488,7 @@ export class KonTypeBinder {
     }
   }
 
-  private BindMember(owner: string, item: any): RowMember {
+  private BindMember(owner: string, item: any, allowProperty: boolean = false): RowMember {
     if (!(item instanceof KnKnot)) {
       this.AddDiagnostic('KTB040', 'Type body item must be a knot node.', String(item));
       return null;
@@ -489,6 +500,12 @@ export class KonTypeBinder {
         return this.BindMethodMember(owner, item);
       case 'field':
         return this.BindFieldMember(owner, item);
+      case 'prop':
+        if (!allowProperty) {
+          this.AddDiagnostic('KTB044', `Property declaration '${getTypeName(item.Name) ?? '<missing>'}' is only valid in class or trait bodies.`, owner);
+          return null;
+        }
+        return this.BindPropertyMember(owner, item);
       default:
         return null;
     }
@@ -502,7 +519,7 @@ export class KonTypeBinder {
         this.AddDiagnostic('KTB122', 'Attribute aliases must be top-level attr declarations, not schema body items.', getTypeName(item.Name) ?? owner);
         continue;
       }
-      const member = this.BindMember(owner, item);
+      const member = this.BindMember(owner, item, false);
       if (member != null) {
         members.push(member);
       }
@@ -542,6 +559,26 @@ export class KonTypeBinder {
       memberInfo.origin,
       memberInfo.name,
       this.BindTypeNode(fieldType),
+      readQualifier(knot),
+      readAccess(knot),
+      this.ReadTypeMetadata(knot),
+    );
+  }
+
+  private BindPropertyMember(owner: string, knot: KnKnot): RowMember {
+    const propertyType = firstTypePrefix(knot);
+    if (propertyType == null) {
+      return null;
+    }
+    const memberInfo = this.ReadMemberName(owner, knot);
+    if (memberInfo == null) {
+      this.AddDiagnostic('KTB045', 'Typed property declaration must include a member name.', owner);
+      return null;
+    }
+    return RowMemberBuilder.Property(
+      memberInfo.origin,
+      memberInfo.name,
+      this.BindTypeNode(propertyType),
       readQualifier(knot),
       readAccess(knot),
       this.ReadTypeMetadata(knot),
@@ -845,8 +882,11 @@ export class KonTypeBinder {
 
   private ReadSourceAnnotations(knot: KnKnot): { PreModifiers?: any; PostModifiers?: any } {
     const sourceAnnotations: { PreModifiers?: any; PostModifiers?: any } = {};
-    if (hasModifierContent(knot.PreModifiers)) {
-      sourceAnnotations.PreModifiers = knot.PreModifiers;
+    const preModifiers = hasModifierContent(knot.PreModifiers)
+      ? knot.PreModifiers
+      : knot.Core?.PreModifiers;
+    if (hasModifierContent(preModifiers)) {
+      sourceAnnotations.PreModifiers = preModifiers;
     }
     if (hasModifierContent(knot.PostModifiers)) {
       sourceAnnotations.PostModifiers = knot.PostModifiers;

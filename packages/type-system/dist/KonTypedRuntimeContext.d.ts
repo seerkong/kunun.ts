@@ -79,6 +79,7 @@ export declare class KonTypedRuntimeContext {
     private HydrateFieldsFromPrototype;
     private ResolveFieldStorage;
     private ResolvePropertyAccessor;
+    private ResolvePropertyMember;
     private ResolveMethodMember;
     private SelectByActiveEffectContext;
     private GetActiveEffectRow;
@@ -87,6 +88,7 @@ export declare class KonTypedRuntimeContext {
     private ResolveInheritedPrototypeMethod;
     private EnumeratePrototypeCandidates;
     private ResolvePrototypeForAccessor;
+    private EnumerateAccessorPrototypeCandidates;
     private TargetExposesField;
     private EnsureProjectionExposesField;
     private ViewExposesMethod;

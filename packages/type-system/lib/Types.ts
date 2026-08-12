@@ -168,6 +168,20 @@ export enum AccessModifier {
   Internal = 'internal',
 }
 
+export enum RowMemberKind {
+  Field = 'field',
+  Property = 'property',
+  Method = 'method',
+  Spread = 'spread',
+}
+
+export interface RowMemberOptions {
+  Access?: AccessModifier;
+  EffectContext?: EffectRow;
+  Metadata?: TypeMetadata;
+  Kind?: RowMemberKind;
+}
+
 export class EffectRow {
   public static readonly EmptyClosed = new EffectRow([], false);
 
@@ -232,6 +246,7 @@ export class EffectRow {
 export class RowMember {
   public readonly Access: AccessModifier;
   public readonly EffectContext?: EffectRow;
+  public readonly Kind: RowMemberKind;
 
   public constructor(
     public readonly Name: string,
@@ -239,8 +254,14 @@ export class RowMember {
     public readonly Qualifier: RowQualifier,
     public readonly Origin: string,
     public readonly IsMethod: boolean,
-    options: { Access?: AccessModifier; EffectContext?: EffectRow; Metadata?: TypeMetadata } = {},
+    options: RowMemberOptions = {},
   ) {
+    const defaultKind = IsMethod ? RowMemberKind.Method : RowMemberKind.Field;
+    const kind = options.Kind ?? defaultKind;
+    if ((IsMethod && kind !== RowMemberKind.Method) || (!IsMethod && kind === RowMemberKind.Method)) {
+      throw new Error(`Row member kind '${kind}' conflicts with legacy IsMethod=${IsMethod}.`);
+    }
+    this.Kind = kind;
     this.Access = options.Access ?? AccessModifier.Public;
     this.EffectContext = options.EffectContext;
     this.Metadata = options.Metadata ?? {};
@@ -270,8 +291,16 @@ export class RowMember {
       || this.Qualifier === RowQualifier.Override;
   }
 
+  public get IsField(): boolean {
+    return this.Kind === RowMemberKind.Field;
+  }
+
+  public get IsProperty(): boolean {
+    return this.Kind === RowMemberKind.Property;
+  }
+
   public get IsSpreadParameter(): boolean {
-    return this.Name.startsWith('..');
+    return this.Kind === RowMemberKind.Spread;
   }
 
   public get EffectContextKey(): string {
@@ -283,6 +312,7 @@ export class RowMember {
       Access: this.Access,
       EffectContext: effectContext,
       Metadata: this.Metadata,
+      Kind: this.Kind,
     });
   }
 
@@ -291,6 +321,7 @@ export class RowMember {
       Access: this.Access,
       EffectContext: this.EffectContext,
       Metadata: this.Metadata,
+      Kind: this.Kind,
     });
   }
 }
@@ -304,7 +335,11 @@ export class RowMemberBuilder {
     access: AccessModifier = AccessModifier.Public,
     metadata: TypeMetadata = {},
   ): RowMember {
-    return new RowMember(name, type, qualifier, origin, true, { Access: access, Metadata: metadata });
+    return new RowMember(name, type, qualifier, origin, true, {
+      Access: access,
+      Metadata: metadata,
+      Kind: RowMemberKind.Method,
+    });
   }
 
   public static Field(
@@ -315,11 +350,33 @@ export class RowMemberBuilder {
     access: AccessModifier = AccessModifier.Public,
     metadata: TypeMetadata = {},
   ): RowMember {
-    return new RowMember(name, type, qualifier, origin, false, { Access: access, Metadata: metadata });
+    return new RowMember(name, type, qualifier, origin, false, {
+      Access: access,
+      Metadata: metadata,
+      Kind: RowMemberKind.Field,
+    });
+  }
+
+  public static Property(
+    origin: string,
+    name: string,
+    type: TypeSymbol,
+    qualifier: RowQualifier = RowQualifier.Default,
+    access: AccessModifier = AccessModifier.Public,
+    metadata: TypeMetadata = {},
+  ): RowMember {
+    return new RowMember(name, type, qualifier, origin, false, {
+      Access: access,
+      Metadata: metadata,
+      Kind: RowMemberKind.Property,
+    });
   }
 
   public static Spread(origin: string, name: string, type: TypeSymbol, metadata: TypeMetadata = {}): RowMember {
-    return new RowMember(`..${name}`, type, RowQualifier.Default, origin, false, { Metadata: metadata });
+    return new RowMember(`..${name}`, type, RowQualifier.Default, origin, false, {
+      Metadata: metadata,
+      Kind: RowMemberKind.Spread,
+    });
   }
 }
 
@@ -346,7 +403,9 @@ export class RowTypeSymbol implements TypeSymbol {
     public readonly Name: string,
     public readonly Members: RowMember[],
     public readonly IsOpen: boolean,
-  ) {}
+  ) {
+    validateMemberKindConflicts(Name, Members);
+  }
 
   public Resolve(name: string, origin?: string): RowMember {
     for (const member of this.Members) {
@@ -678,6 +737,18 @@ function buildRowsForClass(type: ClassTypeSymbol): RowTypeSymbol {
         continue;
       }
 
+      const crossKind = members.find(candidate =>
+        candidate.Name === member.Name
+        && candidate.Kind !== member.Kind
+        && !candidate.IsSpreadParameter
+        && !member.IsSpreadParameter);
+      if (crossKind != null) {
+        if (crossKind.Origin === type.Name && member.Origin !== type.Name) {
+          throw new Error(`Class '${type.Name}' cannot replace inherited ${member.Kind} member '${member.Name}' with ${crossKind.Kind}.`);
+        }
+        throw new Error(`Class '${type.Name}' cannot combine inherited member '${member.Name}' as both ${crossKind.Kind} and ${member.Kind}.`);
+      }
+
       if (finalMembers.has(member.Name)) {
         if (member.IsOverride || member.IsInherit || member.Origin !== ancestor.Name) {
           throw new Error(`Cannot override final member '${member.Name}' in ${type.Name}.`);
@@ -770,6 +841,8 @@ function applyEffectiveAccess(type: ClassTypeSymbol, member: RowMember): RowMemb
   return new RowMember(member.Name, member.Type, member.Qualifier, member.Origin, member.IsMethod, {
     Access: effective,
     EffectContext: member.EffectContext,
+    Metadata: member.Metadata,
+    Kind: member.Kind,
   });
 }
 
@@ -812,5 +885,20 @@ function accessRank(access: AccessModifier): number {
 }
 
 function memberKey(member: RowMember): string {
-  return `${member.Name}\u0000${member.Origin}\u0000${member.EffectContext?.ToDisplayString() ?? ''}`;
+  return `${member.Name}\u0000${member.Origin}\u0000${member.Kind}\u0000${member.EffectContext?.ToDisplayString() ?? ''}`;
+}
+
+function validateMemberKindConflicts(rowName: string, members: RowMember[]): void {
+  const kinds = new Map<string, RowMemberKind>();
+  for (const member of members) {
+    if (member.IsSpreadParameter) {
+      continue;
+    }
+    const key = member.Name;
+    const existing = kinds.get(key);
+    if (existing != null && existing !== member.Kind) {
+      throw new Error(`Row '${rowName}' has conflicting member kinds for '${member.Name}': ${existing} and ${member.Kind}.`);
+    }
+    kinds.set(key, member.Kind);
+  }
 }

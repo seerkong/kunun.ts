@@ -1,0 +1,99 @@
+<decision #track.add_typed_navigation_property_model.member_authority { priority = "P0" status = "accepted" durable_candidate = true confidence = "high" reversibility = "low; collapsing Property into Field or Relation would break the restored authority boundary" } (
+  <question ?01KZKGVR657WGCDQ5KA09V2PRQ>
+  typed navigation property 应复用 field、top-level relation，还是成为独立 class member kind？
+  </?01KZKGVR657WGCDQ5KA09V2PRQ>
+  <answer {  } (
+    <raw-answer ?01KZKGVR657WGCDQ5KA09V2PRR>
+    property 必须与 field 区分，并服务 Order.shop 等 class property。
+    </?01KZKGVR657WGCDQ5KA09V2PRR>
+    <decision-text ?01KZKGVR657WGCDQ5KA09V2PRS>
+    新增独立 Property member kind；top-level RelationTypeSymbol 保持 schema/ontology primitive。
+    </?01KZKGVR657WGCDQ5KA09V2PRS>
+    <rationale ?01KZKGVR657WGCDQ5KA09V2PRT>
+    field alias 会限制复合关系，relation primitive 又不等于对象可导航属性。
+    </?01KZKGVR657WGCDQ5KA09V2PRT>
+    <evidence ?01KZKGVR657WGCDQ5KA09V2PRV>
+    用户明确要求与当前 runtime class field/prop 区分一致。
+    </?01KZKGVR657WGCDQ5KA09V2PRV>
+  )>
+)>
+
+<decision #track.add_typed_navigation_property_model.kind_semantics { priority = "P0" status = "resolved" durable_candidate = true confidence = "high" reversibility = "low; ambiguous cross-kind resolution would make the discriminator non-authoritative" } (
+  <question ?01KZKGVR657WGCDQ5KA09V2PRW>
+  Field、Property、Method、Spread 的 compatibility 与 runtime boundary 如何定义？
+  </?01KZKGVR657WGCDQ5KA09V2PRW>
+  <answer {  } (
+    <raw-answer ?01KZKGVR657WGCDQ5KA09V2PRX>
+    采用严格同 kind compatibility，并保留既有 Field-to-zero-arg-Method adaptation；无 accessor typed property 为 model-only。
+    </?01KZKGVR657WGCDQ5KA09V2PRX>
+    <decision-text ?01KZKGVR657WGCDQ5KA09V2PRY>
+    slot access 只解析 value members，receiver call 只解析 Method；同 origin 或 inheritance 的跨 kind 同名替换失败；typed inline accessor 无需影子 Method 即可执行，伴生 Method signature 必须服从 property type；缺失 accessor 的 runtime read/write 返回 property-specific error。
+    </?01KZKGVR657WGCDQ5KA09V2PRY>
+    <rationale ?01KZKGVR657WGCDQ5KA09V2PRZ>
+    Kind 必须参与 compatibility 和 resolution 才能成为真 discriminator，同时 model-only property 支持 DSL 建模且不伪装 field storage。
+    </?01KZKGVR657WGCDQ5KA09V2PRZ>
+    <evidence ?01KZKGVR657WGCDQ5KA09V2PS0>
+    planning AttractorCheck GAP 对 subtype、lookup、accessor、runtime fallback 和 copy path 的代码证据。
+    </?01KZKGVR657WGCDQ5KA09V2PS0>
+  )>
+)>
+
+<decision #track.add_typed_navigation_property_model.type_admission { priority = "P0" status = "resolved" durable_candidate = true confidence = "high" reversibility = "medium; future inference may supplement but not replace explicit schema types" } (
+  <question ?01KZKGVR657WGCDQ5KA09V2PS1>
+  binder 是否应从 getter body 推断 property 类型？
+  </?01KZKGVR657WGCDQ5KA09V2PS1>
+  <answer {  } (
+    <raw-answer ?01KZKGVR657WGCDQ5KA09V2PS2>
+    采用显式 property type 作为保守默认。
+    </?01KZKGVR657WGCDQ5KA09V2PS2>
+    <decision-text ?01KZKGVR657WGCDQ5KA09V2PS3>
+    只有显式 typed prop 进入 property row member；accessor-only prop 不做 Any/field 推断。
+    </?01KZKGVR657WGCDQ5KA09V2PS3>
+    <rationale ?01KZKGVR657WGCDQ5KA09V2PS4>
+    source/code-first schema 需要稳定类型，body inference 会把运行时实现变成建模 authority。
+    </?01KZKGVR657WGCDQ5KA09V2PS4>
+    <evidence ?01KZKGVR657WGCDQ5KA09V2PS5>
+    现有 accessor tests 与 mission single-authority rule。
+    </?01KZKGVR657WGCDQ5KA09V2PS5>
+  )>
+)>
+
+<decision #track.canonicalize_orm_annotations_with_named_conf.authority { priority = "P0" status = "accepted" durable_candidate = true confidence = "high" reversibility = "low" } (
+  <question ?01KZNKRWXBXWZT1KJ34DGSNNQ9>
+  How does NamedConf interact with Kunun's semantic authority and the retired ORM relation profile?
+  </?01KZNKRWXBXWZT1KJ34DGSNNQ9>
+  <answer {  } (
+    <raw-answer ?01KZNKRWXBXWZT1KJ34DGSNNQA>
+    NamedConf is transport only; the public type-system model remains authority, and Kunun must not restore an ORM relation parser.
+    </?01KZNKRWXBXWZT1KJ34DGSNNQA>
+    <decision-text ?01KZNKRWXBXWZT1KJ34DGSNNQB>
+    Existing datasource/entity/field profiles read NamedConf; typed Properties retain generic relation NamedConf for downstream consumers; no shadow model or public ORM relation descriptor is introduced.
+    </?01KZNKRWXBXWZT1KJ34DGSNNQB>
+    <rationale ?01KZNKRWXBXWZT1KJ34DGSNNQC>
+    This keeps source-first and code-first on one model while preserving the property-first downstream ownership boundary.
+    </?01KZNKRWXBXWZT1KJ34DGSNNQC>
+    <evidence ?01KZNKRWXBXWZT1KJ34DGSNNQD>
+    Parent mission design, archived behavior, current source, and fresh AttractorCheck.
+    </?01KZNKRWXBXWZT1KJ34DGSNNQD>
+  )>
+)>
+
+<decision #track.remove_orm_datasource_identity_duplication.public_surface { priority = "P0" status = "accepted" durable_candidate = true confidence = "high" reversibility = "low" } (
+  <question ?01KZNNMF632SHENVARZB2VZV90>
+  Which surface owns datasource identity?
+  </?01KZNNMF632SHENVARZB2VZV90>
+  <answer {  } (
+    <raw-answer ?01KZNNMF632SHENVARZB2VZV91>
+    Only the datasource declaration name.
+    </?01KZNNMF632SHENVARZB2VZV91>
+    <decision-text ?01KZNNMF632SHENVARZB2VZV92>
+    ORM datasource annotation public types SHALL expose provider/environment/options only and SHALL NOT expose Key or Name.
+    </?01KZNNMF632SHENVARZB2VZV92>
+    <rationale ?01KZNNMF632SHENVARZB2VZV93>
+    One stable declaration identity avoids dual source and public type authority.
+    </?01KZNNMF632SHENVARZB2VZV93>
+    <evidence ?01KZNNMF632SHENVARZB2VZV94>
+    Parent mission P0 decision and fresh package verification.
+    </?01KZNNMF632SHENVARZB2VZV94>
+  )>
+)>

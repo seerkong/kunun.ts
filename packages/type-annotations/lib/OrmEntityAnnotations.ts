@@ -1,5 +1,5 @@
 import { KnKnot, KnSymbol, KnWord } from 'kunun-core';
-import { AnnotationExtractor } from './Annotations';
+import { AdmitOrmNamedConf } from './Annotations';
 
 export interface OrmEntityAnnotationDiagnostic {
   Code: string;
@@ -31,8 +31,6 @@ export interface OrmEntityAnnotationParseResult {
 }
 
 export interface OrmDataSourceAnnotationDescriptor {
-  Key?: string;
-  Name?: string;
   Kind?: string;
   EnvConn?: string;
   Options?: { [key: string]: any };
@@ -49,16 +47,20 @@ export class OrmEntityAnnotationProfile {
     const descriptor: OrmEntityAnnotationDescriptor = {
       PrimaryKey: [],
     };
-    const marker = findMarker(nodeOrMarker, 'entity');
-    if (marker == null) {
+    const admission = AdmitOrmNamedConf(nodeOrMarker, 'entity');
+    if (admission.Issue != null) {
+      const isTransportIssue = admission.Issue === 'missing'
+        || admission.Issue === 'legacy_transport';
       diagnostics.push({
-        Code: 'ORMENTITY001',
-        Message: 'ORM entity annotation must use #(orm #entity :{ ... }).',
+        Code: isTransportIssue ? 'ORMENTITY001' : 'ORMENTITY003',
+        Message: isTransportIssue
+          ? 'ORM entity annotation must use the attached NamedConf form #(orm :entity={ ... }).'
+          : `ORM entity annotation profile or target is invalid (${admission.Issue}).`,
       });
       return { Descriptor: descriptor, Diagnostics: diagnostics };
     }
 
-    for (const item of annotationItems(marker)) {
+    for (const item of annotationItems(admission.Payload)) {
       switch (item.Name) {
         case 'type':
           descriptor.Type = directString(item.Value);
@@ -97,23 +99,21 @@ export class OrmDataSourceAnnotationProfile {
   public Parse(nodeOrMarker: any): OrmDataSourceAnnotationParseResult {
     const diagnostics: OrmEntityAnnotationDiagnostic[] = [];
     const descriptor: OrmDataSourceAnnotationDescriptor = {};
-    const marker = findMarker(nodeOrMarker, 'datasource');
-    if (marker == null) {
+    const admission = AdmitOrmNamedConf(nodeOrMarker, 'datasource');
+    if (admission.Issue != null) {
+      const isTransportIssue = admission.Issue === 'missing'
+        || admission.Issue === 'legacy_transport';
       diagnostics.push({
-        Code: 'ORMDATASOURCE001',
-        Message: 'ORM datasource annotation must use #(orm #datasource :{ ... }).',
+        Code: isTransportIssue ? 'ORMDATASOURCE001' : 'ORMDATASOURCE003',
+        Message: isTransportIssue
+          ? 'ORM datasource annotation must use the attached NamedConf form #(orm :datasource={ ... }).'
+          : `ORM datasource annotation profile or target is invalid (${admission.Issue}).`,
       });
       return { Descriptor: descriptor, Diagnostics: diagnostics };
     }
 
-    for (const item of annotationItems(marker)) {
+    for (const item of annotationItems(admission.Payload)) {
       switch (item.Name) {
-        case 'key':
-          descriptor.Key = directString(item.Value);
-          break;
-        case 'name':
-          descriptor.Name = directString(item.Value);
-          break;
         case 'kind':
           descriptor.Kind = directString(item.Value);
           break;
@@ -152,35 +152,18 @@ function parseLogicalDelete(source: any): OrmEntityLogicalDeleteAnnotation {
   return logicalDelete;
 }
 
-function findMarker(nodeOrMarker: any, markerName: string): KnKnot {
-  if (nodeOrMarker instanceof KnKnot
-    && wordName(nodeOrMarker.Core) === 'orm'
-    && wordName(nodeOrMarker.Name) === markerName) {
-    return nodeOrMarker;
-  }
-  const annotationSource = nodeOrMarker?.Metadata?.source_annotations ?? nodeOrMarker;
-  const entry = new AnnotationExtractor().Extract(annotationSource).Entries.find(candidate =>
-    candidate.Source === 'preModifier'
-    && candidate.Name === markerName
-    && candidate.Value instanceof KnKnot
-    && wordName(candidate.Value.Core) === 'orm');
-  return entry?.Value ?? null;
-}
-
 interface AnnotationItem {
   Name: string;
   Value: any;
 }
 
-function annotationItems(marker: KnKnot): AnnotationItem[] {
-  if (marker.Conf != null) {
-    return Object.entries(marker.Conf)
+function annotationItems(source: any): AnnotationItem[] {
+  if (source != null && typeof source === 'object') {
+    return Object.entries(source)
       .filter(([_, value]) => typeof value !== 'function')
       .map(([name, value]) => ({ Name: name, Value: value }));
   }
-  return (marker.Body ?? [])
-    .filter(item => item instanceof KnKnot)
-    .map(item => ({ Name: wordName(item.Core), Value: item }));
+  return [];
 }
 
 function setIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K]): void {

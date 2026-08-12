@@ -1,5 +1,5 @@
 import { KnKnot, KnSymbol, KnWord } from 'kunun-core';
-import { AnnotationExtractor } from './Annotations';
+import { AdmitOrmNamedConf, AnnotationExtractor } from './Annotations';
 
 export interface FieldAnnotationDiagnostic {
   Code: string;
@@ -63,16 +63,20 @@ export class OrmFieldAnnotationProfile {
     const descriptor: OrmFieldAnnotationDescriptor = {
       Properties: [],
     };
-    const marker = this.FindMarker(nodeOrMarker);
-    if (marker == null) {
+    const admission = AdmitOrmNamedConf(nodeOrMarker, 'field');
+    if (admission.Issue != null) {
+      const isTransportIssue = admission.Issue === 'missing'
+        || admission.Issue === 'legacy_transport';
       diagnostics.push({
-        Code: 'ORMFIELD001',
-        Message: 'ORM field annotation must use #(orm #field :{ ... }).',
+        Code: isTransportIssue ? 'ORMFIELD001' : 'ORMFIELD003',
+        Message: isTransportIssue
+          ? 'ORM field annotation must use the attached NamedConf form #(orm :field={ ... }).'
+          : `ORM field annotation profile or target is invalid (${admission.Issue}).`,
       });
       return { Descriptor: descriptor, Diagnostics: diagnostics };
     }
 
-    for (const item of annotationItems(marker)) {
+    for (const item of annotationItems(admission.Payload)) {
       switch (item.Name) {
         case 'type':
           descriptor.Type = this.ParseFieldType(item.Value);
@@ -116,7 +120,8 @@ export class OrmFieldAnnotationProfile {
   }
 
   public FindMarker(nodeOrMarker: any): KnKnot {
-    return findFieldMarker(nodeOrMarker, 'orm');
+    const admission = AdmitOrmNamedConf(nodeOrMarker, 'field');
+    return admission.Issue == null ? admission.Marker : null;
   }
 
   private ParseFieldType(source: any): OrmFieldTypeAnnotation {
@@ -221,13 +226,21 @@ interface AnnotationItem {
   Value: any;
 }
 
-function annotationItems(marker: KnKnot): AnnotationItem[] {
-  if (marker.Conf != null) {
-    return Object.entries(marker.Conf)
+function annotationItems(source: any): AnnotationItem[] {
+  if (source == null) {
+    return [];
+  }
+  if (!(source instanceof KnKnot) && typeof source === 'object') {
+    return Object.entries(source)
       .filter(([_, value]) => typeof value !== 'function')
       .map(([name, value]) => ({ Name: name, Value: value }));
   }
-  return (marker.Body ?? [])
+  if (source.Conf != null) {
+    return Object.entries(source.Conf)
+      .filter(([_, value]) => typeof value !== 'function')
+      .map(([name, value]) => ({ Name: name, Value: value }));
+  }
+  return (source.Body ?? [])
     .filter(item => item instanceof KnKnot)
     .map(item => ({ Name: wordName(item.Core), Value: item }));
 }

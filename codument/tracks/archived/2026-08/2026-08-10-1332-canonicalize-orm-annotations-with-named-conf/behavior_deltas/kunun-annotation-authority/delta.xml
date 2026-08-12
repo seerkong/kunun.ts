@@ -1,0 +1,41 @@
+<behavior-patch capability="kunun-annotation-authority" version="1">
+  <upsert selector="behavior://kunun-annotation-authority/requirements/orm-named-conf-transport">
+    <requirement id="orm-named-conf-transport">
+      <statement>Kunun SHALL preserve ORM prefix annotations through exactly one KnKnot.NamedConf profile and SHALL reject the legacy marker-name-plus-Conf transport.</statement>
+      <suite id="canonical-transport" name="Canonical ORM annotation transport">
+        <case id="preserve-attached-named-conf">
+          <given>a datasource, class, Field, or typed Property has a matching ORM NamedConf prefix annotation</given>
+          <when>source is parsed and bound into the public Kunun type-system model</when>
+          <then>the matching NamedConf payload SHALL remain attached without creating a shadow entity or relation model</then>
+        </case>
+        <case id="reject-old-transport">
+          <given>an ORM annotation encodes its profile in the marker name and payload in Conf</given>
+          <when>a public ORM profile or admission helper reads it</when>
+          <then>Kunun SHALL return a stable rejection diagnostic and SHALL NOT normalize it into the canonical model</then>
+        </case>
+        <case id="reject-target-mismatch">
+          <given>an ORM NamedConf profile is attached to the wrong declaration kind</given>
+          <when>annotation admission validates the attachment</when>
+          <then>Kunun SHALL reject the profile, including relation on Field and field on Property</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+  <upsert selector="behavior://kunun-annotation-authority/requirements/property-owned-orm-relations">
+    <requirement id="property-owned-orm-relations">
+      <statement>Kunun public packages SHALL expose typed Property metadata for downstream ORM profiles and SHALL NOT expose or positively parse a detached ORM relation annotation descriptor.</statement>
+      <suite id="authority-boundary" name="ORM annotation authority boundary">
+        <case id="reject-detached-orm-profile">
+          <given>the Kunun source tree and built public package artifacts</given>
+          <when>their annotation API surface is inspected</when>
+          <then>they SHALL NOT contain OrmRelationAnnotationProfile, ValidateDepaOrmRelation, or a positive detached ORM relation parser</then>
+        </case>
+        <case id="preserve-generic-and-property-models">
+          <given>generic relation NamedConf, generic annotations, and typed class Properties</given>
+          <when>the Kunun packages are parsed, bound, and typechecked</when>
+          <then>the generic relation payload SHALL remain attached to a typed Property without ORM-specific interpretation in Kunun core</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

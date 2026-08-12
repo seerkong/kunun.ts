@@ -1,0 +1,45 @@
+<Track id="remove-detached-orm-relation-annotations" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>从 Kunun public package 中退役 detached ORM relation annotation authority。</Goal>
+    <Description>删除 ORM 专用 detached relation parser、validator、exports、正向测试与生成产物，同时保持 typed Property、通用 relation 和 annotation extraction。</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>auto</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-08-09T23:03:47Z</CreatedAt>
+    <UpdatedAt>2026-08-09T23:24:59Z</UpdatedAt>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="input" name="annotation-source" domain="repo" path="vfs://@/packages/type-annotations/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+  </Ports>
+  <TaskSpace id="space_remove-detached-orm-relation-annotations" name="remove-detached-orm-relation-annotations" version="1">
+    <Description>物理移除 Kunun detached ORM relation authority 并验证语言边界。</Description>
+    <SubNodes>
+      <TaskGroup id="P1" name="Authority Removal" status="DONE" order="0">
+        <SubNodes>
+          <Task id="T1.1" name="Add retirement and residue tests" status="DONE" order="0" priority="P0">
+            <Description>增加源码、barrel 和 built package residue guard，并保留 typed Property 与 generic relation 回归断言。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.1-AC1" checked="true">The guard fails while the public parser or positive detached ORM tests remain.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="Remove detached ORM annotation surface" status="DONE" order="1" priority="P0">
+            <Description>删除 ORM relation annotation module、barrel export、正向测试和 stale generated exports。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.2-AC1" checked="true">No live source or public generated artifact exposes the retired API.</cdt:Criterion>
+              <cdt:Criterion id="T1.2-AC2" checked="true">Generic relation and typed Property APIs remain available.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.3" name="Verify workspace boundary" status="DONE" order="2" priority="P0">
+            <Description>运行 focused tests、typed Property suite、typecheck、build、residue scan 和 fresh verification。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.3-AC1" checked="true">All focused and workspace gates pass with zero retired authority residue.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+</Track>

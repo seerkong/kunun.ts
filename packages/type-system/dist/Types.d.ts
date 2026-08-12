@@ -96,6 +96,18 @@ export declare enum AccessModifier {
     Private = "private",
     Internal = "internal"
 }
+export declare enum RowMemberKind {
+    Field = "field",
+    Property = "property",
+    Method = "method",
+    Spread = "spread"
+}
+export interface RowMemberOptions {
+    Access?: AccessModifier;
+    EffectContext?: EffectRow;
+    Metadata?: TypeMetadata;
+    Kind?: RowMemberKind;
+}
 export declare class EffectRow {
     readonly Effects: EffectSymbol[];
     readonly IsOpen: boolean;
@@ -118,17 +130,16 @@ export declare class RowMember {
     readonly IsMethod: boolean;
     readonly Access: AccessModifier;
     readonly EffectContext?: EffectRow;
-    constructor(Name: string, Type: TypeSymbol, Qualifier: RowQualifier, Origin: string, IsMethod: boolean, options?: {
-        Access?: AccessModifier;
-        EffectContext?: EffectRow;
-        Metadata?: TypeMetadata;
-    });
+    readonly Kind: RowMemberKind;
+    constructor(Name: string, Type: TypeSymbol, Qualifier: RowQualifier, Origin: string, IsMethod: boolean, options?: RowMemberOptions);
     readonly Metadata: TypeMetadata;
     get IsVirtual(): boolean;
     get IsFinal(): boolean;
     get IsOverride(): boolean;
     get IsInherit(): boolean;
     get ShouldForward(): boolean;
+    get IsField(): boolean;
+    get IsProperty(): boolean;
     get IsSpreadParameter(): boolean;
     get EffectContextKey(): string;
     WithEffectContext(effectContext: EffectRow): RowMember;
@@ -137,6 +148,7 @@ export declare class RowMember {
 export declare class RowMemberBuilder {
     static Method(origin: string, name: string, type: TypeSymbol, qualifier?: RowQualifier, access?: AccessModifier, metadata?: TypeMetadata): RowMember;
     static Field(origin: string, name: string, type: TypeSymbol, qualifier?: RowQualifier, access?: AccessModifier, metadata?: TypeMetadata): RowMember;
+    static Property(origin: string, name: string, type: TypeSymbol, qualifier?: RowQualifier, access?: AccessModifier, metadata?: TypeMetadata): RowMember;
     static Spread(origin: string, name: string, type: TypeSymbol, metadata?: TypeMetadata): RowMember;
 }
 export declare enum RowMemberResolutionStatus {

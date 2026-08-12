@@ -19,6 +19,28 @@ export interface AnnotationBag {
   Entries: AnnotationEntry[];
 }
 
+export const OrmNamedConfProfileNames = [
+  'datasource',
+  'entity',
+  'field',
+  'relation',
+] as const;
+
+export type OrmNamedConfProfileName = typeof OrmNamedConfProfileNames[number];
+
+export type OrmNamedConfAdmissionIssue =
+  | 'missing'
+  | 'legacy_transport'
+  | 'profile_multiplicity'
+  | 'profile_mismatch'
+  | 'target_mismatch';
+
+export interface OrmNamedConfAdmissionResult {
+  Marker?: KnKnot;
+  Payload?: any;
+  Issue?: OrmNamedConfAdmissionIssue;
+}
+
 export const BuiltInAnnotationNames = {
   Required: 'required',
   Description: 'description',
@@ -163,6 +185,99 @@ export class SchemaConstraintProfile {
       return ['Required annotation cannot be loosened by an overriding declaration.'];
     }
     return [];
+  }
+}
+
+export function AdmitOrmNamedConf(
+  nodeOrMarker: any,
+  expectedProfile: OrmNamedConfProfileName,
+): OrmNamedConfAdmissionResult {
+  const markers = attachedModifierKnots(nodeOrMarker).filter(marker => wordName(marker.Core) === 'orm');
+  if (markers.length === 0) {
+    return { Issue: 'missing' };
+  }
+  if (markers.length !== 1) {
+    return { Issue: 'profile_multiplicity' };
+  }
+
+  const marker = markers[0];
+  if (marker.Name != null) {
+    return { Marker: marker, Issue: 'legacy_transport' };
+  }
+
+  const profiles = Object.keys(marker.NamedConf ?? {});
+  if (profiles.length === 0) {
+    return { Marker: marker, Issue: 'missing' };
+  }
+  if (profiles.length !== 1) {
+    return { Marker: marker, Issue: 'profile_multiplicity' };
+  }
+
+  const profile = profiles[0];
+  if (!OrmNamedConfProfileNames.includes(profile as OrmNamedConfProfileName)
+    || profile !== expectedProfile) {
+    return { Marker: marker, Issue: 'profile_mismatch' };
+  }
+  if (annotationTargetKind(nodeOrMarker) !== expectedTargetKind(expectedProfile)) {
+    return { Marker: marker, Issue: 'target_mismatch' };
+  }
+
+  return {
+    Marker: marker,
+    Payload: marker.NamedConf[profile],
+  };
+}
+
+function attachedModifierKnots(nodeOrMarker: any): KnKnot[] {
+  if (nodeOrMarker instanceof KnKnot && wordName(nodeOrMarker.Core) === 'orm') {
+    return [nodeOrMarker];
+  }
+  const annotationSource = nodeOrMarker?.Metadata?.source_annotations ?? nodeOrMarker;
+  return (annotationSource?.PreModifiers?.Knots ?? [])
+    .filter((candidate: any) => candidate instanceof KnKnot);
+}
+
+function annotationTargetKind(node: any): 'datasource' | 'entity' | 'field' | 'property' | 'unknown' {
+  if (node instanceof KnKnot) {
+    switch (wordName(node.Core)) {
+      case 'datasource':
+        return 'datasource';
+      case 'class':
+      case 'schema':
+        return 'entity';
+      case 'field':
+        return 'field';
+      case 'prop':
+        return 'property';
+      default:
+        return 'unknown';
+    }
+  }
+  if (node?.Kind === 'field' || node?.IsField === true) {
+    return 'field';
+  }
+  if (node?.Kind === 'property' || node?.IsProperty === true) {
+    return 'property';
+  }
+  if (node?.Metadata?.source_annotations != null
+    && (node?.DeclaredRow != null || node?.DeclaredRows != null)) {
+    return 'entity';
+  }
+  return 'unknown';
+}
+
+function expectedTargetKind(
+  profile: OrmNamedConfProfileName,
+): 'datasource' | 'entity' | 'field' | 'property' {
+  switch (profile) {
+    case 'datasource':
+      return 'datasource';
+    case 'entity':
+      return 'entity';
+    case 'field':
+      return 'field';
+    case 'relation':
+      return 'property';
   }
 }
 

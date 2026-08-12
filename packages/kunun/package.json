@@ -1,6 +1,6 @@
 {
   "name": "kunun",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "kunun language: parser, runtime interpreter, and type system",
   "types": "dist/index.d.ts",
   "main": "dist/index.cjs",
@@ -26,10 +26,10 @@
     "registry": "https://registry.npmjs.com"
   },
   "dependencies": {
-    "kunun-converter": "1.0.3",
-    "kunun-core": "1.0.3",
-    "kunun-runtime": "1.0.3",
-    "kunun-type-annotations": "1.0.3",
-    "kunun-type-system": "1.0.3"
+    "kunun-converter": "1.0.4",
+    "kunun-core": "1.0.4",
+    "kunun-runtime": "1.0.4",
+    "kunun-type-annotations": "1.0.4",
+    "kunun-type-system": "1.0.4"
   }
 }

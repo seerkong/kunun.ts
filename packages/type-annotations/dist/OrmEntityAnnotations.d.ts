@@ -23,8 +23,6 @@ export interface OrmEntityAnnotationParseResult {
     Diagnostics: OrmEntityAnnotationDiagnostic[];
 }
 export interface OrmDataSourceAnnotationDescriptor {
-    Key?: string;
-    Name?: string;
     Kind?: string;
     EnvConn?: string;
     Options?: {

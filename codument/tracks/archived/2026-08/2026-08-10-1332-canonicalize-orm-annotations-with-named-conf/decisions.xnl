@@ -1,0 +1,11 @@
+<decision #track.canonicalize_orm_annotations_with_named_conf.authority { priority = "P0" status = "accepted" durable_candidate = true confidence = "high" reversibility = "low" }
+(
+  <question ?>How does NamedConf interact with Kunun's semantic authority and the retired ORM relation profile?</?>
+  <answer { }
+  (
+    <raw-answer ?>NamedConf is transport only; the public type-system model remains authority, and Kunun must not restore an ORM relation parser.</?>
+    <decision-text ?>Existing datasource/entity/field profiles read NamedConf; typed Properties retain generic relation NamedConf for downstream consumers; no shadow model or public ORM relation descriptor is introduced.</?>
+    <rationale ?>This keeps source-first and code-first on one model while preserving the property-first downstream ownership boundary.</?>
+    <evidence ?>Parent mission design, archived behavior, current source, and fresh AttractorCheck.</?>
+  )>
+)>

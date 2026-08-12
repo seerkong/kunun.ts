@@ -1,0 +1,11 @@
+<decision #track.remove_orm_datasource_identity_duplication.public_surface { priority = "P0" status = "accepted" durable_candidate = true confidence = "high" reversibility = "low" }
+(
+  <question ?>Which surface owns datasource identity?</?>
+  <answer { }
+  (
+    <raw-answer ?>Only the datasource declaration name.</?>
+    <decision-text ?>ORM datasource annotation public types SHALL expose provider/environment/options only and SHALL NOT expose Key or Name.</?>
+    <rationale ?>One stable declaration identity avoids dual source and public type authority.</?>
+    <evidence ?>Parent mission P0 decision and fresh package verification.</?>
+  )>
+)>

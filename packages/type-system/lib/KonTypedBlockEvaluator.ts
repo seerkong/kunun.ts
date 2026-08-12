@@ -47,7 +47,7 @@ export class KonTypedBlockEvaluator {
       context: binding.Context,
       prototypes: new Map(),
     };
-    for (const declaration of nodes.filter(isClassDeclaration)) {
+    for (const declaration of nodes.filter(isRuntimePrototypeDeclaration)) {
       this.RegisterClassPrototype(state, declaration);
     }
     state.context.PrototypeResolver = className => state.prototypes.get(className)?.prototype ?? null;
@@ -362,6 +362,6 @@ function isTypeSystemDeclaration(node: any): boolean {
   return node instanceof KnKnot && ['type', 'class', 'trait'].includes(getWord(node.Core));
 }
 
-function isClassDeclaration(node: any): node is KnKnot {
-  return node instanceof KnKnot && getWord(node.Core) === 'class';
+function isRuntimePrototypeDeclaration(node: any): node is KnKnot {
+  return node instanceof KnKnot && ['class', 'trait'].includes(getWord(node.Core));
 }

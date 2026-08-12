@@ -8,9 +8,7 @@ import {
   OrmDataSourceAnnotationProfile,
   OrmEntityAnnotationProfile,
   OrmFieldAnnotationProfile,
-  OrmRelationAnnotationProfile,
   SchemaConstraintProfile,
-  ValidateDepaOrmRelation,
 } from 'kunun-type-annotations';
 
 describe('Kunun type annotations package', function () {
@@ -61,184 +59,10 @@ describe('Kunun type annotations package', function () {
     assert.deepEqual(profile.ValidateRequiredOverride(parent, tightened), []);
   });
 
-  it('parses ORM relation prefix annotations with endpoints, write config, and through paths', function () {
-    const [relation] = ParseKonSourceItems(`
-      #(orm #relation :{
-        type = LOOK_UP
-        cardinality = many_to_many
-        from = { field = roles keys = [_id] }
-        through = [
-          (through #UserRole :{
-            from_keys = [user_id]
-            to_keys = [role_id]
-            from_foreign = true
-            to_foreign = true
-            on = [
-              { field = whether_delete equals = 0 }
-              { field = relation_key equals = User_to_Role }
-            ]
-            where = [
-              { field = status equals = active }
-            ]
-            order = [
-              {
-                field = created_at
-                direction = desc
-                namespace = audit
-                alias = createdAt
-                order_set = default
-                entity_name = UserRole
-                relative_path = [user role]
-              }
-            ]
-            limit = 20
-          })
-        ]
-        to = { field = users field_name = "related users" keys = [_id] visible = false }
-        write = { cascade_delete = delete }
-      })
-      (relation #User_to_Role :{ from = User to = Role directed = false })
-    `);
-
-    const parsed = new OrmRelationAnnotationProfile().Parse(relation);
-
-    assert.deepEqual(parsed.Diagnostics, []);
-    assert.equal(parsed.Descriptor.Type, 'LOOK_UP');
-    assert.equal(parsed.Descriptor.Cardinality, 'many_to_many');
-    assert.deepEqual(parsed.Descriptor.From, {
-      Field: 'roles',
-      Keys: ['_id'],
-    });
-    assert.deepEqual(parsed.Descriptor.To, {
-      Field: 'users',
-      FieldName: 'related users',
-      Keys: ['_id'],
-      Visible: false,
-    });
-    assert.equal(parsed.Descriptor.Through.length, 1);
-    assert.equal(parsed.Descriptor.Through[0].Entity, 'UserRole');
-    assert.deepEqual(parsed.Descriptor.Through[0].FromKeys, ['user_id']);
-    assert.deepEqual(parsed.Descriptor.Through[0].ToKeys, ['role_id']);
-    assert.equal(parsed.Descriptor.Through[0].FromForeign, true);
-    assert.equal(parsed.Descriptor.Through[0].ToForeign, true);
-    assert.deepEqual(parsed.Descriptor.Through[0].Constraints.On, [
-      { Field: 'whether_delete', Equals: 0 },
-      { Field: 'relation_key', Equals: 'User_to_Role' },
-    ]);
-    assert.deepEqual(parsed.Descriptor.Through[0].Constraints.Where, [
-      { Field: 'status', Equals: 'active' },
-    ]);
-    assert.deepEqual(parsed.Descriptor.Through[0].Constraints.Order, [
-      {
-        Field: 'created_at',
-        Direction: 'desc',
-        Namespace: 'audit',
-        Alias: 'createdAt',
-        OrderSet: 'default',
-        EntityName: 'UserRole',
-        RelativePath: ['user', 'role'],
-      },
-    ]);
-    assert.equal(parsed.Descriptor.Through[0].Constraints.Limit, 20);
-    assert.deepEqual(parsed.Descriptor.Write, { CascadeDelete: 'delete' });
-    assert.deepEqual(ValidateDepaOrmRelation(parsed.Descriptor), []);
-  });
-
-  it('reports malformed ORM relation annotations without affecting generic extraction', function () {
-    const [relation] = ParseKonSourceItems(`
-      #(orm #relation :{
-        from = { field = missing_keys }
-        through = [
-          (through #Broken :{ from_keys = [a] })
-        ]
-      })
-      (relation #Broken_relation :{ from = A to = B })
-    `);
-
-    const extractorEntries = new AnnotationExtractor().Extract(relation).Entries;
-    const parsed = new OrmRelationAnnotationProfile().Parse(relation);
-
-    assert.ok(extractorEntries.some(entry => entry.Source === 'preModifier' && entry.Name === 'relation'));
-    assert.ok(parsed.Diagnostics.some(diagnostic => diagnostic.Code === 'ORMREL002'));
-    assert.ok(parsed.Diagnostics.some(diagnostic => diagnostic.Code === 'ORMREL003'));
-  });
-
-  it('validates depa ORM relation enums and join path shapes', function () {
-    const [relation] = ParseKonSourceItems(`
-      #(orm #relation :{
-        type = UNKNOWN_REL
-        cardinality = sideways
-        from = { field = roles keys = [_id] }
-        through = [
-          (through #A :{ from_keys = [user_id] to_keys = [role_id tenant_id] })
-          (through #B :{ from_keys = [role_id] to_keys = [id] })
-        ]
-        to = { field = users keys = [_id] }
-        write = { cascade_delete = explode }
-      })
-      (relation #Broken :{ from = User to = Role })
-    `);
-
-    const parsed = new OrmRelationAnnotationProfile().Parse(relation);
-    const diagnostics = ValidateDepaOrmRelation(parsed.Descriptor, {
-      FromEntity: 'User',
-      ToEntity: 'Role',
-      Schema: {
-        HasField: (entity, field) => !(entity === 'User' && field === 'roles'),
-      },
-    });
-
-    assert.ok(diagnostics.some(diagnostic => diagnostic.Code === 'ORMRELVAL001'));
-    assert.ok(diagnostics.some(diagnostic => diagnostic.Code === 'ORMRELVAL002'));
-    assert.ok(diagnostics.some(diagnostic => diagnostic.Code === 'ORMRELVAL003'));
-    assert.ok(diagnostics.some(diagnostic => diagnostic.Code === 'ORMRELVAL005'));
-    assert.ok(diagnostics.some(diagnostic => diagnostic.Code === 'ORMRELVAL006'));
-  });
-
-  it('preserves ORM relation prefix annotations on bound relation metadata without changing core relation binding', function () {
-    const binding = KonTypeBinder.BindSource(`
-      (schema #B :[])
-      (schema #A :[])
-
-      #(orm #relation :{
-        type = LOOK_UP
-        cardinality = many_to_one
-        from = { field = relation_b2 field_name = "引用A" keys = [_b2] foreign = true }
-        to = { field = rev__B__relation_b2 field_name = "has b list" keys = [_id] visible = false }
-        write = { cascade_delete = delete }
-      })
-      (relation #B_to_A :{ from = B to = A directed = true })
-    `);
-
-    const relation = binding.TypeSystem.RequireRelation('B_to_A');
-    const parsed = new OrmRelationAnnotationProfile().Parse(relation);
-
-    assert.deepEqual(binding.Diagnostics, []);
-    assert.equal(relation.From.Name, 'B');
-    assert.equal(relation.To.Name, 'A');
-    assert.equal(relation.Directed, true);
-    assert.deepEqual(parsed.Diagnostics, []);
-    assert.equal(parsed.Descriptor.Type, 'LOOK_UP');
-    assert.equal(parsed.Descriptor.Cardinality, 'many_to_one');
-    assert.deepEqual(parsed.Descriptor.From, {
-      Field: 'relation_b2',
-      FieldName: '引用A',
-      Keys: ['_b2'],
-      Foreign: true,
-    });
-    assert.deepEqual(parsed.Descriptor.To, {
-      Field: 'rev__B__relation_b2',
-      FieldName: 'has b list',
-      Keys: ['_id'],
-      Visible: false,
-    });
-    assert.deepEqual(parsed.Descriptor.Write, { CascadeDelete: 'delete' });
-  });
-
   it('preserves field-level ORM metadata on bound row members', function () {
     const binding = KonTypeBinder.BindSource(`
       (schema #Article :[
-        #(orm #field :{
+        #(orm :field={
           db = { name = original_title type = varchar }
         })
         (!String field #title
@@ -270,7 +94,9 @@ describe('Kunun type annotations package', function () {
     assert.equal(title.Metadata.refType.Value, 'Category');
     assert.ok(entries.some(entry => entry.Source === 'metadata' && entry.Name === 'description' && entry.Value === 'Article title'));
     assert.equal(sourceAnnotation.Core.Value, 'orm');
-    assert.equal(sourceAnnotation.Name.Value, 'field');
+    assert.equal(sourceAnnotation.Name, undefined);
+    assert.equal(sourceAnnotation.Conf, undefined);
+    assert.ok(sourceAnnotation.NamedConf.field);
   });
 
   it('parses field business types from prefix annotations without extending language scalar types', function () {
@@ -280,7 +106,7 @@ describe('Kunun type annotations package', function () {
           type = { name = EmployeeEmail base = String }
           validate = { pattern = email }
         })
-        #(orm #field :{
+        #(orm :field={
           type = { code = person base = string ref_type = __person multiple = true }
           db = { name = owner_ids type = varchar }
           items = { code = person base = string ref_type = __person }
@@ -326,7 +152,7 @@ describe('Kunun type annotations package', function () {
           type = { name = PhoneNumber base = String }
           validate = { kind = e164 }
         })
-        #(orm #field :{
+        #(orm :field={
           type = { code = phone base = string }
           db = { name = mobile_phone type = varchar }
           format = e164
@@ -365,7 +191,7 @@ describe('Kunun type annotations package', function () {
   it('parses canonical object field properties and keeps singular property compatibility', function () {
     const [schema] = ParseKonSourceItems(`
       (schema #Article :[
-        #(orm #field :{
+        #(orm :field={
           type = { code = object }
           properties = [
             { name = title code = string base = string }
@@ -393,7 +219,7 @@ describe('Kunun type annotations package', function () {
 
   it('parses ORM entity profile from bound schema metadata', function () {
     const binding = KonTypeBinder.BindSource(`
-      #(orm #entity :{
+      #(orm :entity={
         type = table
         primary_key = [_id tenant_id]
         db = { name = users schema = app }
@@ -419,11 +245,9 @@ describe('Kunun type annotations package', function () {
     });
   });
 
-  it('parses ORM datasource profile from annotated Knots and direct markers', function () {
+  it('parses ORM datasource NamedConf without duplicating declaration identity', function () {
     const [datasource] = ParseKonSourceItems(`
-      #(orm #datasource :{
-        key = main
-        name = Main
+      #(orm :datasource={
         kind = mysql
         env_conn = DATABASE_URL
         options = { pool = 10 ssl = true }
@@ -431,19 +255,139 @@ describe('Kunun type annotations package', function () {
       (datasource #main)
     `);
 
-    const marker = datasource.PreModifiers.Knots[0];
-    const fromKnot = new OrmDataSourceAnnotationProfile().Parse(datasource);
-    const fromMarker = new OrmDataSourceAnnotationProfile().Parse(marker);
+    const parsed = new OrmDataSourceAnnotationProfile().Parse(datasource);
 
-    assert.deepEqual(fromKnot.Diagnostics, []);
-    assert.deepEqual(fromKnot.Descriptor, {
-      Key: 'main',
-      Name: 'Main',
+    assert.equal(datasource.Name.Value, 'main');
+    assert.deepEqual(parsed.Diagnostics, []);
+    assert.deepEqual(parsed.Descriptor, {
       Kind: 'mysql',
       EnvConn: 'DATABASE_URL',
       Options: { pool: 10, ssl: true },
     });
-    assert.deepEqual(fromMarker.Diagnostics, []);
-    assert.deepEqual(fromMarker.Descriptor, fromKnot.Descriptor);
+  });
+
+  it('rejects legacy marker Conf transport for every public ORM profile', function () {
+    const [field] = ParseKonSourceItems(`
+      #(orm #field :{ type = { code = string } })
+      (!String field #title)
+    `);
+    const [entity] = ParseKonSourceItems(`
+      #(orm #entity :{ type = table })
+      (schema #Article :[])
+    `);
+    const [datasource] = ParseKonSourceItems(`
+      #(orm #datasource :{ kind = mysql })
+      (datasource #main)
+    `);
+    const cases = [
+      {
+        code: 'ORMFIELD001',
+        profile: new OrmFieldAnnotationProfile(),
+        target: field,
+      },
+      {
+        code: 'ORMENTITY001',
+        profile: new OrmEntityAnnotationProfile(),
+        target: entity,
+      },
+      {
+        code: 'ORMDATASOURCE001',
+        profile: new OrmDataSourceAnnotationProfile(),
+        target: datasource,
+      },
+    ];
+
+    for (const { code, profile, target } of cases) {
+      for (const input of [target, target.PreModifiers.Knots[0]]) {
+        const parsed = profile.Parse(input);
+        assert.deepEqual(parsed.Diagnostics.map(diagnostic => diagnostic.Code), [code]);
+        assert.match(parsed.Diagnostics[0].Message, /NamedConf|:\w+=\{/);
+      }
+    }
+  });
+
+  it('rejects unnamed Conf transport without reading its payload', function () {
+    const [field] = ParseKonSourceItems(`
+      #(orm :{ type = { code = string } })
+      (!String field #title)
+    `);
+    const marker = field.PreModifiers.Knots[0];
+    Object.defineProperty(marker, 'Conf', {
+      configurable: true,
+      get(): never {
+        throw new Error('legacy Conf payload must not be read');
+      },
+    });
+
+    const parsed = new OrmFieldAnnotationProfile().Parse(field);
+
+    assert.deepEqual(parsed.Diagnostics.map(diagnostic => diagnostic.Code), ['ORMFIELD001']);
+  });
+
+  it('rejects ORM NamedConf profiles attached to the wrong member kind', function () {
+    const [fieldWithRelation] = ParseKonSourceItems(`
+      #(orm :relation={ cardinality = many_to_one })
+      (!String field #owner_id)
+    `);
+    const [propertyWithField] = ParseKonSourceItems(`
+      #(orm :field={ type = { code = relation } })
+      (!Owner prop #owner)
+    `);
+    const profile = new OrmFieldAnnotationProfile();
+
+    const relationOnField = profile.Parse(fieldWithRelation);
+    const fieldOnProperty = profile.Parse(propertyWithField);
+
+    assert.deepEqual(relationOnField.Diagnostics.map(diagnostic => diagnostic.Code), ['ORMFIELD003']);
+    assert.deepEqual(fieldOnProperty.Diagnostics.map(diagnostic => diagnostic.Code), ['ORMFIELD003']);
+  });
+
+  it('rejects nested storage and relation keys from the flat ORM field profile', function () {
+    const [nestedStorage] = ParseKonSourceItems(`
+      #(orm :field={
+        storage = { db = { name = owner_id type = bigint } }
+      })
+      (!Int field #owner_id)
+    `);
+    const [relationShape] = ParseKonSourceItems(`
+      #(orm :field={
+        type = { code = relation }
+        relation = { target = Owner }
+      })
+      (!Int field #owner_id)
+    `);
+    const profile = new OrmFieldAnnotationProfile();
+
+    const storage = profile.Parse(nestedStorage);
+    const relation = profile.Parse(relationShape);
+
+    assert.ok(storage.Diagnostics.some(diagnostic =>
+      diagnostic.Code === 'ORMFIELD004' && diagnostic.Location === 'storage'));
+    assert.ok(relation.Diagnostics.some(diagnostic =>
+      diagnostic.Code === 'ORMFIELD004' && diagnostic.Location === 'relation'));
+  });
+
+  it('rejects datasource key and name because the declaration owns identity', function () {
+    const [datasource] = ParseKonSourceItems(`
+      #(orm :datasource={
+        key = duplicate_key
+        name = DuplicateName
+        kind = mysql
+      })
+      (datasource #main)
+    `);
+
+    const parsed = new OrmDataSourceAnnotationProfile().Parse(datasource);
+
+    assert.equal(datasource.Name.Value, 'main');
+    assert.deepEqual(
+      parsed.Diagnostics.map(diagnostic => [diagnostic.Code, diagnostic.Location]),
+      [
+        ['ORMDATASOURCE004', 'key'],
+        ['ORMDATASOURCE004', 'name'],
+      ],
+    );
+    assert.equal(Object.prototype.hasOwnProperty.call(parsed.Descriptor, 'Key'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(parsed.Descriptor, 'Name'), false);
   });
 });

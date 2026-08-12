@@ -61,6 +61,7 @@ export declare class KonTypeBinder {
     private BindSchemaMembers;
     private BindMethodMember;
     private BindFieldMember;
+    private BindPropertyMember;
     private BindFunctionSignature;
     private BindInOutItemType;
     BindTypeNode(node: any): TypeSymbol;

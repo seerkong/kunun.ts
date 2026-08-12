@@ -238,7 +238,12 @@ export class KonTypedExecutionContext {
         RowQualifier.Default,
         traitMember.Origin,
         traitMember.IsMethod,
-        { Access: traitMember.Access, EffectContext: traitMember.EffectContext },
+        {
+          Access: traitMember.Access,
+          EffectContext: traitMember.EffectContext,
+          Metadata: traitMember.Metadata,
+          Kind: traitMember.Kind,
+        },
       );
       list.unshift(new RowImplementation(forwarded, list[0].Function));
     }
@@ -379,7 +384,7 @@ export class KonTypedExecutionContext {
   private CreateFieldStorage(cls: ClassTypeSymbol): { [name: string]: FieldStorage[] } {
     const fields: { [name: string]: FieldStorage[] } = {};
     for (const member of cls.Rows.Members) {
-      if (member.IsMethod) {
+      if (!member.IsField) {
         continue;
       }
       fields[member.Name] = fields[member.Name] ?? [];
@@ -539,7 +544,7 @@ export class KonTypedExecutionContext {
   }
 
   private EnsureProjectionExposesField(targetType: ClassTypeSymbol, memberName: string): void {
-    if (targetType.Rows.Members.some(member => !member.IsMethod && member.Name === memberName)) {
+    if (targetType.Rows.Members.some(member => member.IsField && member.Name === memberName)) {
       return;
     }
     throw new Error(`Field '${memberName}' is not exposed by projected view ${targetType.Name}.`);

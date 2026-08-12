@@ -66,6 +66,9 @@ export class KonTypeChecker {
     const nodes = ParseKonSourceItems(source);
     const binding = new KonTypeBinder().Bind(nodes.filter(isTypeSystemDeclarationOrFunction));
     const checker = new KonTypeChecker(binding);
+    if (!binding.Success) {
+      return new TypeCheckingResult(binding, checker.diagnostics);
+    }
     checker.Check(nodes.filter(isFunctionDeclaration));
     checker.CheckClassBodies(nodes.filter(isClassDeclaration));
     return new TypeCheckingResult(binding, checker.diagnostics);
@@ -148,6 +151,7 @@ export class KonTypeChecker {
           this.CheckPropertyBody(classType, member);
         }
       }
+      this.ValidateClassCompanionAccessors(classType);
     }
   }
 
@@ -185,19 +189,32 @@ export class KonTypeChecker {
 
   private CheckPropertyBody(classType: ClassTypeSymbol, member: KnKnot): void {
     const propertyName = getTypeName(member.Name);
+    const property = propertyName == null
+      ? null
+      : classType.Rows.EnumerateByName(propertyName).find(candidate => candidate.IsProperty);
+    const getter = this.FindCompanionAccessor(classType, propertyName, 'get_');
+    const setter = this.FindCompanionAccessor(classType, propertyName, 'set_');
+
     let current = member.Next;
     while (current != null) {
       const section = getWord(current.Core);
       if (section === 'get' && current.Body != null) {
-        const getter = classType.DeclaredRows.EnumerateByName(`get_${propertyName}`).find(candidate => candidate.IsMethod)
-          ?? classType.DeclaredRows.EnumerateByName(propertyName).find(candidate => candidate.IsMethod);
-        const signature = getter?.Type instanceof FunctionTypeSymbol ? getter.Type : null;
+        const companionSignature = getter?.Type instanceof FunctionTypeSymbol ? getter.Type : null;
+        let signature = companionSignature;
+        if (property != null) {
+          signature = new FunctionTypeSymbol(
+            `${classType.Name}::get_${propertyName}`,
+            [],
+            [property.Type],
+            companionSignature?.EffectRow,
+          );
+        }
         const environment = this.BuildMemberEnvironment(
           classType,
           current,
           signature ?? new FunctionTypeSymbol(`${classType.Name}::get_${propertyName}`, [], [this.binding.TypeSystem.Registry.Any]),
         );
-        if (signature == null) {
+        if (property == null && signature == null) {
           for (const bodyItem of current.Body) {
             this.CheckExpression(bodyItem, environment, EffectRow.EmptyClosed, {
               CurrentClass: classType,
@@ -212,11 +229,17 @@ export class KonTypeChecker {
           InClassBody: true,
         }, `${classType.Name}.${propertyName}.get`);
       } else if (section === 'set' && current.Body != null) {
-        const setter = classType.DeclaredRows.EnumerateByName(`set_${propertyName}`).find(candidate => candidate.IsMethod)
-          ?? classType.DeclaredRows.EnumerateByName(propertyName).find(candidate => candidate.IsMethod);
-        const signature = setter?.Type instanceof FunctionTypeSymbol
-          ? setter.Type
-          : new FunctionTypeSymbol(`${classType.Name}::set_${propertyName}`, [this.binding.TypeSystem.Registry.Any], [this.binding.TypeSystem.Registry.Never]);
+        const companionSignature = setter?.Type instanceof FunctionTypeSymbol ? setter.Type : null;
+        let signature = companionSignature
+          ?? new FunctionTypeSymbol(`${classType.Name}::set_${propertyName}`, [this.binding.TypeSystem.Registry.Any], [this.binding.TypeSystem.Registry.Never]);
+        if (property != null) {
+          signature = new FunctionTypeSymbol(
+            `${classType.Name}::set_${propertyName}`,
+            [property.Type],
+            [this.binding.TypeSystem.Registry.Never],
+            companionSignature?.EffectRow,
+          );
+        }
         const environment = this.BuildMemberEnvironment(classType, current, signature);
         for (const bodyItem of current.Body) {
           this.CheckExpression(bodyItem, environment, signature.EffectRow, {
@@ -226,6 +249,56 @@ export class KonTypeChecker {
         }
       }
       current = current.Next;
+    }
+  }
+
+  private FindCompanionAccessor(classType: ClassTypeSymbol, propertyName: string, prefix: string): RowMember {
+    if (propertyName == null) {
+      return null;
+    }
+    return classType.Rows.EnumerateByName(`${prefix}${propertyName}`).find(candidate => candidate.IsMethod)
+      ?? classType.Rows.EnumerateByName(propertyName).find(candidate => candidate.IsMethod)
+      ?? null;
+  }
+
+  private ValidateClassCompanionAccessors(classType: ClassTypeSymbol): void {
+    const propertyNames = new Set(
+      classType.Rows.Members.filter(member => member.IsProperty).map(member => member.Name),
+    );
+    for (const propertyName of propertyNames) {
+      const property = classType.Rows.EnumerateByName(propertyName).find(candidate => candidate.IsProperty);
+      this.ValidateCompanionAccessor(
+        property,
+        this.FindCompanionAccessor(classType, propertyName, 'get_'),
+        'getter',
+      );
+      this.ValidateCompanionAccessor(
+        property,
+        this.FindCompanionAccessor(classType, propertyName, 'set_'),
+        'setter',
+      );
+    }
+  }
+
+  private ValidateCompanionAccessor(property: RowMember, accessor: RowMember, kind: 'getter' | 'setter'): void {
+    if (accessor == null || !(accessor.Type instanceof FunctionTypeSymbol)) {
+      return;
+    }
+    const signature = accessor.Type;
+    let compatible: boolean;
+    if (kind === 'getter') {
+      compatible = signature.Outputs.length === 1
+        && this.binding.TypeSystem.AreTypesCompatible(signature.Outputs[0], property.Type);
+    } else {
+      compatible = signature.Parameters.length > 0
+        && this.binding.TypeSystem.AreTypesCompatible(property.Type, signature.Parameters[signature.Parameters.length - 1]);
+    }
+    if (!compatible) {
+      this.AddDiagnostic(
+        'KTC090',
+        `Companion ${kind} '${accessor.Name}' is incompatible with property '${property.Name}' type '${property.Type.Name}'.`,
+        `${property.Origin}.${property.Name}`,
+      );
     }
   }
 
@@ -501,7 +574,9 @@ export class KonTypeChecker {
     let candidates = rows.EnumerateByName(memberRef.Name)
       .filter(member => !member.IsVirtual)
       .filter(member => memberRef.Origin == null || member.Origin === memberRef.Origin)
-      .filter(member => !requireMethod || member.IsMethod);
+      .filter(member => requireMethod
+        ? member.IsMethod
+        : !member.IsMethod && !member.IsSpreadParameter);
     if (activeEffectRow != null && candidates.some(member => member.EffectContext != null)) {
       candidates = candidates.filter(member => member.EffectContext == null || member.EffectContext.IsSubsetOf(activeEffectRow));
     }

@@ -485,4 +485,78 @@
       </case>
     </suite>
   </requirement>
+  <requirement id="typed-navigation-properties">
+    <statement>Kunun type system SHALL model explicitly typed class navigation properties as public property members distinct from fields, methods, and schema relation declarations.</statement>
+    <suite id="property-binding" name="Typed property binding">
+      <case id="bind-single-target-property">
+        <given>a class declares an explicitly typed property such as Order.shop with target type Shop</given>
+        <when>the source is bound into the Kunun type system</when>
+        <then>the class SHALL expose a property member named shop whose type is Shop and whose kind is property rather than field</then>
+      </case>
+      <case id="bind-collection-property">
+        <given>a class declares an explicitly typed collection property such as Shop.orders with type List&amp;lt;Order&amp;gt;</given>
+        <when>the source is bound</when>
+        <then>the property SHALL preserve the collection type reference and target type arguments without converting it to a field or relation primitive</then>
+      </case>
+      <case id="preserve-property-metadata">
+        <given>a typed property carries prefix annotations and declaration metadata</given>
+        <when>the property is bound</when>
+        <then>the property member SHALL preserve that metadata for downstream profile consumers without core ORM interpretation</then>
+      </case>
+      <case id="reject-property-outside-class">
+        <given>a prop declaration appears in a plain row type, schema, or mixin body</given>
+        <when>the source is bound</when>
+        <then>the binder SHALL report a stable invalid-member-context diagnostic and SHALL NOT add a property member</then>
+      </case>
+    </suite>
+    <suite id="code-first-model" name="Programmatic type-system construction">
+      <case id="source-code-first-equivalence">
+        <given>equivalent class fields and properties are declared through Kon source and public type-system builders</given>
+        <when>both models are inspected</when>
+        <then>their member names, kinds, types, qualifiers, access and metadata SHALL be structurally equivalent</then>
+      </case>
+    </suite>
+    <suite id="compatibility" name="Existing class behavior">
+      <case id="keep-accessor-runtime">
+        <given>an existing accessor-only prop uses getter and setter bodies without an explicit property type</given>
+        <when>the class is checked and executed</when>
+        <then>its current runtime behavior SHALL remain available and it SHALL NOT be silently reclassified as a storage field</then>
+      </case>
+      <case id="field-only-storage">
+        <given>a typed class contains both fields and properties</given>
+        <when>field-only construction or projection logic enumerates storage fields</when>
+        <then>it SHALL exclude property members</then>
+      </case>
+      <case id="property-kind-compatibility">
+        <given>row or class compatibility compares members with the same name across field, property, method, and spread kinds</given>
+        <when>subtyping, slot resolution, inheritance, or override rules are applied</when>
+        <then>the type system SHALL apply the documented kind compatibility matrix and SHALL reject ambiguous or cross-kind replacement</then>
+      </case>
+      <case id="typed-accessor-contract">
+        <given>a typed property has getter or setter accessor bodies</given>
+        <when>the bodies are type-checked</when>
+        <then>the property type SHALL constrain the getter result and setter value parameter</then>
+      </case>
+      <case id="typed-inline-accessor-runtime">
+        <given>a typed property declares inline getter or setter bodies without companion get_x, set_x, or same-name method members</given>
+        <when>runtime execution reads or writes the property</when>
+        <then>execution SHALL invoke the inline accessor directly and SHALL NOT require shadow method members</then>
+      </case>
+      <case id="reject-incompatible-companion-accessor-signature">
+        <given>a typed property also declares an explicit companion getter or setter method whose result or value-input type is incompatible with the property type</given>
+        <when>the class is bound and checked</when>
+        <then>the checker SHALL report a stable incompatibility diagnostic and SHALL retain the property type as authority</then>
+      </case>
+      <case id="model-only-property-runtime">
+        <given>a typed property has no getter or setter accessor</given>
+        <when>runtime execution attempts to read or write that property</when>
+        <then>execution SHALL report a property-specific missing-accessor error and SHALL NOT fall back to field storage</then>
+      </case>
+      <case id="preserve-kind-and-metadata-through-projections">
+        <given>a typed property flows through inheritance, trait forwarding, effective access, generic substitution, or member copy operations</given>
+        <when>the resulting row member is inspected</when>
+        <then>its property kind, metadata, access, qualifier and effect context SHALL remain intact</then>
+      </case>
+    </suite>
+  </requirement>
 </behaviors>

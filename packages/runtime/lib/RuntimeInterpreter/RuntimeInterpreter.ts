@@ -1186,6 +1186,7 @@ export class RuntimeInterpreter {
     }
     switch (keyword) {
       case 'class':
+      case 'trait':
         runtime.addOpDirectly(RuntimeOpCode.PushValue, RuntimeInterpreter.EvaluateClassDefinition(runtime, knot));
         return true;
       case 'var':
@@ -3401,7 +3402,7 @@ export class RuntimeInterpreter {
   private static IsPureTypeSystemDeclaration(node: any): boolean {
     return node instanceof KnKnot
       && node.CallType == null
-      && ['type', 'trait'].includes(RuntimeInterpreter.GetKnotCoreWordName(node));
+      && RuntimeInterpreter.GetKnotCoreWordName(node) === 'type';
   }
 
   // Generic dispatch loop for hosts and higher-level packages: drives the

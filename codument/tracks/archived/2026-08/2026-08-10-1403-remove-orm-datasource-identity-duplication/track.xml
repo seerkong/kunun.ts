@@ -1,0 +1,34 @@
+<Track id="remove-orm-datasource-identity-duplication" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>物理删除 Kunun public ORM datasource descriptor 中的重复 identity fields。</Goal>
+    <Description>修复 fresh verification 发现的 Key/Name source/declaration/tarball residue，重建并 dry-run 验证 1.0.4。</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>auto</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-08-10T10:57:14Z</CreatedAt>
+    <UpdatedAt>2026-08-10T11:03:18Z</UpdatedAt>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="input" name="annotations" domain="repo" path="vfs://@/packages/type-annotations/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+    <MaterialBundle role="output" name="packages" domain="package" path="vfs://@/packages/"/>
+  </Ports>
+  <TaskSpace id="space_remove-orm-datasource-identity-duplication" name="remove-orm-datasource-identity-duplication" version="1">
+    <SubNodes>
+      <TaskGroup id="P1" name="Public Surface Correction" status="DONE" order="0">
+        <SubNodes>
+          <Task id="T1.1" name="Remove and verify datasource identity fields" status="DONE" order="0" priority="P0">
+            <Description>补回归测试，删除 source descriptor Key/Name，重建 declarations/bundles，运行 focused/full gates 与 pack/publish dry-run，记录精确未发布证据。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.1-AC1" checked="true">No live source, declaration, aggregate bundle, or packed public type exposes datasource Key or Name.</cdt:Criterion>
+              <cdt:Criterion id="T1.1-AC2" checked="true">NamedConf focused tests, typecheck, build, pack dry-run, and publish dry-run pass at 1.0.4 without a real publish.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule><Parallel max-concurrent="1" spot-check="true"/></Schedule>
+</Track>

@@ -1,0 +1,56 @@
+<decision #track.add_typed_navigation_property_model.member_authority {
+  priority = "P0"
+  status = "accepted"
+  durable_candidate = true
+  confidence = "high"
+  reversibility = "low; collapsing Property into Field or Relation would break the restored authority boundary"
+}
+(
+  <question ?>typed navigation property 应复用 field、top-level relation，还是成为独立 class member kind？</?>
+  <answer { }
+  (
+    <raw-answer ?>property 必须与 field 区分，并服务 Order.shop 等 class property。</?>
+    <decision-text ?>新增独立 Property member kind；top-level RelationTypeSymbol 保持 schema/ontology primitive。</?>
+    <rationale ?>field alias 会限制复合关系，relation primitive 又不等于对象可导航属性。</?>
+    <evidence ?>用户明确要求与当前 runtime class field/prop 区分一致。</?>
+  )
+  >
+)>
+
+<decision #track.add_typed_navigation_property_model.kind_semantics {
+  priority = "P0"
+  status = "resolved"
+  durable_candidate = true
+  confidence = "high"
+  reversibility = "low; ambiguous cross-kind resolution would make the discriminator non-authoritative"
+}
+(
+  <question ?>Field、Property、Method、Spread 的 compatibility 与 runtime boundary 如何定义？</?>
+  <answer { }
+  (
+    <raw-answer ?>采用严格同 kind compatibility，并保留既有 Field-to-zero-arg-Method adaptation；无 accessor typed property 为 model-only。</?>
+    <decision-text ?>slot access 只解析 value members，receiver call 只解析 Method；同 origin 或 inheritance 的跨 kind 同名替换失败；typed inline accessor 无需影子 Method 即可执行，伴生 Method signature 必须服从 property type；缺失 accessor 的 runtime read/write 返回 property-specific error。</?>
+    <rationale ?>Kind 必须参与 compatibility 和 resolution 才能成为真 discriminator，同时 model-only property 支持 DSL 建模且不伪装 field storage。</?>
+    <evidence ?>planning AttractorCheck GAP 对 subtype、lookup、accessor、runtime fallback 和 copy path 的代码证据。</?>
+  )
+  >
+)>
+
+<decision #track.add_typed_navigation_property_model.type_admission {
+  priority = "P0"
+  status = "resolved"
+  durable_candidate = true
+  confidence = "high"
+  reversibility = "medium; future inference may supplement but not replace explicit schema types"
+}
+(
+  <question ?>binder 是否应从 getter body 推断 property 类型？</?>
+  <answer { }
+  (
+    <raw-answer ?>采用显式 property type 作为保守默认。</?>
+    <decision-text ?>只有显式 typed prop 进入 property row member；accessor-only prop 不做 Any/field 推断。</?>
+    <rationale ?>source/code-first schema 需要稳定类型，body inference 会把运行时实现变成建模 authority。</?>
+    <evidence ?>现有 accessor tests 与 mission single-authority rule。</?>
+  )
+  >
+)>

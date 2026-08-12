@@ -1,0 +1,29 @@
+<behavior-patch capability="kunun-annotation-authority" version="1">
+  <upsert selector="behavior://kunun-annotation-authority/requirements/orm-named-conf-transport">
+    <requirement id="orm-named-conf-transport">
+      <statement>Kunun SHALL preserve ORM prefix annotations through exactly one KnKnot.NamedConf profile and SHALL reject the legacy marker-name-plus-Conf transport.</statement>
+      <suite id="canonical-transport" name="Canonical ORM annotation transport">
+        <case id="preserve-attached-named-conf">
+          <given>a datasource, class, Field, or typed Property has a matching ORM NamedConf prefix annotation</given>
+          <when>source is parsed and bound into the public Kunun type-system model</when>
+          <then>the matching NamedConf payload SHALL remain attached without creating a shadow entity or relation model</then>
+        </case>
+        <case id="reject-old-transport">
+          <given>an ORM annotation encodes its profile in the marker name and payload in Conf</given>
+          <when>a public ORM profile or admission helper reads it</when>
+          <then>Kunun SHALL return a stable rejection diagnostic and SHALL NOT normalize it into the canonical model</then>
+        </case>
+        <case id="reject-target-mismatch">
+          <given>an ORM NamedConf profile is attached to the wrong declaration kind</given>
+          <when>annotation admission validates the attachment</when>
+          <then>Kunun SHALL reject the profile, including relation on Field and field on Property</then>
+        </case>
+        <case id="datasource-declaration-owns-identity">
+          <given>a datasource declaration and its ORM NamedConf annotation</given>
+          <when>the public source, declarations, bundles, and packed package are inspected</when>
+          <then>datasource identity SHALL exist only on the declaration and the annotation descriptor SHALL NOT expose Key or Name</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

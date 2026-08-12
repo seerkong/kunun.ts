@@ -12,6 +12,7 @@ import {
   RelationTypeSymbol,
   MethodBody,
   RowMember,
+  RowMemberKind,
   RowTypeSymbol,
   SchemaMixinSymbol,
   SchemaTypeSymbol,
@@ -477,12 +478,13 @@ export class TypeSystem {
   }
 
   private MemberTypesAreCompatible(candidate: RowMember, required: RowMember): boolean {
-    if (this.areTypesCompatibleDirect(candidate.Type, required.Type)) {
-      return true;
+    if (candidate.Kind === required.Kind) {
+      return candidate.Kind !== RowMemberKind.Spread
+        && this.areTypesCompatibleDirect(candidate.Type, required.Type);
     }
 
-    if (!candidate.IsMethod
-      && required.IsMethod
+    if (candidate.IsField
+      && required.Kind === RowMemberKind.Method
       && required.Type instanceof FunctionTypeSymbol
       && required.Type.Parameters.length === 0
       && required.Type.Outputs.length === 1) {

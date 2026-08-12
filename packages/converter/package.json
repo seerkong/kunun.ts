@@ -1,6 +1,6 @@
 {
   "name": "kunun-converter",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": false,
   "main": "lib/index.ts",
   "types": "dist/index.d.ts",
@@ -25,6 +25,6 @@
     "registry": "https://registry.npmjs.com"
   },
   "dependencies": {
-    "kunun-core": "1.0.3"
+    "kunun-core": "1.0.4"
   }
 }

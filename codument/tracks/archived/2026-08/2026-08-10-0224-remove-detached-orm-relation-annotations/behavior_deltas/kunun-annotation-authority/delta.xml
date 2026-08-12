@@ -1,0 +1,19 @@
+<behavior-patch capability="kunun-annotation-authority" version="1">
+  <upsert selector="behavior://kunun-annotation-authority/requirements/property-owned-orm-relations">
+    <requirement id="property-owned-orm-relations">
+      <statement>Kunun public packages SHALL expose typed Property metadata for downstream ORM profiles and SHALL NOT expose or positively parse a detached ORM relation annotation descriptor.</statement>
+      <suite id="authority-boundary" name="ORM annotation authority boundary">
+        <case id="reject-detached-orm-profile">
+          <given>the Kunun source tree and built public package artifacts</given>
+          <when>their annotation API surface is inspected</when>
+          <then>they SHALL NOT contain OrmRelationAnnotationProfile, ValidateDepaOrmRelation, or a positive detached orm relation parser</then>
+        </case>
+        <case id="preserve-generic-and-property-models">
+          <given>generic relation declarations, generic annotations, and typed class Properties</given>
+          <when>the Kunun packages are tested and typechecked</when>
+          <then>those language features SHALL remain available without ORM-specific interpretation in Kunun core</then>
+        </case>
+      </suite>
+    </requirement>
+  </upsert>
+</behavior-patch>

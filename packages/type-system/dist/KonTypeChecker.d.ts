@@ -22,6 +22,9 @@ export declare class KonTypeChecker {
     private CheckClassMethodBody;
     private CheckConstructorBody;
     private CheckPropertyBody;
+    private FindCompanionAccessor;
+    private ValidateClassCompanionAccessors;
+    private ValidateCompanionAccessor;
     private BuildMemberEnvironment;
     private SignatureHasImplicitReceiver;
     private CheckBodyAgainstSignature;

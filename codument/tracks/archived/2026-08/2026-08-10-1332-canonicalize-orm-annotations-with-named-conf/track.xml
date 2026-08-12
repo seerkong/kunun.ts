@@ -1,0 +1,53 @@
+<Track id="canonicalize-orm-annotations-with-named-conf" version="1" xmlns:cdt="urn:codument:v1">
+  <Metadata>
+    <Status>completed</Status>
+    <Goal>将 Kunun ORM prefix annotations 硬切到 NamedConf transport，同时保持 public type-system 与 typed Property authority。</Goal>
+    <Description>迁移 datasource/entity/field profiles、generic relation metadata preservation、target-kind diagnostics、tests 和 package artifacts，保持 1.0.4 且不发布。</Description>
+    <QuestionMode>decision-tree</QuestionMode>
+    <QuestionSeverity>auto</QuestionSeverity>
+    <CommitMode>manual</CommitMode>
+    <CreatedAt>2026-08-10T10:01:56Z</CreatedAt>
+    <UpdatedAt>2026-08-10T10:32:22Z</UpdatedAt>
+  </Metadata>
+  <Ports scope="track">
+    <MaterialBundle role="input" name="behavior-deltas" domain="behavior" path="vfs://./behavior_deltas/"/>
+    <MaterialBundle role="input" name="annotation-source" domain="repo" path="vfs://@/packages/type-annotations/"/>
+    <MaterialBundle role="input" name="type-system-source" domain="repo" path="vfs://@/packages/type-system/"/>
+    <MaterialBundle role="output" name="behavior" domain="codument" path="vfs://@/codument/behaviors/"/>
+    <MaterialBundle role="output" name="packages" domain="package" path="vfs://@/packages/"/>
+  </Ports>
+  <TaskSpace id="space_canonicalize-orm-annotations-with-named-conf" name="canonicalize-orm-annotations-with-named-conf" version="1">
+    <Description>Kunun NamedConf-only ORM annotation transport hard cut.</Description>
+    <SubNodes>
+      <TaskGroup id="P1" name="NamedConf Admission" status="DONE" order="0">
+        <SubNodes>
+          <Task id="T1.1" name="Add canonical and rejection tests" status="DONE" order="0" priority="P0">
+            <Description>覆盖 canonical NamedConf、old transport、target mismatch、field shape、datasource identity 和 generic typed Property preservation。</Description>
+            <cdt:Acceptance><cdt:Criterion id="T1.1-AC1" checked="true">Focused tests fail against old profile discovery and pass only with NamedConf-only admission.</cdt:Criterion></cdt:Acceptance>
+          </Task>
+          <Task id="T1.2" name="Implement NamedConf profile transport" status="DONE" order="1" priority="P0">
+            <Description>迁移 datasource/entity/field profiles 与共享 admission helper，保留 generic relation metadata，拒绝旧形态且不恢复 relation profile。</Description>
+            <cdt:Acceptance>
+              <cdt:Criterion id="T1.2-AC1" checked="true">All existing public profiles read only matching NamedConf payloads.</cdt:Criterion>
+              <cdt:Criterion id="T1.2-AC2" checked="true">No public ORM relation parser or shadow model exists.</cdt:Criterion>
+            </cdt:Acceptance>
+          </Task>
+          <Task id="T1.3" name="Verify focused contract" status="DONE" order="2" priority="P0">
+            <Description>运行 type-annotations 与 typed Property focused suites、typecheck 和 residue checks。</Description>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+      <TaskGroup id="P2" name="Package Readiness" status="DONE" order="1">
+        <SubNodes>
+          <Task id="T2.1" name="Build and inspect public artifacts" status="DONE" order="0" priority="P0">
+            <Description>构建 generated declarations/JavaScript，检查 exports、src/dist/lib 和 old live reader residue。</Description>
+          </Task>
+          <Task id="T2.2" name="Pack and publish dry run" status="DONE" order="1" priority="P1">
+            <Description>保持六包 1.0.4，运行 package pack/content 与 registry publish dry-run，明确不实际发布。</Description>
+          </Task>
+        </SubNodes>
+      </TaskGroup>
+    </SubNodes>
+  </TaskSpace>
+  <Schedule><Parallel max-concurrent="1" spot-check="true"/></Schedule>
+</Track>

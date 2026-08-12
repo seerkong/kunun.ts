@@ -245,7 +245,7 @@ export class KonTypedRuntimeContext {
   private CreateFieldStorage(cls: ClassTypeSymbol): { [name: string]: FieldStorage[] } {
     const fields: { [name: string]: FieldStorage[] } = {};
     for (const member of cls.Rows.Members) {
-      if (member.IsMethod) {
+      if (!member.IsField) {
         continue;
       }
       fields[member.Name] = fields[member.Name] ?? [];
@@ -304,11 +304,34 @@ export class KonTypedRuntimeContext {
 
   private ResolvePropertyAccessor(target: KonTypedObject, memberName: string, prefix: string): any {
     const accessorName = prefix + memberName;
+    const property = this.ResolvePropertyMember(target, memberName);
+    if (property != null) {
+      for (const prototype of this.EnumerateAccessorPrototypeCandidates(target, property)) {
+        const accessor = getPrototypeValue(prototype, accessorName)
+          ?? getPrototypeValue(prototype, `${property.Origin}::${accessorName}`);
+        if (accessor != null) {
+          return accessor;
+        }
+      }
+      const accessorKind = prefix === 'get_' ? 'getter' : 'setter';
+      throw new Error(`Property '${memberName}' on ${target.Projection?.Name ?? target.Class.Name} is missing ${accessorKind} accessor.`);
+    }
     if (!this.ViewExposesMethod(target, accessorName)) {
       return null;
     }
-    const prototype = this.ResolvePrototypeForAccessor(target, accessorName);
-    return getPrototypeValue(prototype, accessorName);
+    const prototype = this.ResolvePrototypeForAccessor(target, accessorName, null);
+    const method = this.ResolveMethodMember(target, accessorName);
+    return getPrototypeValue(prototype, accessorName)
+      ?? getPrototypeValue(prototype, `${method.Origin}::${accessorName}`);
+  }
+
+  private ResolvePropertyMember(target: KonTypedObject, memberName: string): RowMember {
+    const rows = target.Projection?.Rows ?? target.Class.Rows;
+    return rows.Members.find(member =>
+      member.IsProperty
+      && member.Name === memberName
+      && this.IsAccessible(member, target.Class, target.Projection != null))
+      ?? null;
   }
 
   private ResolveMethodMember(target: KonTypedObject, memberName: string): RowMember {
@@ -420,7 +443,7 @@ export class KonTypedRuntimeContext {
     return [this.PrototypeResolver?.(member.Origin), target.Prototype];
   }
 
-  private ResolvePrototypeForAccessor(target: KonTypedObject, accessorName: string): any {
+  private ResolvePrototypeForAccessor(target: KonTypedObject, accessorName: string, property: RowMember): any {
     if (target.Projection != null) {
       if (!target.Projection.IsTrait) {
         return this.PrototypeResolver?.(target.Projection.Name);
@@ -432,12 +455,30 @@ export class KonTypedRuntimeContext {
         }
       }
     }
+    if (property != null) {
+      if (getPrototypeValue(target.Prototype, accessorName) != null) {
+        return target.Prototype;
+      }
+      return this.PrototypeResolver?.(property.Origin) ?? target.Prototype;
+    }
     return target.Prototype;
+  }
+
+  private EnumerateAccessorPrototypeCandidates(target: KonTypedObject, property: RowMember): any[] {
+    const view = target.Projection?.IsTrait === true
+      ? target.Class
+      : target.Projection ?? target.Class;
+    const prototypes = view.MethodResolutionOrder.map(type => this.PrototypeResolver?.(type.Name));
+    prototypes.push(this.PrototypeResolver?.(property.Origin));
+    if (target.Projection == null || target.Projection.IsTrait) {
+      prototypes.push(target.Prototype);
+    }
+    return prototypes.filter((prototype, index) => prototype != null && prototypes.indexOf(prototype) === index);
   }
 
   private TargetExposesField(target: KonTypedObject, memberName: string): boolean {
     const rows = target.Projection?.Rows ?? target.Class.Rows;
-    return rows.Members.some(member => !member.IsMethod && member.Name === memberName);
+    return rows.Members.some(member => member.IsField && member.Name === memberName);
   }
 
   private EnsureProjectionExposesField(target: KonTypedObject, memberName: string): void {

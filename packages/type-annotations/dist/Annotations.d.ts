@@ -1,3 +1,4 @@
+import { KnKnot } from 'kunun-core';
 export type AnnotationSource = 'metadata' | 'config' | 'attr' | 'namedAttr' | 'preModifier' | 'postModifier';
 export interface AnnotationEntry {
     Source: AnnotationSource;
@@ -7,6 +8,14 @@ export interface AnnotationEntry {
 }
 export interface AnnotationBag {
     Entries: AnnotationEntry[];
+}
+export declare const OrmNamedConfProfileNames: readonly ["datasource", "entity", "field", "relation"];
+export type OrmNamedConfProfileName = typeof OrmNamedConfProfileNames[number];
+export type OrmNamedConfAdmissionIssue = 'missing' | 'legacy_transport' | 'profile_multiplicity' | 'profile_mismatch' | 'target_mismatch';
+export interface OrmNamedConfAdmissionResult {
+    Marker?: KnKnot;
+    Payload?: any;
+    Issue?: OrmNamedConfAdmissionIssue;
 }
 export declare const BuiltInAnnotationNames: {
     readonly Required: "required";
@@ -30,3 +39,4 @@ export declare class AnnotationExtractor {
 export declare class SchemaConstraintProfile {
     ValidateRequiredOverride(parent: any, child: any): string[];
 }
+export declare function AdmitOrmNamedConf(nodeOrMarker: any, expectedProfile: OrmNamedConfProfileName): OrmNamedConfAdmissionResult;

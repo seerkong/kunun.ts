@@ -1,6 +1,6 @@
 {
   "name": "kunun-core",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": false,
   "main": "lib/index.ts",
   "types": "dist/index.d.ts",

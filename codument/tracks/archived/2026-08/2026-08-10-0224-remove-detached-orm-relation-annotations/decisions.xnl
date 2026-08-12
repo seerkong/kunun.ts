@@ -1,0 +1,16 @@
+<decision #track.remove_detached_orm_relation_annotations.authority_cut {
+  priority = "P0"
+  status = "accepted"
+  durable_candidate = false
+}
+(
+  <question ?>Should Kunun retain a deprecated detached ORM relation parser?</?>
+  <answer { }
+  (
+    <raw-answer ?>No; the mission requires Property metadata to be the only ORM relation authority.</?>
+    <decision-text ?>Remove the parser, exports, tests, and generated artifacts without a compatibility reader.</?>
+    <rationale ?>The controlled consumers have migrated, and retaining a positive parser would preserve dual authority.</?>
+    <evidence ?>Mission-level fresh verification found the exported parser and positive tests after host migration completed.</?>
+  )
+  >
+)>
